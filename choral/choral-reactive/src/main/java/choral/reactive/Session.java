@@ -1,8 +1,9 @@
 package choral.reactive;
 
+import java.io.Serializable;
 import java.util.Random;
 
-public class Session<C> {
+public class Session<C> implements Serializable {
     public final C choreographyID;
     public final Integer sessionID;
 

@@ -14,10 +14,12 @@ public class LocalReactiveQueue<C> implements ReactiveSender<C, Object>, Reactiv
     public LocalReactiveQueue() {
     }
 
+    @Override
     public void onNewSession(NewSessionEvent<C> event) {
         this.newSessionEvent = event;
     }
 
+    @Override
     public void send(Session<C> session, Object msg) {
         synchronized (this) {
             if (this.recvQueue.containsKey(session)) {
@@ -38,6 +40,7 @@ public class LocalReactiveQueue<C> implements ReactiveSender<C, Object>, Reactiv
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public <T> T recv(Session<C> session) {
         CompletableFuture<Object> future = new CompletableFuture<>();
 

@@ -17,8 +17,15 @@
         <groupId>dev.chord</groupId>
         <artifactId>main</artifactId>
         <version>1.0.0</version>
-        <relativePath>../../../choral/pom.xml</relativePath>
     </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.choral-lang</groupId>
+            <artifactId>choral-reactive</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>

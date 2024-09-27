@@ -15,6 +15,7 @@
 
 	<modules>
 		<module>choral-reactive</module>
+		<module>cartservice</module>
 	</modules>
 
 	<dependencyManagement>

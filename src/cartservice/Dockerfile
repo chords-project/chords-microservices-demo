@@ -28,25 +28,12 @@ RUN dotnet publish cartservice.csproj \
     -c release \
     -o /cartservice
 
-FROM maven:latest AS choral
-WORKDIR /choral
-# Install choral dependencies
-RUN wget https://github.com/choral-lang/choral/archive/refs/tags/v0.1.3.tar.gz \
-    && tar -xzf v0.1.3.tar.gz \
-    && cd choral-0.1.3 \
-    && mvn clean install
-
-COPY ./choral/ .
-RUN mvn clean package
-
 # https://mcr.microsoft.com/product/dotnet/runtime-deps
 # FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.8-noble-chiseled@sha256:7c86350773464d70bd15b2804c0e52f6c0f6b27d05d0fc607ff16abeb84dedd0
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim@sha256:dfd55dc4b11cf81696d03d1592a2ba95f40eeaeb0bd6615705bd58d556d771c0
 
 RUN apt update && apt install -y default-jre
-
-COPY --from=choral /choral /choral
-COPY --from=choral /choral/target/cartservice-1.0-SNAPSHOT-jar-with-dependencies.jar /choral/cartservice.jar
+COPY ./choral/target/cartservice-1.0-SNAPSHOT-jar-with-dependencies.jar /choral/cartservice.jar
 
 WORKDIR /app
 COPY --from=builder /cartservice .
