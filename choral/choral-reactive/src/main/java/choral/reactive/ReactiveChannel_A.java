@@ -20,9 +20,11 @@ public class ReactiveChannel_A<C, M> implements DiChannel_A<M> {
         return Unit.id;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends Enum<T>> Unit select(T msg) {
-        throw new RuntimeException("Select: not implemented yet");
-        // return com(msg);
+        Object msgO = msg;
+        sender.send(session, (M) msgO);
+        return Unit.id;
     }
 }

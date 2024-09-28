@@ -11,16 +11,16 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable> {
 
-    private final HashMap<Session<C>, LinkedList<Object>> sendQueue = new HashMap<>();
-    private final HashMap<Session<C>, LinkedList<CompletableFuture<Object>>> recvQueue = new HashMap<>();
+    private final HashMap<Session<C>, LinkedList<Serializable>> sendQueue = new HashMap<>();
+    private final HashMap<Session<C>, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
 
     private NewSessionEvent<C> newSessionEvent = null;
 
-    public TCPReactiveServer(NewSessionEvent<C> newSessionEvent) {
-        this.newSessionEvent = newSessionEvent;
+    public TCPReactiveServer() {
     }
 
     public void listen(InetSocketAddress addr) {
@@ -62,10 +62,33 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable> {
         this.newSessionEvent = event;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public <T> T recv(Session<C> session) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'recv'");
+    public <T extends Serializable> T recv(Session<C> session) {
+        CompletableFuture<Serializable> future = new CompletableFuture<>();
+
+        synchronized (this) {
+            if (this.sendQueue.containsKey(session)) {
+                // Flow already exists, receive message from send...
+
+                if (this.sendQueue.get(session).isEmpty()) {
+                    this.recvQueue.get(session).add(future);
+                } else {
+                    future.complete(this.sendQueue.get(session).removeFirst());
+                }
+            } else {
+                // Flow does not exist yet, wait for it to arrive...
+                enqueueRecv(session, future);
+            }
+        }
+
+        try {
+            return (T) future.get();
+        } catch (InterruptedException | ExecutionException e) {
+            // It's the responsibility of the choreography to have the type cast match
+            // Throw runtime exception if mismatch
+            throw new RuntimeException(e);
+        }
     }
 
     private void receiveMessage(Session<C> session, Serializable msg) {
@@ -78,25 +101,40 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable> {
                 if (this.recvQueue.get(session).isEmpty()) {
                     enqueueSend(session, msg);
                 } else {
-                    CompletableFuture<Object> future = this.recvQueue.get(session).removeFirst();
+                    CompletableFuture<Serializable> future = this.recvQueue.get(session).removeFirst();
                     future.complete(msg);
                 }
             } else {
                 // this is a new flow, enqueue the message and notify the event handler
                 enqueueSend(session, msg);
-                newSessionEvent.onNewSession(session, () -> cleanupKey(session));
+
+                // Handle new session in new thread
+                new Thread(() -> {
+                    newSessionEvent.onNewSession(session);
+                    cleanupKey(session);
+                }).start();
             }
         }
     }
 
     // should synchronize on 'this' before calling this method
-    private void enqueueSend(Session<C> session, Object msg) {
+    private void enqueueSend(Session<C> session, Serializable msg) {
         if (!this.sendQueue.containsKey(session)) {
             this.sendQueue.put(session, new LinkedList<>());
             this.recvQueue.put(session, new LinkedList<>());
         }
 
         this.sendQueue.get(session).add(msg);
+    }
+
+    // should synchronize on 'this' before calling this method
+    private void enqueueRecv(Session<C> session, CompletableFuture<Serializable> future) {
+        if (!this.recvQueue.containsKey(session)) {
+            this.recvQueue.put(session, new LinkedList<>());
+            this.sendQueue.put(session, new LinkedList<>());
+        }
+
+        this.recvQueue.get(session).add(future);
     }
 
     private void cleanupKey(Session<C> session) {

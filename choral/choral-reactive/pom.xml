@@ -8,6 +8,12 @@
     <artifactId>choral-reactive</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <parent>
+        <groupId>dev.chord</groupId>
+        <artifactId>main</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>

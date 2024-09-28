@@ -16,6 +16,8 @@
 	<modules>
 		<module>choral-reactive</module>
 		<module>cartservice</module>
+		<module>choreographies</module>
+		<module>protobuf</module>
 	</modules>
 
 	<dependencyManagement>

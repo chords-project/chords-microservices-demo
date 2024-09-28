@@ -22,9 +22,11 @@ public class ReactiveChannel_B<C, M> implements DiChannel_B<M> {
         return com();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T extends Enum<T>> T select() {
-        return receiver.<T>recv(session);
+        Object value = receiver.<M>recv(session);
+        return (T) value;
     }
 
     @Override

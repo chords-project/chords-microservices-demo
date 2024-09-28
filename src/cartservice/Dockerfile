@@ -33,7 +33,7 @@ RUN dotnet publish cartservice.csproj \
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim@sha256:dfd55dc4b11cf81696d03d1592a2ba95f40eeaeb0bd6615705bd58d556d771c0
 
 RUN apt update && apt install -y default-jre
-COPY ./choral/target/cartservice-1.0-SNAPSHOT-jar-with-dependencies.jar /choral/cartservice.jar
+COPY ./choral-build/cartservice-1.0-SNAPSHOT-jar-with-dependencies.jar /choral/cartservice.jar
 
 WORKDIR /app
 COPY --from=builder /cartservice .

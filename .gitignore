@@ -1,3 +1,5 @@
+src/*/choral-build/
+
 .DS_Store
 .eclipse.buildship.core.prefs
 .gradle/

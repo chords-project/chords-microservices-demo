@@ -34,7 +34,12 @@ public class LocalReactiveQueue<C> implements ReactiveSender<C, Object>, Reactiv
             } else {
                 // this is a new flow, enqueue the message and notify the event handler
                 enqueueSend(session, msg);
-                newSessionEvent.onNewSession(session, () -> cleanupKey(session));
+
+                // Handle new session in the background
+                new Thread(() -> {
+                    newSessionEvent.onNewSession(session);
+                    cleanupKey(session);
+                }).start();
             }
         }
     }
