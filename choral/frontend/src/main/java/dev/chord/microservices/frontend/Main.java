@@ -1,30 +1,55 @@
 package dev.chord.microservices.frontend;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 
 import choral.reactive.Session;
 import choral.reactive.TCPReactiveClient;
+import choral.reactive.TCPReactiveServer;
+import dev.chord.choreographies.Cart;
 import dev.chord.choreographies.ChorAddCartItem_Client;
+import dev.chord.choreographies.ChorGetCartItems_Client;
+import dev.chord.choreographies.ServiceResources;
 import dev.chord.choreographies.WebshopChoreography;
 
 public class Main {
-    public static void main(String[] args) throws URISyntaxException, UnknownHostException, IOException {
+    public static void main(String[] args) throws Exception {
         System.out.println("Starting choral frontend service");
 
-        String cartHost = System.getenv().getOrDefault("CHORAL_CART_HOST", "localhost:5400");
-        URI address = new URI(null, cartHost, null, null, null).parseServerAuthority();
+        TCPReactiveServer<WebshopChoreography> cartServer = new TCPReactiveServer<>();
 
-        TCPReactiveClient<WebshopChoreography> cartSvc = new TCPReactiveClient<>(
-                new InetSocketAddress(address.getHost(), address.getPort()));
+        cartServer.onNewSession((session) -> {
+            // No choreographies are instantiated by a new session...
+        });
 
-        // Add item
-        ChorAddCartItem_Client addItemChor = new ChorAddCartItem_Client(
-                cartSvc.chanA(Session.makeSession(WebshopChoreography.ADD_CART_ITEM)));
+        Thread cartServerThread = new Thread(() -> {
+            try {
+                cartServer.listen(ServiceResources.shared.cartToFrontend);
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+        });
+        cartServerThread.start();
+        Thread.sleep(1000); // Wait for server to start up
 
-        addItemChor.addItem("user1", "product1", 1);
+        try (TCPReactiveClient<WebshopChoreography> cartSvc = new TCPReactiveClient<>(
+                ServiceResources.shared.frontendToCart)) {
+
+            // Add item
+            // ChorAddCartItem_Client addItemChor = new ChorAddCartItem_Client(
+            // cartSvc.chanA(Session.makeSession(WebshopChoreography.ADD_CART_ITEM)));
+
+            // addItemChor.addItem("user1", "product1", 1);
+
+            // Get items
+            Session<WebshopChoreography> getItemsSession = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
+            ChorGetCartItems_Client getItemsChor = new ChorGetCartItems_Client(
+                    cartSvc.chanA(getItemsSession), cartServer.chanB(getItemsSession));
+
+            Cart cart = getItemsChor.getItems("user1");
+            System.out.println("Got back cart: " + cart.userID + ", " + cart.items);
+
+            cartServer.close();
+            cartServerThread.join();
+        }
     }
 }

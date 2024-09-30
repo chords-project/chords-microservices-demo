@@ -1,12 +1,14 @@
 package dev.chord.microservices.cartservice;
 
+import java.util.List;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
+import dev.chord.choreographies.Cart;
+import dev.chord.choreographies.CartItem;
 import hipstershop.CartServiceGrpc;
 import hipstershop.Demo;
 import hipstershop.CartServiceGrpc.CartServiceBlockingStub;
-import hipstershop.Demo.Cart;
 import hipstershop.Demo.EmptyCartRequest;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -39,17 +41,21 @@ public class CartService implements dev.chord.choreographies.CartService, AutoCl
         connection.addItem(request);
     }
 
-    public void emptyCart(String userID) {
-        connection.emptyCart(EmptyCartRequest.newBuilder().build());
-    }
-
+    @Override
     public Cart getCart(String userID) {
         Demo.GetCartRequest request = Demo.GetCartRequest.newBuilder()
                 .setUserId(userID)
                 .build();
 
-        Cart cart = connection.getCart(request);
-        return cart;
+        Demo.Cart cart = connection.getCart(request);
+        List<CartItem> items = cart.getItemsList().stream()
+                .map(item -> new CartItem(item.getProductId())).toList();
+
+        return new Cart(cart.getUserId(), items);
+    }
+
+    public void emptyCart(String userID) {
+        connection.emptyCart(EmptyCartRequest.newBuilder().build());
     }
 
     @Override

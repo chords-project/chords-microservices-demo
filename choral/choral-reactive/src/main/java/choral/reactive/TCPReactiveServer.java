@@ -8,42 +8,46 @@ import java.io.StreamCorruptedException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable> {
+public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, AutoCloseable {
 
     private final HashMap<Session<C>, LinkedList<Serializable>> sendQueue = new HashMap<>();
     private final HashMap<Session<C>, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
 
     private NewSessionEvent<C> newSessionEvent = null;
+    private ServerSocket serverSocket = null;
 
     public TCPReactiveServer() {
     }
 
-    public void listen(InetSocketAddress addr) {
+    public void listen(String address) throws URISyntaxException {
+        URI uri = new URI(null, address, null, null, null).parseServerAuthority();
+        InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
-        try (ServerSocket serverSocket = new ServerSocket(addr.getPort(), 50, addr.getAddress())) {
+        try {
+            serverSocket = new ServerSocket(addr.getPort(), 50, addr.getAddress());
             System.out.println("Choral reactive server listening on " + serverSocket.getLocalSocketAddress());
 
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                public void run() {
-                    try {
-                        System.out.println("Shutting down reactive server gracefully...");
-                        serverSocket.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    System.out.println("Shutting down reactive server gracefully...");
+                    serverSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            });
+            }, "SHUTDOWN_HOOK_TCPReactiveServer"));
 
             while (true) {
                 Socket connection = serverSocket.accept();
                 new Thread(() -> {
                     clientListen(connection);
-                }).start();
+                }, "CLIENT_CONNECTION_" + connection).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -124,7 +128,7 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable> {
                 new Thread(() -> {
                     newSessionEvent.onNewSession(session);
                     cleanupKey(session);
-                }).start();
+                }, "NEW_SESSION_HANDLER_" + session).start();
             }
         }
     }
@@ -154,5 +158,10 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable> {
             this.sendQueue.remove(session);
             this.recvQueue.remove(session);
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        serverSocket.close();
     }
 }
