@@ -1,4 +1,4 @@
-package dev.chord.microservices.cartservice;
+package dev.chords.microservices.cartservice;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -6,10 +6,10 @@ import java.net.URISyntaxException;
 
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
-import dev.chord.choreographies.ChorAddCartItem_Cart;
-import dev.chord.choreographies.ChorGetCartItems_Cart;
-import dev.chord.choreographies.ServiceResources;
-import dev.chord.choreographies.WebshopChoreography;
+import dev.chords.choreographies.ChorAddCartItem_Cart;
+import dev.chords.choreographies.ChorGetCartItems_Cart;
+import dev.chords.choreographies.ServiceResources;
+import dev.chords.choreographies.WebshopChoreography;
 
 public class Main {
     public static void main(String[] args) throws Exception {

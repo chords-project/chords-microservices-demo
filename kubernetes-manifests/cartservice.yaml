@@ -49,8 +49,10 @@ spec:
         env:
         - name: REDIS_ADDR
           value: "redis-cart:6379"
-        - name: CHORAL_PORT
-          value: 5400
+        - name: CHORAL_FRONTEND_TO_CART
+          value: "0.0.0.0:5400"
+        - name: CHORAL_CART_TO_FRONTEND
+          value: "frontend:5500"
         resources:
           requests:
             cpu: 200m

@@ -1,11 +1,11 @@
-package dev.chord.microservices.cartservice;
+package dev.chords.microservices.cartservice;
 
 import java.util.List;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
-import dev.chord.choreographies.Cart;
-import dev.chord.choreographies.CartItem;
+import dev.chords.choreographies.Cart;
+import dev.chords.choreographies.CartItem;
 import hipstershop.CartServiceGrpc;
 import hipstershop.Demo;
 import hipstershop.CartServiceGrpc.CartServiceBlockingStub;
@@ -13,7 +13,7 @@ import hipstershop.Demo.EmptyCartRequest;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
-public class CartService implements dev.chord.choreographies.CartService, AutoCloseable {
+public class CartService implements dev.chords.choreographies.CartService, AutoCloseable {
 
     protected ManagedChannel channel;
     protected CartServiceBlockingStub connection;

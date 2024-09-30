@@ -1,4 +1,4 @@
-package dev.chord.choreographies;
+package dev.chords.choreographies;
 
 public class ServiceResources {
     public static final ServiceResources shared = new ServiceResources();

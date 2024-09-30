@@ -1,4 +1,4 @@
-package dev.chord.choreographies;
+package dev.chords.choreographies;
 
 public interface CartService@A {
     void addItem(String@A userID, String@A productID, int@A quantity);

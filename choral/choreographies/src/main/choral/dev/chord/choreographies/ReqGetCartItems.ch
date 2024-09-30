@@ -1,4 +1,4 @@
-package dev.chord.choreographies;
+package dev.chords.choreographies;
 
 import java.io.Serializable;
 

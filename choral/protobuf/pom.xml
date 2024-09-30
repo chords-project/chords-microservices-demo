@@ -9,7 +9,7 @@
     <version>1.0-SNAPSHOT</version>
 
     <parent>
-        <groupId>dev.chord</groupId>
+        <groupId>dev.chords</groupId>
         <artifactId>main</artifactId>
         <version>1.0.0</version>
     </parent>

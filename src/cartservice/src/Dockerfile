@@ -35,12 +35,11 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim@sha256:dfd55dc4b11c
 RUN apt update && apt install -y default-jre
 COPY ./choral-build/cartservice-1.0-SNAPSHOT.jar /choral/cartservice.jar
 
-EXPOSE 5400
-ENV CHORAL_PORT=5400
-
-COPY --chmod=0755 ./entrypoint.sh /app/entrypoint.sh
-
 WORKDIR /app
+
+COPY ./entrypoint.sh .
+RUN chmod 755 ./entrypoint.sh
+
 COPY --from=builder /cartservice .
 
 EXPOSE 7070
