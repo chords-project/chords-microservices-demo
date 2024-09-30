@@ -1,4 +1,4 @@
-src/*/choral-build/
+src/**/choral-build/
 
 .DS_Store
 .eclipse.buildship.core.prefs

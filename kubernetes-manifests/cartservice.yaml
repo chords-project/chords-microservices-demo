@@ -49,6 +49,8 @@ spec:
         env:
         - name: REDIS_ADDR
           value: "redis-cart:6379"
+        - name: CHORAL_PORT
+          value: 5400
         resources:
           requests:
             cpu: 200m
@@ -80,6 +82,9 @@ spec:
   - name: grpc
     port: 7070
     targetPort: 7070
+  - name: choral
+    port: 5400
+    targetPort: 5400
 ---
 apiVersion: v1
 kind: ServiceAccount

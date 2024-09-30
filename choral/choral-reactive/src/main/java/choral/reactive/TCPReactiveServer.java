@@ -24,8 +24,20 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable> {
     }
 
     public void listen(InetSocketAddress addr) {
+
         try (ServerSocket serverSocket = new ServerSocket(addr.getPort(), 50, addr.getAddress())) {
             System.out.println("Choral reactive server listening on " + serverSocket.getLocalSocketAddress());
+
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        System.out.println("Shutting down reactive server gracefully...");
+                        serverSocket.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
 
             while (true) {
                 Socket connection = serverSocket.accept();

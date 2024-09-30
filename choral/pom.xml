@@ -14,8 +14,10 @@
 	</properties>
 
 	<modules>
-		<module>choral-reactive</module>
+		<module>frontend</module>
 		<module>cartservice</module>
+
+		<module>choral-reactive</module>
 		<module>choreographies</module>
 		<module>protobuf</module>
 	</modules>

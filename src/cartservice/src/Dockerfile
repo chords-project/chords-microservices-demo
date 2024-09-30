@@ -29,12 +29,23 @@ RUN dotnet publish cartservice.csproj \
     -o /cartservice
 
 # https://mcr.microsoft.com/product/dotnet/runtime-deps
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.8-noble-chiseled@sha256:7c86350773464d70bd15b2804c0e52f6c0f6b27d05d0fc607ff16abeb84dedd0
+# FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.8-noble-chiseled@sha256:7c86350773464d70bd15b2804c0e52f6c0f6b27d05d0fc607ff16abeb84dedd0
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim@sha256:dfd55dc4b11cf81696d03d1592a2ba95f40eeaeb0bd6615705bd58d556d771c0
+
+RUN apt update && apt install -y default-jre
+COPY ./choral-build/cartservice-1.0-SNAPSHOT.jar /choral/cartservice.jar
+
+EXPOSE 5400
+ENV CHORAL_PORT=5400
+
+COPY --chmod=0755 ./entrypoint.sh /app/entrypoint.sh
 
 WORKDIR /app
 COPY --from=builder /cartservice .
+
 EXPOSE 7070
 ENV DOTNET_EnableDiagnostics=0 \
     ASPNETCORE_HTTP_PORTS=7070
+
 USER 1000
-ENTRYPOINT ["/app/cartservice"]
+ENTRYPOINT ["/app/entrypoint.sh"]

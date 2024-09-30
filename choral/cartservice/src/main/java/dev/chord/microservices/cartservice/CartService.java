@@ -1,17 +1,27 @@
 package dev.chord.microservices.cartservice;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+
 import hipstershop.CartServiceGrpc;
 import hipstershop.Demo;
 import hipstershop.CartServiceGrpc.CartServiceBlockingStub;
 import hipstershop.Demo.Cart;
 import hipstershop.Demo.EmptyCartRequest;
-import io.grpc.Channel;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 
-public class CartService implements dev.chord.choreographies.CartService {
+public class CartService implements dev.chord.choreographies.CartService, AutoCloseable {
 
+    protected ManagedChannel channel;
     protected CartServiceBlockingStub connection;
 
-    public CartService(Channel channel) {
+    public CartService(InetSocketAddress address) {
+        channel = ManagedChannelBuilder
+                .forAddress(address.getHostName(), address.getPort())
+                .usePlaintext()
+                .build();
+
         this.connection = CartServiceGrpc.newBlockingStub(channel);
     }
 
@@ -40,6 +50,11 @@ public class CartService implements dev.chord.choreographies.CartService {
 
         Cart cart = connection.getCart(request);
         return cart;
+    }
+
+    @Override
+    public void close() throws InterruptedException {
+        channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
 }

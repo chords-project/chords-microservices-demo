@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>dev.chords.microservices.cartservice</groupId>
-    <artifactId>cartservice</artifactId>
+    <groupId>dev.chord</groupId>
+    <artifactId>frontend</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -79,7 +79,7 @@
                     <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                         <manifestEntries>
-                            <Main-Class>dev.chord.microservices.cartservice.Main</Main-Class>
+                            <Main-Class>dev.chord.microservices.frontend.Main</Main-Class>
                         </manifestEntries>
                         </transformer>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
@@ -95,7 +95,7 @@
                 </executions>
             </plugin>
 
-            <plugin>
+            <!-- <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
@@ -112,14 +112,14 @@
                                 <resource>
                                     <directory>${basedir}/target/</directory>
                                     <include>cartservice-1.0-SNAPSHOT.jar</include>
-                                    <!--<include>*.[MIME-TYPE]</include>-->
-                                    <!-- <filtering>false</filtering> -->
+                                    <!- -<include>*.[MIME-TYPE]</include>- ->
+                                    <!- - <filtering>false</filtering> - ->
                                 </resource>
                             </resources>
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin> -->
         </plugins>
     </build>
 

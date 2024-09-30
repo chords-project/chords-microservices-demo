@@ -7,11 +7,14 @@ import dev.chord.choreographies.ChorAddCartItem_Cart;
 import dev.chord.choreographies.WebshopChoreography;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.out.println("Starting choral cart service");
-        InetSocketAddress address = new InetSocketAddress(5400);
 
-        CartService cartService = new CartService(null);
+        int choralPort = Integer.parseInt(System.getenv().getOrDefault("CHORAL_PORT", "5400"));
+        InetSocketAddress address = new InetSocketAddress(choralPort);
+
+        int rpcPort = Integer.parseInt(System.getenv().getOrDefault("ASPNETCORE_HTTP_PORTS", "7070"));
+        CartService cartService = new CartService(new InetSocketAddress("localhost", rpcPort));
 
         TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>();
 
