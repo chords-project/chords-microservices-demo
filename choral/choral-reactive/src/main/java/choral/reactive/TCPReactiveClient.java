@@ -14,6 +14,8 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Au
     private Socket connection;
 
     public TCPReactiveClient(String address) throws URISyntaxException, UnknownHostException, IOException {
+        System.out.println("TCPReactiveClient connecting to " + address);
+
         URI uri = new URI(null, address, null, null, null).parseServerAuthority();
         InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
@@ -22,6 +24,7 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Au
 
     @Override
     public void send(Session<C> session, Serializable msg) {
+        System.out.println("TCPReactiveClient sending message on session: " + session);
         try (ObjectOutputStream stream = new ObjectOutputStream(connection.getOutputStream())) {
             TCPMessage<C> message = new TCPMessage<>(session, msg);
             stream.writeObject(message);

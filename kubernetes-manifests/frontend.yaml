@@ -43,29 +43,43 @@ spec:
               drop:
                 - ALL
             privileged: false
-            readOnlyRootFilesystem: true
+            # readOnlyRootFilesystem: true
           image: frontend
           ports:
           - containerPort: 8080
           readinessProbe:
             initialDelaySeconds: 10
             httpGet:
-              path: "/_healthz"
+              path: "/ping"
               port: 8080
-              httpHeaders:
-              - name: "Cookie"
-                value: "shop_session-id=x-readiness-probe"
           livenessProbe:
             initialDelaySeconds: 10
             httpGet:
-              path: "/_healthz"
+              path: "/ping"
               port: 8080
-              httpHeaders:
-              - name: "Cookie"
-                value: "shop_session-id=x-liveness-probe"
+          # readinessProbe:
+          #   initialDelaySeconds: 10
+          #   httpGet:
+          #     path: "/_healthz"
+          #     port: 8080
+          #     httpHeaders:
+          #     - name: "Cookie"
+          #       value: "shop_session-id=x-readiness-probe"
+          # livenessProbe:
+          #   initialDelaySeconds: 10
+          #   httpGet:
+          #     path: "/_healthz"
+          #     port: 8080
+          #     httpHeaders:
+          #     - name: "Cookie"
+          #       value: "shop_session-id=x-liveness-probe"
           env:
           - name: PORT
             value: "8080"
+          - name: CHORAL_FRONTEND_TO_CART
+            value: "cartservice:5400"
+          - name: CHORAL_CART_TO_FRONTEND
+            value: "0.0.0.0:5500"
           - name: PRODUCT_CATALOG_SERVICE_ADDR
             value: "productcatalogservice:3550"
           - name: CURRENCY_SERVICE_ADDR
@@ -99,11 +113,17 @@ spec:
           #   value: "" # This value would look like "http://123.123.123"
           resources:
             requests:
-              cpu: 100m
-              memory: 64Mi
-            limits:
               cpu: 200m
-              memory: 128Mi
+              memory: 180Mi
+            limits:
+              cpu: 300m
+              memory: 300Mi
+            # requests:
+            #   cpu: 100m
+            #   memory: 64Mi
+            # limits:
+            #   cpu: 200m
+            #   memory: 128Mi
 ---
 apiVersion: v1
 kind: Service
@@ -119,6 +139,9 @@ spec:
   - name: http
     port: 80
     targetPort: 8080
+  - name: choral-cart-to-frontend
+    port: 5500
+    targetPort: 5500
 ---
 apiVersion: v1
 kind: Service

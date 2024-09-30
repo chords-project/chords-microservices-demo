@@ -112,8 +112,6 @@
                                 <resource>
                                     <directory>${basedir}/target/</directory>
                                     <include>cartservice-1.0-SNAPSHOT.jar</include>
-                                    <!--<include>*.[MIME-TYPE]</include>-->
-                                    <!-- <filtering>false</filtering> -->
                                 </resource>
                             </resources>
                         </configuration>

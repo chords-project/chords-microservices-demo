@@ -24,6 +24,7 @@ public class FrontendController {
 
         cartToFrontendServer.onNewSession((session) -> {
             // No choreographies are instantiated by a new session...
+            System.out.println("Received new session: " + session);
         });
 
         Thread cartServerThread = new Thread(() -> {
@@ -36,6 +37,11 @@ public class FrontendController {
         cartServerThread.start();
     }
 
+    @GetMapping("/ping")
+    String ping() {
+        return "pong";
+    }
+
     @GetMapping("/cart/{userID}")
     String cart(@PathVariable String userID) {
 
@@ -44,6 +50,8 @@ public class FrontendController {
 
             // Get items
             Session<WebshopChoreography> getItemsSession = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
+            System.out.println("Initiating getItem choreography with session: " + getItemsSession);
+
             ChorGetCartItems_Client getItemsChor = new ChorGetCartItems_Client(
                     cartSvc.chanA(getItemsSession), cartToFrontendServer.chanB(getItemsSession));
 

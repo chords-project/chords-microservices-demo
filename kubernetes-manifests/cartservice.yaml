@@ -84,7 +84,7 @@ spec:
   - name: grpc
     port: 7070
     targetPort: 7070
-  - name: choral
+  - name: choral-frontend-to-cart
     port: 5400
     targetPort: 5400
 ---

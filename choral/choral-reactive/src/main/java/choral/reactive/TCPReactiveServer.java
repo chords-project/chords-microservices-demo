@@ -56,6 +56,7 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
 
     protected void clientListen(Socket connection) {
         try {
+            System.out.println("TCPReactiveServer client connected");
             while (true) {
                 try (ObjectInputStream stream = new ObjectInputStream(connection.getInputStream())) {
                     while (true) {
@@ -63,11 +64,11 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
                         receiveMessage(msg.session, msg.message);
                     }
                 } catch (StreamCorruptedException | ClassNotFoundException e) {
-                    System.out.println("Failed to deserialize class");
+                    System.out.println("TCPReactiveServer failed to deserialize class");
                 }
             }
         } catch (EOFException e) {
-            System.out.println("Client disconnected");
+            System.out.println("TCPReactiveServer client disconnected");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -81,6 +82,7 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Serializable> T recv(Session<C> session) {
+        System.out.println("TCPReactiveServer waiting to receive on session: " + session);
         CompletableFuture<Serializable> future = new CompletableFuture<>();
 
         synchronized (this) {
@@ -108,7 +110,7 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
     }
 
     private void receiveMessage(Session<C> session, Serializable msg) {
-        System.out.println("Received a new message with session " + session);
+        System.out.println("TCPReactiveServer received a new message with session " + session);
 
         synchronized (this) {
             if (this.recvQueue.containsKey(session)) {
