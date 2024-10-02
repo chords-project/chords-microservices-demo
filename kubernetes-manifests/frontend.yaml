@@ -47,16 +47,19 @@ spec:
           image: frontend
           ports:
           - containerPort: 8080
+          # Liveness for the choral sidecar (slower than website)
           readinessProbe:
             initialDelaySeconds: 10
             httpGet:
               path: "/ping"
-              port: 8080
+              port: 8081
           livenessProbe:
             initialDelaySeconds: 10
             httpGet:
               path: "/ping"
-              port: 8080
+              port: 8081
+          # Liveness for the Website
+          # 
           # readinessProbe:
           #   initialDelaySeconds: 10
           #   httpGet:
@@ -139,6 +142,9 @@ spec:
   - name: http
     port: 80
     targetPort: 8080
+  - name: choral-sidecar
+    port: 8081
+    targetPort: 8081
   - name: choral-cart-to-frontend
     port: 5500
     targetPort: 5500
