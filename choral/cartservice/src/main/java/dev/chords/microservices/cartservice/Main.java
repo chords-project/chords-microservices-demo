@@ -8,6 +8,7 @@ import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import dev.chords.choreographies.ChorAddCartItem_Cart;
 import dev.chords.choreographies.ChorGetCartItems_Cart;
+import dev.chords.choreographies.ChorPlaceOrder_Cart;
 import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopChoreography;
 
@@ -35,6 +36,21 @@ public class Main {
                         ChorGetCartItems_Cart getItemsChor = new ChorGetCartItems_Cart(
                                 frontendServer.chanB(session), clientConn.chanA(session), cartService);
                         getItemsChor.getItems();
+
+                    } catch (URISyntaxException | IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    break;
+                case PLACE_ORDER:
+                    System.out.println("New PLACE_ORDER request");
+                    try (TCPReactiveClient<WebshopChoreography> catalogConn = new TCPReactiveClient<WebshopChoreography>(
+                            ServiceResources.shared.cartToProductcatalog);) {
+
+                        ChorPlaceOrder_Cart placeOrderChor = new ChorPlaceOrder_Cart(cartService,
+                                frontendServer.chanB(session), catalogConn.chanA(session));
+
+                        placeOrderChor.placeOrder();
 
                     } catch (URISyntaxException | IOException e) {
                         e.printStackTrace();

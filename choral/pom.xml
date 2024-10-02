@@ -16,6 +16,7 @@
 	<modules>
 		<module>frontend</module>
 		<module>cartservice</module>
+		<module>productcatalog</module>
 
 		<module>choral-reactive</module>
 		<module>choreographies</module>

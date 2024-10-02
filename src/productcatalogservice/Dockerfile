@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7-labs
+
 # Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +20,14 @@ WORKDIR /src
 # restore dependencies
 COPY go.mod go.sum ./
 RUN go mod download
-COPY . .
+COPY --exclude=choral-build/ . .
 
 # Skaffold passes in debug-oriented compiler flags
 ARG SKAFFOLD_GO_GCFLAGS
 RUN CGO_ENABLED=0 GOOS=linux go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /productcatalogservice .
 
-FROM scratch
+# FROM scratch
+FROM openjdk:24-slim-bullseye@sha256:d3d89f0ff751bd92d856f11a0b3223744fbe55ee95ba8990bcfe016223762079
 
 WORKDIR /src
 COPY --from=builder /productcatalogservice ./server
@@ -36,5 +39,10 @@ COPY products.json .
 # See https://golang.org/pkg/runtime/
 ENV GOTRACEBACK=single
 
+COPY ./entrypoint.sh .
+RUN chmod 755 ./entrypoint.sh
+
+COPY ./choral-build/productcatalog-1.0-SNAPSHOT.jar /src/choral-productcatalog.jar
+
 EXPOSE 3550
-ENTRYPOINT ["/src/server"]
+ENTRYPOINT ["/src/entrypoint.sh"]

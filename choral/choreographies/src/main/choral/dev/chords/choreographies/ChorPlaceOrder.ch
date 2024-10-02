@@ -11,15 +11,17 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog) {
     private CartService@Cart cartSvc;
     private ProductCatalogService@ProductCatalog productCatalogSvc;
 
-    public DiChannel@(Client, Cart)<Serializable> ch_clientCart;
-    public DiChannel@(Cart, ProductCatalog)<Serializable> ch_cartProduct;
+    private DiChannel@(Client, Cart)<Serializable> ch_clientCart;
+    private DiChannel@(Cart, ProductCatalog)<Serializable> ch_cartProduct;
 
     public ChorPlaceOrder(
         CartService@Cart cartSvc,
+        ProductCatalogService@ProductCatalog productCatalogSvc,
         DiChannel@(Client, Cart)<Serializable> ch_clientCart,
         DiChannel@(Cart, ProductCatalog)<Serializable> ch_cartProduct
     ) {
         this.cartSvc = cartSvc;
+        this.productCatalogSvc = productCatalogSvc;
 
         this.ch_clientCart = ch_clientCart;
         this.ch_cartProduct = ch_cartProduct;
