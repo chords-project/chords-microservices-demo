@@ -4,10 +4,10 @@ import java.util.List;
 
 public interface ProductCatalogService@A {
     // RPCs
-    List@A<Product> listProducts();
+    Products@A listProducts();
     Product@A getProduct(String@A productID);
-    List@A<Product> searchProducts(String@A query);
+    Products@A searchProducts(String@A query);
 
     // Helper methods
-    List@A<OrderItem> prepOrderItems(Cart@A cart);
+    Products@A lookupCartProducts(Cart@A cart);
 }
