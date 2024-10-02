@@ -49,15 +49,15 @@ public class FrontendController {
     @GetMapping("/cart/{userID}")
     String cart(@PathVariable String userID) {
 
-        try (TCPReactiveClient<WebshopChoreography> cartSvc = new TCPReactiveClient<>(
+        try (TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
                 ServiceResources.shared.frontendToCart)) {
 
             // Get items
-            Session<WebshopChoreography> getItemsSession = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
-            System.out.println("Initiating getItem choreography with session: " + getItemsSession);
+            Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
+            System.out.println("Initiating getItem choreography with session: " + session);
 
             ChorGetCartItems_Client getItemsChor = new ChorGetCartItems_Client(
-                    cartSvc.chanA(getItemsSession), cartToFrontendServer.chanB(getItemsSession));
+                    cartClient.chanA(session), cartToFrontendServer.chanB(session));
 
             Cart cart = getItemsChor.getItems("user1");
             return "Got back cart: " + cart.userID + ", " + cart.items;
@@ -72,14 +72,22 @@ public class FrontendController {
     String checkout(@RequestBody ReqPlaceOrder request) {
         System.out.println("Placing order: " + request);
 
-        // Get items
-        Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.PLACE_ORDER);
-        System.out.println("Initiating placeOrder choreography with session: " + session);
+        try (TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
+                ServiceResources.shared.frontendToCart)) {
 
-        ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client();
+            // Get items
+            Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.PLACE_ORDER);
+            System.out.println("Initiating placeOrder choreography with session: " + session);
 
-        placeOrderChor.placeOrder(request);
+            ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(cartClient.chanA(session));
 
-        return "Placed order";
+            placeOrderChor.placeOrder(request);
+
+            return "Placed order";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Server error";
+        }
     }
 }
