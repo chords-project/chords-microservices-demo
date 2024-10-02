@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7-labs
+
 # Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +20,7 @@ WORKDIR /app
 COPY cartservice.csproj .
 RUN dotnet restore cartservice.csproj \
     -r linux-x64
-COPY . .
+COPY --exclude=choral-build/ . .
 RUN dotnet publish cartservice.csproj \
     -p:PublishSingleFile=true \
     -r linux-x64 \
