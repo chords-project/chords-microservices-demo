@@ -50,6 +50,17 @@ spec:
           value: "50051"
         - name: DISABLE_PROFILER
           value: "1"
+
+        # Ingoing choral channels
+        - name: CHORAL_FRONTEND_TO_SHIPPING
+          value: "0.0.0.0:5403"
+        - name: CHORAL_CART_TO_SHIPPING
+          value: "0.0.0.0:5407"
+
+        # Outgoing choral channels
+        - name: CHORAL_SHIPPING_TO_FRONTEND
+          value: "frontend:5410"
+
         readinessProbe:
           periodSeconds: 5
           grpc:

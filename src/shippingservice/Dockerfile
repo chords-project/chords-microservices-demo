@@ -24,7 +24,8 @@ COPY . .
 ARG SKAFFOLD_GO_GCFLAGS
 RUN CGO_ENABLED=0 GOOS=linux go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/shippingservice .
 
-FROM scratch
+# FROM scratch
+FROM openjdk:24-slim-bullseye@sha256:d3d89f0ff751bd92d856f11a0b3223744fbe55ee95ba8990bcfe016223762079
 
 WORKDIR /src
 COPY --from=builder /go/bin/shippingservice /src/shippingservice
@@ -34,6 +35,11 @@ ENV APP_PORT=50051
 # Default behavior - a failure prints a stack trace for the current goroutine.
 # See https://golang.org/pkg/runtime/
 ENV GOTRACEBACK=single
+
+COPY ./entrypoint.sh .
+RUN chmod 755 ./entrypoint.sh
+
+COPY ./choral-build/shippingservice-1.0-SNAPSHOT.jar /src/choral-shippingservice.jar
 
 EXPOSE 50051
 ENTRYPOINT ["/src/shippingservice"]

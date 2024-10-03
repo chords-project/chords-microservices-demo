@@ -49,12 +49,19 @@ spec:
         env:
         - name: REDIS_ADDR
           value: "redis-cart:6379"
+
+        # Ingoing choral channels
         - name: CHORAL_FRONTEND_TO_CART
-          value: "0.0.0.0:5400"
+          value: "0.0.0.0:5401"
+
+        # Outgoing choral channels
         - name: CHORAL_CART_TO_FRONTEND
-          value: "frontend:5500"
+          value: "frontend:5405"
         - name: CHORAL_CART_TO_PRODUCTCATALOG
-          value: "productcatalogservice:5600"
+          value: "productcatalogservice:5406"
+        - name: CHORAL_CART_TO_SHIPPING
+          value: "shippingservice:5407"
+
         resources:
           requests:
             cpu: 200m

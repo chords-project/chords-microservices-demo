@@ -51,8 +51,15 @@ spec:
           value: "3550"
         - name: DISABLE_PROFILER
           value: "1"
+
+        # Ingoing choral channels
         - name: CHORAL_CART_TO_PRODUCTCATALOG
-          value: "0.0.0.0:5600"
+          value: "0.0.0.0:5406"
+
+        # Outgoing choral channels
+        - name: CHORAL_PRODUCTCATALOG_TO_CURRENCY
+          value: "currencyservice:5608"
+
         readinessProbe:
           grpc:
             port: 3550

@@ -46,7 +46,7 @@ public class FrontendController {
 
         Thread serverThread = new Thread(() -> {
             try {
-                server.listen(ServiceResources.shared.shippingToFrontend);
+                server.listen(address);
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }

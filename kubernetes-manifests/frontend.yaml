@@ -105,12 +105,12 @@ spec:
             value: "shippingservice:5403"
           - name: CHORAL_FRONTEND_TO_PAYMENT
             value: "paymentservice:5404"
-            
+
           # Choral ingoing channels
           - name: CHORAL_CURRENCY_TO_FRONTEND
-            value: "0.0.0.0:5408"
-          - name: CHORAL_SHIPPING_TO_FRONTEND
             value: "0.0.0.0:5409"
+          - name: CHORAL_SHIPPING_TO_FRONTEND
+            value: "0.0.0.0:5410"
 
           # # ENV_PLATFORM: One of: local, gcp, aws, azure, onprem, alibaba
           # # When not set, defaults to "local" unless running in GKE, otherwies auto-sets to gcp
