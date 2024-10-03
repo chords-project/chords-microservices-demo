@@ -20,6 +20,7 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Au
         InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
         this.connection = new Socket(addr.getHostName(), addr.getPort());
+        System.out.println("TCPReactiveClient connected to " + address);
     }
 
     @Override

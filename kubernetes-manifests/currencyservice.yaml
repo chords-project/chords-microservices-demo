@@ -57,7 +57,7 @@ spec:
         - name: CHORAL_FRONTEND_TO_CURRENCY
           value: "0.0.0.0:5402"
         - name: CHORAL_PRODUCTCATALOG_TO_CURRENCY
-          value: "0.0.0.0:5608"
+          value: "0.0.0.0:5408"
 
         # Outgoing choral channels
         - name: CHORAL_CURRENCY_TO_FRONTEND
@@ -91,6 +91,12 @@ spec:
   - name: grpc
     port: 7000
     targetPort: 7000
+  - name: frontend-to-currency
+    port: 5402
+    targetPort: 5402
+  - name: productcatalog-to-currency
+    port: 5408
+    targetPort: 5408
 ---
 apiVersion: v1
 kind: ServiceAccount

@@ -23,13 +23,13 @@ public class Main {
         frontendServer.onNewSession((session) -> {
             switch (session.choreographyID) {
                 case ADD_CART_ITEM:
-                    System.out.println("New ADD_CART_ITEM request " + session);
+                    System.out.println("[CART] New ADD_CART_ITEM request " + session);
                     ChorAddCartItem_Cart addItemChor = new ChorAddCartItem_Cart(frontendServer.chanB(session),
                             cartService);
                     addItemChor.addItem();
                     break;
                 case GET_CART_ITEMS:
-                    System.out.println("New GET_CART_ITEMS request " + session);
+                    System.out.println("[CART] New GET_CART_ITEMS request " + session);
                     try (TCPReactiveClient<WebshopChoreography> clientConn = new TCPReactiveClient<WebshopChoreography>(
                             ServiceResources.shared.cartToFrontend);) {
 
@@ -43,7 +43,7 @@ public class Main {
 
                     break;
                 case PLACE_ORDER:
-                    System.out.println("New PLACE_ORDER request " + session);
+                    System.out.println("[CART] New PLACE_ORDER request " + session);
                     try (
                             TCPReactiveClient<WebshopChoreography> catalogClient = new TCPReactiveClient<WebshopChoreography>(
                                     ServiceResources.shared.cartToProductcatalog);

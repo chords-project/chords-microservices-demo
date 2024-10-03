@@ -47,7 +47,7 @@ public class Main {
     private static void handleNewSession(Session<WebshopChoreography> session) {
         switch (session.choreographyID) {
             case PLACE_ORDER:
-                System.out.println("New PLACE_ORDER request " + session);
+                System.out.println("[SHIPPING] New PLACE_ORDER request " + session);
 
                 try (TCPReactiveClient<WebshopChoreography> frontendClient = new TCPReactiveClient<>(
                         ServiceResources.shared.shippingToFrontend);) {
@@ -64,7 +64,7 @@ public class Main {
 
                 break;
             default:
-                System.out.println("Invalid choreography ID " + session.choreographyID);
+                System.out.println("[SHIPPING] Invalid choreography ID " + session.choreographyID);
                 break;
         }
     }

@@ -58,7 +58,7 @@ spec:
 
         # Outgoing choral channels
         - name: CHORAL_PRODUCTCATALOG_TO_CURRENCY
-          value: "currencyservice:5608"
+          value: "currencyservice:5408"
 
         readinessProbe:
           grpc:
@@ -89,8 +89,8 @@ spec:
     port: 3550
     targetPort: 3550
   - name: choral-cart-to-productcatalog
-    port: 5600
-    targetPort: 5600
+    port: 5406
+    targetPort: 5406
 ---
 apiVersion: v1
 kind: ServiceAccount

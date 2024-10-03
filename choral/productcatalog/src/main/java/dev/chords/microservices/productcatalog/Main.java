@@ -21,7 +21,7 @@ public class Main {
         cartServer.onNewSession((session) -> {
             switch (session.choreographyID) {
                 case PLACE_ORDER:
-                    System.out.println("New PLACE_ORDER request");
+                    System.out.println("[CART] New PLACE_ORDER request");
 
                     try (TCPReactiveClient<WebshopChoreography> currencyClient = new TCPReactiveClient<>(
                             ServiceResources.shared.productcatalogToCurrency);) {
@@ -38,7 +38,7 @@ public class Main {
 
                     break;
                 default:
-                    System.out.println("Invalid choreography ID " + session.choreographyID);
+                    System.out.println("[CART] Invalid choreography ID " + session.choreographyID);
                     break;
             }
         });

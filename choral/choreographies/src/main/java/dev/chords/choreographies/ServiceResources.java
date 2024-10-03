@@ -16,7 +16,7 @@ public class ServiceResources {
     public String cartToShipping = System.getenv().getOrDefault("CHORAL_CART_TO_SHIPPING", "0.0.0.0:5407");
 
     public String productcatalogToCurrency = System.getenv().getOrDefault("CHORAL_PRODUCTCATALOG_TO_CURRENCY",
-            "0.0.0.0:5608");
+            "0.0.0.0:5408");
 
     public String currencyToFrontend = System.getenv().getOrDefault("CHORAL_CURRENCY_TO_FRONTEND", "0.0.0.0:5409");
     public String shippingToFrontend = System.getenv().getOrDefault("CHORAL_SHIPPING_TO_FRONTEND", "0.0.0.0:5410");

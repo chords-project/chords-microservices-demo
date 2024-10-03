@@ -90,6 +90,12 @@ spec:
   - name: grpc
     port: 50051
     targetPort: 50051
+  - name: frontend-to-shipping
+    port: 5403
+    targetPort: 5403
+  - name: cart-to-shipping
+    port: 5407
+    targetPort: 5407
 ---
 apiVersion: v1
 kind: ServiceAccount

@@ -94,8 +94,8 @@ spec:
     port: 7070
     targetPort: 7070
   - name: choral-frontend-to-cart
-    port: 5400
-    targetPort: 5400
+    port: 5401
+    targetPort: 5401
 ---
 apiVersion: v1
 kind: ServiceAccount

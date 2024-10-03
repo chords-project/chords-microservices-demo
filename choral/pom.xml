@@ -19,6 +19,7 @@
 		<module>productcatalog</module>
 		<module>shippingservice</module>
 		<module>currencyservice</module>
+		<module>paymentservice</module>
 
 		<module>choral-reactive</module>
 		<module>choreographies</module>

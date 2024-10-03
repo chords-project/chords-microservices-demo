@@ -158,9 +158,12 @@ spec:
   - name: choral-sidecar
     port: 8081
     targetPort: 8081
-  - name: choral-cart-to-frontend
-    port: 5500
-    targetPort: 5500
+  - name: choral-currency-to-frontend
+    port: 5409
+    targetPort: 5409
+  - name: choral-shipping-to-frontend
+    port: 5410
+    targetPort: 5410
 ---
 apiVersion: v1
 kind: Service
