@@ -1,12 +1,10 @@
 package dev.chords.microservices.productcatalog;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
 
 import dev.chords.choreographies.Cart;
-import dev.chords.choreographies.OrderItem;
 import dev.chords.choreographies.Product;
+import dev.chords.choreographies.Products;
 
 public class ProductCatalogService implements dev.chords.choreographies.ProductCatalogService {
 
@@ -14,23 +12,27 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
     }
 
     @Override
-    public List<Product> listProducts() {
-        return new ArrayList<>();
+    public Products listProducts() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'listProducts'");
     }
 
     @Override
     public Product getProduct(String productID) {
-        return null;
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getProduct'");
     }
 
     @Override
-    public List<Product> searchProducts(String query) {
-        return new ArrayList<>();
+    public Products searchProducts(String query) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'searchProducts'");
     }
 
     @Override
-    public List<OrderItem> prepOrderItems(Cart cart) {
-        return new ArrayList<>();
+    public Products lookupCartProducts(Cart cart) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'lookupCartProducts'");
     }
 
 }

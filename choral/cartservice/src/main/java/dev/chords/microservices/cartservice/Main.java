@@ -44,11 +44,16 @@ public class Main {
                     break;
                 case PLACE_ORDER:
                     System.out.println("New PLACE_ORDER request");
-                    try (TCPReactiveClient<WebshopChoreography> catalogConn = new TCPReactiveClient<WebshopChoreography>(
-                            ServiceResources.shared.cartToProductcatalog);) {
+                    try (
+                            TCPReactiveClient<WebshopChoreography> catalogClient = new TCPReactiveClient<WebshopChoreography>(
+                                    ServiceResources.shared.cartToProductcatalog);
+                            TCPReactiveClient<WebshopChoreography> shippingClient = new TCPReactiveClient<WebshopChoreography>(
+                                    ServiceResources.shared.cartToShipping);) {
 
-                        ChorPlaceOrder_Cart placeOrderChor = new ChorPlaceOrder_Cart(cartService,
-                                frontendServer.chanB(session), catalogConn.chanA(session));
+                        ChorPlaceOrder_Cart placeOrderChor = new ChorPlaceOrder_Cart(
+                                cartService,
+                                frontendServer.chanB(session), catalogClient.chanA(session),
+                                shippingClient.chanA(session));
 
                         placeOrderChor.placeOrder();
 

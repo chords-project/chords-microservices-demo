@@ -79,10 +79,6 @@ spec:
           env:
           - name: PORT
             value: "8080"
-          - name: CHORAL_FRONTEND_TO_CART
-            value: "cartservice:5400"
-          - name: CHORAL_CART_TO_FRONTEND
-            value: "0.0.0.0:5500"
           - name: PRODUCT_CATALOG_SERVICE_ADDR
             value: "productcatalogservice:3550"
           - name: CURRENCY_SERVICE_ADDR
@@ -99,6 +95,23 @@ spec:
             value: "adservice:9555"
           - name: SHOPPING_ASSISTANT_SERVICE_ADDR
             value: "shoppingassistantservice:80"
+          
+          # Choral outgoing channels
+          - name: CHORAL_FRONTEND_TO_CART
+            value: "cartservice:5401"
+          - name: CHORAL_FRONTEND_TO_CURRENCY
+            value: "currencyservice:5402"
+          - name: CHORAL_FRONTEND_TO_SHIPPING
+            value: "shippingservice:5403"
+          - name: CHORAL_FRONTEND_TO_PAYMENT
+            value: "paymentservice:5404"
+            
+          # Choral ingoing channels
+          - name: CHORAL_CURRENCY_TO_FRONTEND
+            value: "0.0.0.0:5408"
+          - name: CHORAL_SHIPPING_TO_FRONTEND
+            value: "0.0.0.0:5409"
+
           # # ENV_PLATFORM: One of: local, gcp, aws, azure, onprem, alibaba
           # # When not set, defaults to "local" unless running in GKE, otherwies auto-sets to gcp
           # - name: ENV_PLATFORM

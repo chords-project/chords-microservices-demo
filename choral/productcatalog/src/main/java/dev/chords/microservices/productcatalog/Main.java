@@ -1,7 +1,10 @@
 package dev.chords.microservices.productcatalog;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 
+import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import dev.chords.choreographies.ChorPlaceOrder_ProductCatalog;
 import dev.chords.choreographies.ServiceResources;
@@ -20,10 +23,18 @@ public class Main {
                 case PLACE_ORDER:
                     System.out.println("New PLACE_ORDER request");
 
-                    ChorPlaceOrder_ProductCatalog placeOrderChor = new ChorPlaceOrder_ProductCatalog(
-                            catalogService,
-                            cartServer.chanB(session));
-                    placeOrderChor.placeOrder();
+                    try (TCPReactiveClient<WebshopChoreography> currencyClient = new TCPReactiveClient<>(
+                            ServiceResources.shared.productcatalogToCurrency);) {
+
+                        ChorPlaceOrder_ProductCatalog placeOrderChor = new ChorPlaceOrder_ProductCatalog(
+                                catalogService,
+                                cartServer.chanB(session), currencyClient.chanA(session));
+
+                        placeOrderChor.placeOrder();
+
+                    } catch (IOException | URISyntaxException e) {
+                        e.printStackTrace();
+                    }
 
                     break;
                 default:

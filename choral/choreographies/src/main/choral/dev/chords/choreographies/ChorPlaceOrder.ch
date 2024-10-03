@@ -71,11 +71,9 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         // Fetch user cart items
         String@Cart userID_cart = ch_clientCart.<SerializableString>com(new SerializableString@Client(req.userID)).string;
         Cart@Cart userCart = cartSvc.getCart(userID_cart);
-        System@Cart.out.println("Got cart for place order request: user_id="@Cart + userID_cart + " products="@Cart + userCart.items.size());
         
         // Lookup cart item products
         Cart@ProductCatalog cart_pc = ch_cartProduct.<Cart>com(userCart);
-        System@ProductCatalog.out.println("Product catalog place order choreography started: user_id="@ProductCatalog + cart_pc.userID + " products="@ProductCatalog + cart_pc.items.size());
         Products@ProductCatalog products = productCatalogSvc.lookupCartProducts(cart_pc);
         
         // Convert currency of products

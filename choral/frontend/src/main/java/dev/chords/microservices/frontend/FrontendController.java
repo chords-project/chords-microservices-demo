@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import choral.reactive.Session;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
+import choral.reactive.ReactiveReceiver.NewSessionEvent;
 import dev.chords.choreographies.Cart;
 import dev.chords.choreographies.ChorGetCartItems_Client;
 import dev.chords.choreographies.ChorPlaceOrder_Client;
@@ -22,23 +23,37 @@ import dev.chords.choreographies.WebshopChoreography;
 public class FrontendController {
 
     TCPReactiveServer<WebshopChoreography> cartToFrontendServer;
+    TCPReactiveServer<WebshopChoreography> currencyToFrontendServer;
+    TCPReactiveServer<WebshopChoreography> shippingToFrontendServer;
 
     public FrontendController() {
-        cartToFrontendServer = new TCPReactiveServer<>();
+        cartToFrontendServer = initializeServer("CART_TO_FRONTEND", ServiceResources.shared.cartToFrontend);
+        currencyToFrontendServer = initializeServer("CURRENCY_TO_FRONTEND", ServiceResources.shared.currencyToFrontend);
+        shippingToFrontendServer = initializeServer("SHIPPING_TO_FRONTEND", ServiceResources.shared.shippingToFrontend);
+    }
 
-        cartToFrontendServer.onNewSession((session) -> {
+    private TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address) {
+        return initializeServer(name, address, (session) -> {
             // No choreographies are instantiated by a new session...
-            System.out.println("Received new session: " + session);
+            System.out.println("Received new session from " + name + " service: " + session);
         });
+    }
 
-        Thread cartServerThread = new Thread(() -> {
+    private TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address,
+            NewSessionEvent<WebshopChoreography> onNewSession) {
+        TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>();
+        server.onNewSession(onNewSession);
+
+        Thread serverThread = new Thread(() -> {
             try {
-                cartToFrontendServer.listen(ServiceResources.shared.cartToFrontend);
+                server.listen(ServiceResources.shared.shippingToFrontend);
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
-        }, "SERVER_CART_TO_FRONTEND");
-        cartServerThread.start();
+        }, "SERVER_" + name);
+        serverThread.start();
+
+        return server;
     }
 
     @GetMapping("/ping")
@@ -72,14 +87,27 @@ public class FrontendController {
     String checkout(@RequestBody ReqPlaceOrder request) {
         System.out.println("Placing order: " + request);
 
-        try (TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
-                ServiceResources.shared.frontendToCart)) {
+        try (
+                TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.frontendToCart);
+                TCPReactiveClient<WebshopChoreography> currencyClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.frontendToCurrency);
+                TCPReactiveClient<WebshopChoreography> shippingClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.frontendToShipping);
+                TCPReactiveClient<WebshopChoreography> paymentClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.frontendToPayment);) {
 
             // Get items
             Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.PLACE_ORDER);
             System.out.println("Initiating placeOrder choreography with session: " + session);
 
-            ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(cartClient.chanA(session));
+            ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
+                    cartClient.chanA(session),
+                    currencyClient.chanA(session),
+                    shippingClient.chanA(session),
+                    paymentClient.chanA(session),
+                    currencyToFrontendServer.chanB(session),
+                    shippingToFrontendServer.chanB(session));
 
             placeOrderChor.placeOrder(request);
 
