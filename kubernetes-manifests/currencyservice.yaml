@@ -52,6 +52,17 @@ spec:
           value: "7000"
         - name: DISABLE_PROFILER
           value: "1"
+
+        # Ingoing choral channels
+        - name: CHORAL_FRONTEND_TO_CURRENCY
+          value: "0.0.0.0:5402"
+        - name: CHORAL_PRODUCTCATALOG_TO_CURRENCY
+          value: "0.0.0.0:5608"
+
+        # Outgoing choral channels
+        - name: CHORAL_CURRENCY_TO_FRONTEND
+          value: "frontend:5409"
+
         readinessProbe:
           grpc:
             port: 7000

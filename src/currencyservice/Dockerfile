@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7-labs
+
 # Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,14 +31,18 @@ RUN npm install --only=production
 
 FROM alpine:3.20.3@sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d
 
-RUN apk add --no-cache nodejs
+RUN apk add --no-cache nodejs openjdk21
 
 WORKDIR /usr/src/app
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 
-COPY . .
+COPY --exclude=choral-build/ . .
+
+RUN chmod 755 ./entrypoint.sh
+
+COPY choral-build/currencyservice-1.0-SNAPSHOT.jar choral-currencyservice.jar
 
 EXPOSE 7000
 
-ENTRYPOINT [ "node", "server.js" ]
+ENTRYPOINT [ "./entrypoint.sh" ]

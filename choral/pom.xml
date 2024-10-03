@@ -18,6 +18,7 @@
 		<module>cartservice</module>
 		<module>productcatalog</module>
 		<module>shippingservice</module>
+		<module>currencyservice</module>
 
 		<module>choral-reactive</module>
 		<module>choreographies</module>
