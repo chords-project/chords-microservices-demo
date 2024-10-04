@@ -49,7 +49,7 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
 
         Demo.Cart cart = connection.getCart(request);
         List<CartItem> items = cart.getItemsList().stream()
-                .map(item -> new CartItem(item.getProductId())).toList();
+                .map(item -> new CartItem(item.getProductId(), item.getQuantity())).toList();
 
         return new Cart(cart.getUserId(), items);
     }

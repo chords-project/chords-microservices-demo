@@ -9,5 +9,5 @@ public interface ProductCatalogService@A {
     Products@A searchProducts(String@A query);
 
     // Helper methods
-    Products@A lookupCartProducts(Cart@A cart);
+    OrderItems@A lookupCartPrices(Cart@A cart);
 }

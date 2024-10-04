@@ -8,5 +8,5 @@ public interface CurrencyService@A {
     Money@A convert(Money@A from, String@A toCurrency);
     
     // Helpers
-    OrderItems@A convertProducts(Products@A products, String@A toCurrency);
+    OrderItems@A convertProducts(OrderItems@A products, String@A toCurrency);
 }

@@ -19,8 +19,4 @@ public class Money@A implements Serializable@A {
         this.units = units;
         this.nanos = nanos;
     }
-
-    public static Money@A sum(Money@A a, Money@A b) {
-        return new Money@A(a.currencyCode, a.units + b.units, a.nanos + b.nanos);
-    }
 }

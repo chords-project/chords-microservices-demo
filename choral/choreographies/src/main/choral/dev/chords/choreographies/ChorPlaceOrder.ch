@@ -8,6 +8,7 @@ import choral.channels.DiChannel;
 
 public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Shipping) {
 
+    private ClientService@Client clientSvc;
     private CartService@Cart cartSvc;
     private ProductCatalogService@ProductCatalog productCatalogSvc;
     private CurrencyService@Currency currencySvc;
@@ -29,6 +30,7 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
     private DiChannel@(Shipping, Client)<Serializable> ch_shippingClient;
 
     public ChorPlaceOrder(
+        ClientService@Client clientSvc,
         CartService@Cart cartSvc,
         ProductCatalogService@ProductCatalog productCatalogSvc,
         CurrencyService@Currency currencySvc,
@@ -44,6 +46,7 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         DiChannel@(Currency, Client)<Serializable> ch_currencyClient,
         DiChannel@(Shipping, Client)<Serializable> ch_shippingClient
     ) {
+        this.clientSvc = clientSvc;
         this.cartSvc = cartSvc;
         this.productCatalogSvc = productCatalogSvc;
         this.currencySvc = currencySvc;
@@ -72,14 +75,14 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         String@Cart userID_cart = ch_clientCart.<SerializableString>com(new SerializableString@Client(req.userID)).string;
         Cart@Cart userCart = cartSvc.getCart(userID_cart);
         
-        // Lookup cart item products
+        // Lookup cart item prices
         Cart@ProductCatalog cart_pc = ch_cartProduct.<Cart>com(userCart);
-        Products@ProductCatalog products = productCatalogSvc.lookupCartProducts(cart_pc);
+        OrderItems@ProductCatalog cartPrices = productCatalogSvc.lookupCartPrices(cart_pc);
         
         // Convert currency of products
         String@Currency userCurrency = ch_clientCurrency.<SerializableString>com(new SerializableString@Client(req.userCurrency)).string;
-        Products@Currency products_currency = ch_productCurrency.<Products>com(products);
-        OrderItems@Currency orderItems = currencySvc.convertProducts(products_currency, userCurrency);
+        OrderItems@Currency cartPrices_currency = ch_productCurrency.<OrderItems>com(cartPrices);
+        OrderItems@Currency orderItems = currencySvc.convertProducts(cartPrices_currency, userCurrency);
         OrderItems@Client orderItems_client = ch_currencyClient.<OrderItems>com(orderItems);
 
         // Calculate shipping
@@ -93,7 +96,7 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         String@Client trackingID_client = ch_shippingClient.<SerializableString>com(new SerializableString@Shipping(trackingID)).string;
 
         // Charge card
-        Money@Client totalPrice = Money@Client.sum(orderItems_client.total, shippingCost_client);
+        Money@Client totalPrice = clientSvc.totalPrice(orderItems_client, shippingCost_client);
         Money@Payment chargePrice = ch_clientPayment.<Money>com(totalPrice);
         CreditCardInfo@Payment creditCartInfo = ch_clientPayment.<CreditCardInfo>com(req.creditCard);
         String@Payment txID = paymentSvc.charge(chargePrice, creditCartInfo);

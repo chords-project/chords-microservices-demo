@@ -102,6 +102,7 @@ public class FrontendController {
             System.out.println("Initiating placeOrder choreography with session: " + session);
 
             ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
+                    new ClientService(),
                     cartClient.chanA(session),
                     currencyClient.chanA(session),
                     shippingClient.chanA(session),
