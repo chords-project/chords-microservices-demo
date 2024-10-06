@@ -36,6 +36,8 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
 
     @Override
     public Products listProducts() {
+        System.out.println("[PRODUCT_CATALOG] List products");
+
         ListProductsResponse response = connection.listProducts(Empty.getDefaultInstance());
 
         List<Product> products = response.getProductsList().stream().map(prod -> new Product(
@@ -53,6 +55,7 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
 
     @Override
     public Product getProduct(String productID) {
+        System.out.println("[PRODUCT_CATALOG] Get product: productID=" + productID);
 
         GetProductRequest request = GetProductRequest.newBuilder().setId(productID).build();
         Demo.Product p = connection.getProduct(request);
@@ -62,6 +65,8 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
 
     @Override
     public Products searchProducts(String query) {
+        System.out.println("[PRODUCT_CATALOG] Search products: query=" + query);
+
         SearchProductsRequest request = SearchProductsRequest.newBuilder().setQuery(query).build();
         List<Product> products = connection
                 .searchProducts(request)
@@ -74,6 +79,8 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
 
     @Override
     public OrderItems lookupCartPrices(Cart cart) {
+        System.out.println("[PRODUCT_CATALOG] Lookup cart prices");
+
         List<OrderItem> products = cart.items.stream()
                 .map(item -> new OrderItem(item, getProduct(item.productID).priceUSD)).toList();
 

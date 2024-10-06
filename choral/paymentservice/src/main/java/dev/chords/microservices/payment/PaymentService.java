@@ -28,6 +28,8 @@ public class PaymentService implements dev.chords.choreographies.PaymentService 
 
     @Override
     public String charge(Money price, CreditCardInfo creditCardInfo) {
+        System.out.println("[PAYMENT] Charge credit card");
+
         ChargeRequest request = ChargeRequest
                 .newBuilder()
                 .setAmount(

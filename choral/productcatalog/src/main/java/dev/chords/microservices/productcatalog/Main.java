@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 
+import choral.reactive.SessionPool;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import dev.chords.choreographies.ChorPlaceOrder_ProductCatalog;
@@ -17,11 +18,13 @@ public class Main {
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "3550"));
         ProductCatalogService catalogService = new ProductCatalogService(new InetSocketAddress("localhost", rpcPort));
 
-        TCPReactiveServer<WebshopChoreography> cartServer = new TCPReactiveServer<>();
+        SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
+
+        TCPReactiveServer<WebshopChoreography> cartServer = new TCPReactiveServer<>(sessionPool);
         cartServer.onNewSession((session) -> {
             switch (session.choreographyID) {
                 case PLACE_ORDER:
-                    System.out.println("[CART] New PLACE_ORDER request");
+                    System.out.println("[PRODUCT_CATALOG] New PLACE_ORDER request" + session.choreographyID);
 
                     try (TCPReactiveClient<WebshopChoreography> currencyClient = new TCPReactiveClient<>(
                             ServiceResources.shared.productcatalogToCurrency);) {
@@ -31,6 +34,7 @@ public class Main {
                                 cartServer.chanB(session), currencyClient.chanA(session));
 
                         placeOrderChor.placeOrder();
+                        System.out.println("[PRODUCT_CATALOG] PLACE_ORDER choreography completed " + session);
 
                     } catch (IOException | URISyntaxException e) {
                         e.printStackTrace();
@@ -38,7 +42,7 @@ public class Main {
 
                     break;
                 default:
-                    System.out.println("[CART] Invalid choreography ID " + session.choreographyID);
+                    System.out.println("[PRODUCT_CATALOG] Invalid choreography ID " + session.choreographyID);
                     break;
             }
         });

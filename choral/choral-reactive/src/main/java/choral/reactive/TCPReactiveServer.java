@@ -22,8 +22,10 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
 
     private NewSessionEvent<C> newSessionEvent = null;
     private ServerSocket serverSocket = null;
+    private SessionPool<C> sessionPool;
 
-    public TCPReactiveServer() {
+    public TCPReactiveServer(SessionPool<C> sessionPool) {
+        this.sessionPool = sessionPool;
     }
 
     public void listen(String address) throws URISyntaxException {
@@ -56,20 +58,23 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
 
     protected void clientListen(Socket connection) {
         try {
-            System.out.println("TCPReactiveServer client connected");
+            System.out.println("TCPReactiveServer client connected: address=" + connection.getInetAddress());
             while (true) {
                 try (ObjectInputStream stream = new ObjectInputStream(connection.getInputStream())) {
                     while (true) {
                         TCPMessage<C> msg = (TCPMessage<C>) stream.readObject();
-                        receiveMessage(msg.session, msg.message);
+                        receiveMessage(connection, msg.session, msg.message);
                     }
                 } catch (StreamCorruptedException | ClassNotFoundException e) {
-                    System.out.println("TCPReactiveServer failed to deserialize class");
+                    System.out.println(
+                            "TCPReactiveServer failed to deserialize class: address=" + connection.getInetAddress());
                 }
             }
-        } catch (EOFException e) {
-            System.out.println("TCPReactiveServer client disconnected");
+            // } catch (EOFException e) {
+            // System.out.println("TCPReactiveServer client disconnected: address=" +
+            // connection.getInetAddress());
         } catch (IOException e) {
+            System.out.println("TCPReactiveServer client exception: address=" + connection.getInetAddress());
             e.printStackTrace();
         }
     }
@@ -82,7 +87,7 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Serializable> T recv(Session<C> session) {
-        System.out.println("TCPReactiveServer waiting to receive on session: " + session);
+        System.out.println("TCPReactiveServer waiting to receive: session=" + session);
         CompletableFuture<Serializable> future = new CompletableFuture<>();
 
         synchronized (this) {
@@ -109,10 +114,13 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
         }
     }
 
-    private void receiveMessage(Session<C> session, Serializable msg) {
-        System.out.println("TCPReactiveServer received a new message with session " + session);
+    private void receiveMessage(Socket connection, Session<C> session, Serializable msg) {
+        System.out.println(
+                "TCPReactiveServer received message: address=" + connection.getInetAddress() + " session=" + session);
 
         synchronized (this) {
+            boolean isNewSession = sessionPool.registerSession(session);
+
             if (this.recvQueue.containsKey(session)) {
                 // the flow already exists, pass the message to recv...
 
@@ -125,7 +133,9 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
             } else {
                 // this is a new flow, enqueue the message and notify the event handler
                 enqueueSend(session, msg);
+            }
 
+            if (isNewSession) {
                 // Handle new session in new thread
                 new Thread(() -> {
                     newSessionEvent.onNewSession(session);

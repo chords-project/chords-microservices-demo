@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 
 import choral.reactive.Session;
+import choral.reactive.SessionPool;
 import choral.reactive.TCPReactiveServer;
 import dev.chords.choreographies.ChorPlaceOrder_Payment;
 import dev.chords.choreographies.ServiceResources;
@@ -14,6 +15,7 @@ public class Main {
     public static PaymentService paymentService;
 
     public static TCPReactiveServer<WebshopChoreography> frontendServer = null;
+    public static SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral payment service");
@@ -25,7 +27,7 @@ public class Main {
     }
 
     public static TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address) {
-        TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>();
+        TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>(sessionPool);
         server.onNewSession(Main::handleNewSession);
 
         Thread serverThread = new Thread(() -> {
@@ -50,6 +52,7 @@ public class Main {
                         frontendServer.chanB(session));
 
                 placeOrderChor.placeOrder();
+                System.out.println("[PAYMENT] PLACE_ORDER choreography completed " + session);
 
                 break;
             default:

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import choral.reactive.Session;
+import choral.reactive.SessionPool;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.ReactiveReceiver.NewSessionEvent;
@@ -25,6 +26,7 @@ public class FrontendController {
     TCPReactiveServer<WebshopChoreography> cartToFrontendServer;
     TCPReactiveServer<WebshopChoreography> currencyToFrontendServer;
     TCPReactiveServer<WebshopChoreography> shippingToFrontendServer;
+    SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
 
     public FrontendController() {
         cartToFrontendServer = initializeServer("CART_TO_FRONTEND", ServiceResources.shared.cartToFrontend);
@@ -35,13 +37,13 @@ public class FrontendController {
     private TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address) {
         return initializeServer(name, address, (session) -> {
             // No choreographies are instantiated by a new session...
-            System.out.println("Received new session from " + name + " service: " + session);
+            System.out.println("[FRONTEND] Received new session from " + name + " service: " + session);
         });
     }
 
     private TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address,
             NewSessionEvent<WebshopChoreography> onNewSession) {
-        TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>();
+        TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>(sessionPool);
         server.onNewSession(onNewSession);
 
         Thread serverThread = new Thread(() -> {
@@ -85,7 +87,7 @@ public class FrontendController {
 
     @PostMapping("/checkout")
     String checkout(@RequestBody ReqPlaceOrder request) {
-        System.out.println("Placing order: " + request);
+        System.out.println("[FRONTEND] Placing order: " + request);
 
         try (
                 TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
@@ -99,7 +101,9 @@ public class FrontendController {
 
             // Get items
             Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.PLACE_ORDER);
-            System.out.println("Initiating placeOrder choreography with session: " + session);
+            sessionPool.registerSession(session);
+
+            System.out.println("[FRONTEND] Initiating placeOrder choreography with session: " + session);
 
             ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
                     new ClientService(),

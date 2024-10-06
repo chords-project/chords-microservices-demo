@@ -28,7 +28,7 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
     }
 
     public void addItem(String userID, String productID, int quantity) {
-        System.out.println("Adding item to cart service");
+        System.out.println("[CART] Adding item to cart");
 
         Demo.AddItemRequest request = Demo.AddItemRequest.newBuilder()
                 .setUserId(userID)
@@ -43,6 +43,8 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
 
     @Override
     public Cart getCart(String userID) {
+        System.out.println("[CART] Get cart for user: " + userID);
+
         Demo.GetCartRequest request = Demo.GetCartRequest.newBuilder()
                 .setUserId(userID)
                 .build();
@@ -55,6 +57,7 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
     }
 
     public void emptyCart(String userID) {
+        System.out.println("[CART] Empty cart for user: " + userID);
         connection.emptyCart(EmptyCartRequest.newBuilder().build());
     }
 

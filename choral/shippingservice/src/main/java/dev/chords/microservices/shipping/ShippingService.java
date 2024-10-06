@@ -32,6 +32,7 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
 
     @Override
     public Money getQuote(Address address, Cart cart) {
+        System.out.println("[SHIPPING] Get quote");
 
         GetQuoteRequest.Builder request = GetQuoteRequest.newBuilder()
                 .setAddress(
@@ -54,6 +55,8 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
 
     @Override
     public String shipOrder(Address address, Cart cart) {
+        System.out.println("[SHIPPING] Ship order");
+
         ShipOrderRequest.Builder request = ShipOrderRequest.newBuilder()
                 .setAddress(
                         Demo.Address.newBuilder()

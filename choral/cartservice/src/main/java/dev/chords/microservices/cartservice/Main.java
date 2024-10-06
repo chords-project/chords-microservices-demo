@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 
+import choral.reactive.SessionPool;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import dev.chords.choreographies.ChorAddCartItem_Cart;
@@ -19,7 +20,9 @@ public class Main {
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("ASPNETCORE_HTTP_PORTS", "7070"));
         CartService cartService = new CartService(new InetSocketAddress("localhost", rpcPort));
 
-        TCPReactiveServer<WebshopChoreography> frontendServer = new TCPReactiveServer<>();
+        SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
+
+        TCPReactiveServer<WebshopChoreography> frontendServer = new TCPReactiveServer<>(sessionPool);
         frontendServer.onNewSession((session) -> {
             switch (session.choreographyID) {
                 case ADD_CART_ITEM:
@@ -56,6 +59,7 @@ public class Main {
                                 shippingClient.chanA(session));
 
                         placeOrderChor.placeOrder();
+                        System.out.println("[CART] PLACE_ORDER choreography completed " + session);
 
                     } catch (URISyntaxException | IOException e) {
                         e.printStackTrace();

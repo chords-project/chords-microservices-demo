@@ -32,12 +32,16 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
 
     @Override
     public List<String> supportedCurrencies() {
+        System.out.println("[CURRENCY] Get supported currencies");
+
         GetSupportedCurrenciesResponse response = connection.getSupportedCurrencies(Empty.getDefaultInstance());
         return response.getCurrencyCodesList();
     }
 
     @Override
     public Money convert(Money from, String toCurrency) {
+        System.out.println("[CURRENCY] Convert currencies: from=" + from.currencyCode + ", to=" + toCurrency);
+
         CurrencyConversionRequest request = CurrencyConversionRequest.newBuilder()
                 .setFrom(
                         Demo.Money.newBuilder()
@@ -55,6 +59,8 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
 
     @Override
     public OrderItems convertProducts(OrderItems products, String toCurrency) {
+        System.out.println("[CURRENCY] Convert products: to=" + toCurrency);
+
         List<OrderItem> orderItemList = products.items.stream()
                 .map(product -> new OrderItem(product.item, convert(product.cost, toCurrency)))
                 .toList();
