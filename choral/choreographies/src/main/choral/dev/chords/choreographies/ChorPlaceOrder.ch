@@ -69,18 +69,19 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
     }
 
     public OrderResult@Client placeOrder(ReqPlaceOrder@Client req) {
-        System@Client.out.println("Starting place order choreography: user_id="@Client + req.userID + " user_currency="@Client + req.userCurrency);
+        System@Client.out.println("Starting place order choreography: user_id="@Client + req.user_id + " user_currency="@Client + req.user_currency);
 
         // Fetch user cart items
-        String@Cart userID_cart = ch_clientCart.<SerializableString>com(new SerializableString@Client(req.userID)).string;
+        String@Cart userID_cart = ch_clientCart.<SerializableString>com(new SerializableString@Client(req.user_id)).string;
         Cart@Cart userCart = cartSvc.getCart(userID_cart);
+        cartSvc.emptyCart(userID_cart);
         
         // Lookup cart item prices
         Cart@ProductCatalog cart_pc = ch_cartProduct.<Cart>com(userCart);
         OrderItems@ProductCatalog cartPrices = productCatalogSvc.lookupCartPrices(cart_pc);
         
         // Convert currency of products
-        String@Currency userCurrency = ch_clientCurrency.<SerializableString>com(new SerializableString@Client(req.userCurrency)).string;
+        String@Currency userCurrency = ch_clientCurrency.<SerializableString>com(new SerializableString@Client(req.user_currency)).string;
         OrderItems@Currency cartPrices_currency = ch_productCurrency.<OrderItems>com(cartPrices);
         OrderItems@Currency orderItems = currencySvc.convertProducts(cartPrices_currency, userCurrency);
         OrderItems@Client orderItems_client = ch_currencyClient.<OrderItems>com(orderItems);
@@ -98,7 +99,7 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         // Charge card
         Money@Client totalPrice = clientSvc.totalPrice(orderItems_client, shippingCost_client);
         Money@Payment chargePrice = ch_clientPayment.<Money>com(totalPrice);
-        CreditCardInfo@Payment creditCartInfo = ch_clientPayment.<CreditCardInfo>com(req.creditCard);
+        CreditCardInfo@Payment creditCartInfo = ch_clientPayment.<CreditCardInfo>com(req.credit_card);
         String@Payment txID = paymentSvc.charge(chargePrice, creditCartInfo);
 
         // Bundle response at client

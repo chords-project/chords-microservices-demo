@@ -58,7 +58,7 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
 
     public void emptyCart(String userID) {
         System.out.println("[CART] Empty cart for user: " + userID);
-        connection.emptyCart(EmptyCartRequest.newBuilder().build());
+        connection.emptyCart(EmptyCartRequest.newBuilder().setUserId(userID).build());
     }
 
     @Override

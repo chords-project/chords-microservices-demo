@@ -4,31 +4,31 @@ import java.io.Serializable;
 import java.util.List;
 
 public class CreditCardInfo@A implements Serializable@A {
-    public String@A number;
-    public Integer@A cvv;
-    public Integer@A expirationYear;
-    public Integer@A expirationMonth;
+    public String@A credit_card_number;
+    public Integer@A credit_card_cvv;
+    public Integer@A credit_card_expiration_year;
+    public Integer@A credit_card_expiration_month;
 
     public CreditCardInfo() {
-        number = ""@A;
-        cvv = 0@A;
-        expirationYear = 0@A;
-        expirationMonth = 0@A;
+        credit_card_number = ""@A;
+        credit_card_cvv = 0@A;
+        credit_card_expiration_year = 0@A;
+        credit_card_expiration_month = 0@A;
     }
 
     public CreditCardInfo(
-        String@A number,
-        Integer@A cvv,
-        Integer@A expirationYear,
-        Integer@A expirationMonth
+        String@A credit_card_number,
+        Integer@A credit_card_cvv,
+        Integer@A credit_card_expiration_year,
+        Integer@A credit_card_expiration_month
     ) {
-        this.number = number;
-        this.cvv = cvv;
-        this.expirationYear = expirationYear;
-        this.expirationMonth = expirationMonth;
+        this.credit_card_number = credit_card_number;
+        this.credit_card_cvv = credit_card_cvv;
+        this.credit_card_expiration_year = credit_card_expiration_year;
+        this.credit_card_expiration_month = credit_card_expiration_month;
     }
 
     public String@A toString() {
-        return "[ CreditCardInfo number="@A+number+" cvv="@A+cvv+" year="@A+expirationYear+" month="@A+expirationMonth+" ]"@A;
+        return "[ CreditCardInfo number="@A+credit_card_number+" cvv="@A+credit_card_cvv+" year="@A+credit_card_expiration_year+" month="@A+credit_card_expiration_month+" ]"@A;
     }
 }

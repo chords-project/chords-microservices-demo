@@ -2,20 +2,20 @@ POST http://localhost:8081/checkout HTTP/1.1
 content-type: application/json
 
 {
-    "userID": "user1",
-    "userCurrency": "DKK",
+    "user_id": "user1",
+    "user_currency": "DKK",
     "address": {
-        "streetAddress": "Campusvej 55",
+        "street_address": "Campusvej 55",
         "city": "Odense",
         "state": "fyn",
         "country": "Danmark",
-        "zipCode": 5230
+        "zip_code": 5230
     },
     "email": "user@example.com",
-    "creditCart": {
-        "number": "111-222-333-444",
-        "cvv": 321,
-        "expirationYear": 2027,
-        "expirationMonth": 8
+    "credit_card": {
+        "credit_card_number": "111-222-333-444",
+        "credit_card_cvv": 321,
+        "credit_card_expiration_year": 2027,
+        "credit_card_expiration_month": 8
     }
 }

@@ -1,29 +1,30 @@
 package dev.chords.choreographies;
 
+import java.util.ArrayList;
 import java.io.Serializable;
 
 public class OrderResult@A implements Serializable@A {
-    public final String@A orderID;
-    public final String@A shippingTrackingID;
-    public final Money@A shippingCost;
-    public final Address@A shippingAddress;
-    public final OrderItems@A items;
+    public final String@A order_id;
+    public final String@A shipping_tracking_id;
+    public final Money@A shipping_cost;
+    public final Address@A shipping_address;
+    public final ArrayList@A<OrderItem> items;
 
     public OrderResult(
-        String@A orderID,
-        String@A shippingTrackingID,
-        Money@A shippingCost,
-        Address@A shippingAddress,
+        String@A order_id,
+        String@A shipping_tracking_id,
+        Money@A shipping_cost,
+        Address@A shipping_address,
         OrderItems@A items
     ) {
-        this.orderID = orderID;
-        this.shippingTrackingID = shippingTrackingID;
-        this.shippingCost = shippingCost;
-        this.shippingAddress = shippingAddress;
-        this.items = items;
+        this.order_id = order_id;
+        this.shipping_tracking_id = shipping_tracking_id;
+        this.shipping_cost = shipping_cost;
+        this.shipping_address = shipping_address;
+        this.items = items.items;
     }
 
     public String@A toString() {
-        return "[ OrderResult orderID="@A+orderID+" trackingID="@A+shippingTrackingID+" shippingCost="@A+shippingCost+" address="@A+shippingAddress+" items="@A+items+" ]"@A;
+        return "[ OrderResult order_id="@A+order_id+" trackingID="@A+shipping_tracking_id+" shipping_cost="@A+shipping_cost+" address="@A+shipping_address+" items="@A+items+" ]"@A;
     }
 }

@@ -37,14 +37,14 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
         GetQuoteRequest.Builder request = GetQuoteRequest.newBuilder()
                 .setAddress(
                         Demo.Address.newBuilder()
-                                .setStreetAddress(address.streetAddress)
+                                .setStreetAddress(address.street_address)
                                 .setCity(address.city)
                                 .setState(address.state)
                                 .setCountry(address.country)
-                                .setZipCode(address.zipCode));
+                                .setZipCode(address.zip_code));
 
         for (CartItem item : cart.items) {
-            request.addItems(Demo.CartItem.newBuilder().setProductId(item.productID).setQuantity(item.quantity));
+            request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
         }
 
         GetQuoteResponse response = connection.getQuote(request.build());
@@ -60,14 +60,14 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
         ShipOrderRequest.Builder request = ShipOrderRequest.newBuilder()
                 .setAddress(
                         Demo.Address.newBuilder()
-                                .setStreetAddress(address.streetAddress)
+                                .setStreetAddress(address.street_address)
                                 .setCity(address.city)
                                 .setState(address.state)
                                 .setCountry(address.country)
-                                .setZipCode(address.zipCode));
+                                .setZipCode(address.zip_code));
 
         for (CartItem item : cart.items) {
-            request.addItems(Demo.CartItem.newBuilder().setProductId(item.productID).setQuantity(item.quantity));
+            request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
         }
 
         ShipOrderResponse response = connection.shipOrder(request.build());

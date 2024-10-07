@@ -13,6 +13,7 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Au
 
     private String address;
     private Socket connection;
+    private ObjectOutputStream stream;
 
     public TCPReactiveClient(String address) throws URISyntaxException, UnknownHostException, IOException {
         this.address = address;
@@ -23,13 +24,14 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Au
         InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
         this.connection = new Socket(addr.getHostName(), addr.getPort());
+        this.stream = new ObjectOutputStream(connection.getOutputStream());
         System.out.println("TCPReactiveClient connected: address=" + address);
     }
 
     @Override
     public void send(Session<C> session, Serializable msg) {
         System.out.println("TCPReactiveClient sending message: address=" + address + " session=" + session);
-        try (ObjectOutputStream stream = new ObjectOutputStream(connection.getOutputStream())) {
+        try {
             TCPMessage<C> message = new TCPMessage<>(session, msg);
             stream.writeObject(message);
             stream.flush();
@@ -42,6 +44,7 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Au
     @Override
     public void close() throws IOException {
         System.out.println("TCPReactiveClient closing: address=" + address);
+        stream.close();
         connection.close();
     }
 

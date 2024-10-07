@@ -34,11 +34,11 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
 
         try {
             serverSocket = new ServerSocket(addr.getPort(), 50, addr.getAddress());
-            System.out.println("Choral reactive server listening on " + serverSocket.getLocalSocketAddress());
+            System.out.println("TCPReactiveServer listening on " + serverSocket.getLocalSocketAddress());
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
-                    System.out.println("Shutting down reactive server gracefully...");
+                    System.out.println("TCPReactiveServer shutting down reactive server gracefully...");
                     serverSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -62,17 +62,21 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
             while (true) {
                 try (ObjectInputStream stream = new ObjectInputStream(connection.getInputStream())) {
                     while (true) {
-                        TCPMessage<C> msg = (TCPMessage<C>) stream.readObject();
-                        receiveMessage(connection, msg.session, msg.message);
+                        try {
+                            TCPMessage<C> msg = (TCPMessage<C>) stream.readObject();
+                            receiveMessage(connection, msg.session, msg.message);
+                        } catch (StreamCorruptedException | ClassNotFoundException e) {
+                            System.out.println(
+                                    "TCPReactiveServer failed to deserialize class: address="
+                                            + connection.getInetAddress());
+                        }
                     }
-                } catch (StreamCorruptedException | ClassNotFoundException e) {
-                    System.out.println(
-                            "TCPReactiveServer failed to deserialize class: address=" + connection.getInetAddress());
                 }
+
             }
-            // } catch (EOFException e) {
-            // System.out.println("TCPReactiveServer client disconnected: address=" +
-            // connection.getInetAddress());
+        } catch (EOFException e) {
+            System.out.println("TCPReactiveServer client disconnected: address=" +
+                    connection.getInetAddress());
         } catch (IOException e) {
             System.out.println("TCPReactiveServer client exception: address=" + connection.getInetAddress());
             e.printStackTrace();
@@ -173,7 +177,7 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() throws IOException {
         serverSocket.close();
     }
 }

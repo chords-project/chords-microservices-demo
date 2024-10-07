@@ -82,7 +82,7 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
         System.out.println("[PRODUCT_CATALOG] Lookup cart prices");
 
         List<OrderItem> products = cart.items.stream()
-                .map(item -> new OrderItem(item, getProduct(item.productID).priceUSD)).toList();
+                .map(item -> new OrderItem(item, getProduct(item.product_id).priceUSD)).toList();
 
         return new OrderItems(new ArrayList<>(products));
     }
