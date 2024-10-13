@@ -112,6 +112,10 @@ spec:
           - name: CHORAL_SHIPPING_TO_FRONTEND
             value: "0.0.0.0:5410"
 
+          # Tracing
+          - name: JAEGER_ENDPOINT
+            value: "http://jaeger-collector:4317"
+
           # # ENV_PLATFORM: One of: local, gcp, aws, azure, onprem, alibaba
           # # When not set, defaults to "local" unless running in GKE, otherwies auto-sets to gcp
           # - name: ENV_PLATFORM
@@ -129,11 +133,11 @@ spec:
           #   value: "" # This value would look like "http://123.123.123"
           resources:
             requests:
-              cpu: 200m
-              memory: 180Mi
-            limits:
               cpu: 300m
-              memory: 300Mi
+              memory: 500Mi
+            limits:
+              cpu: 400m
+              memory: 800Mi
             # requests:
             #   cpu: 100m
             #   memory: 64Mi

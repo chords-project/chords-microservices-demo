@@ -15,24 +15,33 @@ import hipstershop.Demo.ShipOrderResponse;
 import hipstershop.ShippingServiceGrpc.ShippingServiceBlockingStub;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
 
 public class ShippingService implements dev.chords.choreographies.ShippingService {
 
     protected ManagedChannel channel;
     protected ShippingServiceBlockingStub connection;
+    protected Tracer tracer;
 
-    public ShippingService(InetSocketAddress address) {
+    public ShippingService(InetSocketAddress address, Tracer tracer) {
         channel = ManagedChannelBuilder
                 .forAddress(address.getHostName(), address.getPort())
                 .usePlaintext()
                 .build();
 
         connection = ShippingServiceGrpc.newBlockingStub(channel);
+        this.tracer = tracer;
     }
 
     @Override
     public Money getQuote(Address address, Cart cart) {
         System.out.println("[SHIPPING] Get quote");
+
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("ShippingService: get quote").startSpan();
+        }
 
         GetQuoteRequest.Builder request = GetQuoteRequest.newBuilder()
                 .setAddress(
@@ -50,12 +59,21 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
         GetQuoteResponse response = connection.getQuote(request.build());
 
         Demo.Money m = response.getCostUsd();
+
+        if (span != null)
+            span.end();
+
         return new Money(m.getCurrencyCode(), (int) m.getUnits(), m.getNanos());
     }
 
     @Override
     public String shipOrder(Address address, Cart cart) {
         System.out.println("[SHIPPING] Ship order");
+
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("ShippingService: ship order").startSpan();
+        }
 
         ShipOrderRequest.Builder request = ShipOrderRequest.newBuilder()
                 .setAddress(
@@ -71,6 +89,10 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
         }
 
         ShipOrderResponse response = connection.shipOrder(request.build());
+
+        if (span != null)
+            span.end();
+
         return response.getTrackingId();
     }
 

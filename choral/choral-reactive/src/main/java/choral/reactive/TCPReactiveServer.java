@@ -15,6 +15,10 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
+
 public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, AutoCloseable {
 
     private final HashMap<Session<C>, LinkedList<Serializable>> sendQueue = new HashMap<>();
@@ -23,6 +27,8 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
     private NewSessionEvent<C> newSessionEvent = null;
     private ServerSocket serverSocket = null;
     private SessionPool<C> sessionPool;
+
+    private Tracer tracer = null;
 
     public TCPReactiveServer(SessionPool<C> sessionPool) {
         this.sessionPool = sessionPool;
@@ -88,6 +94,11 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
         this.newSessionEvent = event;
     }
 
+    public void configureTracing(Tracer tracer) {
+        System.out.println("TCPReactiveServer configuring tracing");
+        this.tracer = tracer;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Serializable> T recv(Session<C> session) {
@@ -142,8 +153,25 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
             if (isNewSession) {
                 // Handle new session in new thread
                 new Thread(() -> {
-                    newSessionEvent.onNewSession(session);
-                    cleanupKey(session);
+                    System.out.println("Starting trace span for session: " + session);
+
+                    if (tracer != null) {
+                        Span span = tracer.spanBuilder("choreography session")
+                                .setAttribute("choreography.session", session.toString())
+                                .startSpan();
+
+                        try (Scope scope = span.makeCurrent();) {
+                            newSessionEvent.onNewSession(session);
+                            cleanupKey(session);
+                        }
+
+                        span.end();
+                        System.out.println("Ended trace span for session: " + session);
+                    } else {
+                        System.out.println("Not starting span since tracer is null");
+                        newSessionEvent.onNewSession(session);
+                        cleanupKey(session);
+                    }
                 }, "NEW_SESSION_HANDLER_" + session).start();
             }
         }

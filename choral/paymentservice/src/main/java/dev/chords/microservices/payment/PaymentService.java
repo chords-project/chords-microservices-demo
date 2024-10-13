@@ -9,22 +9,32 @@ import hipstershop.PaymentServiceGrpc;
 import hipstershop.PaymentServiceGrpc.PaymentServiceBlockingStub;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+
 import java.net.InetSocketAddress;
 
 public class PaymentService implements dev.chords.choreographies.PaymentService {
 
     protected ManagedChannel channel;
     protected PaymentServiceBlockingStub connection;
+    protected Tracer tracer;
 
-    public PaymentService(InetSocketAddress address) {
+    public PaymentService(InetSocketAddress address, Tracer tracer) {
         channel = ManagedChannelBuilder.forAddress(address.getHostName(), address.getPort()).usePlaintext().build();
 
         this.connection = PaymentServiceGrpc.newBlockingStub(channel);
+        this.tracer = tracer;
     }
 
     @Override
     public String charge(Money price, CreditCardInfo creditCardInfo) {
         System.out.println("[PAYMENT] Charge credit card");
+
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("Payment: charge").startSpan();
+        }
 
         ChargeRequest request = ChargeRequest.newBuilder()
                 .setAmount(
@@ -42,6 +52,10 @@ public class PaymentService implements dev.chords.choreographies.PaymentService 
                 .build();
 
         ChargeResponse response = connection.charge(request);
+
+        if (span != null)
+            span.end();
+
         return response.getTransactionId();
     }
 }

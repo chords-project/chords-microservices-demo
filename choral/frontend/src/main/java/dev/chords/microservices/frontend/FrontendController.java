@@ -1,6 +1,7 @@
 package dev.chords.microservices.frontend;
 
 import choral.reactive.ReactiveReceiver.NewSessionEvent;
+import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.Session;
 import choral.reactive.SessionPool;
 import choral.reactive.TCPReactiveClient;
@@ -45,6 +46,13 @@ public class FrontendController {
             String address,
             NewSessionEvent<WebshopChoreography> onNewSession) {
         TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>(sessionPool);
+
+        final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
+        if (JAEGER_ENDPOINT != null) {
+            System.out.println("Configuring choreographic tracing to: " + JAEGER_ENDPOINT);
+            server.configureTracing(JaegerConfiguration.initTracer(JAEGER_ENDPOINT));
+        }
+
         server.onNewSession(onNewSession);
 
         Thread serverThread = new Thread(

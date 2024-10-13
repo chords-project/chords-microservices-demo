@@ -56,6 +56,10 @@ spec:
         - name: CHORAL_FRONTEND_TO_PAYMENT
           value: "0.0.0.0:5404"
 
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+
         readinessProbe:
           grpc:
             port: 50051

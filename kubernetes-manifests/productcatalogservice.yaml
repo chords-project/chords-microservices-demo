@@ -60,6 +60,10 @@ spec:
         - name: CHORAL_PRODUCTCATALOG_TO_CURRENCY
           value: "currencyservice:5408"
 
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+
         readinessProbe:
           grpc:
             port: 3550

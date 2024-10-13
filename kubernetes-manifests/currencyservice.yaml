@@ -63,6 +63,10 @@ spec:
         - name: CHORAL_CURRENCY_TO_FRONTEND
           value: "frontend:5409"
 
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+
         readinessProbe:
           grpc:
             port: 7000

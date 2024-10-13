@@ -8,9 +8,11 @@ import choral.reactive.Session;
 import choral.reactive.SessionPool;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
+import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Currency;
 import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopChoreography;
+import io.opentelemetry.api.trace.Tracer;
 
 public class Main {
 
@@ -19,12 +21,19 @@ public class Main {
     public static TCPReactiveServer<WebshopChoreography> frontendServer = null;
     public static TCPReactiveServer<WebshopChoreography> productServer = null;
     public static SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
+    public static Tracer tracer = null;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral currency service");
 
+        final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
+        if (JAEGER_ENDPOINT != null) {
+            System.out.println("Configuring choreographic tracing to: " + JAEGER_ENDPOINT);
+            tracer = JaegerConfiguration.initTracer(JAEGER_ENDPOINT);
+        }
+
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "7000"));
-        currencyService = new CurrencyService(new InetSocketAddress("localhost", rpcPort));
+        currencyService = new CurrencyService(new InetSocketAddress("localhost", rpcPort), tracer);
 
         frontendServer = initializeServer("FRONTEND_TO_CURRENCY", ServiceResources.shared.frontendToCurrency);
         productServer = initializeServer("PRODUCTCATALOG_TO_CURRENCY",
@@ -34,6 +43,10 @@ public class Main {
     public static TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address) {
         TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>(sessionPool);
         server.onNewSession(Main::handleNewSession);
+
+        if (tracer != null) {
+            server.configureTracing(tracer);
+        }
 
         Thread serverThread = new Thread(() -> {
             try {

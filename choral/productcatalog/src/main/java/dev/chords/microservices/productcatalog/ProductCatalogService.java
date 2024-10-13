@@ -19,24 +19,34 @@ import hipstershop.Demo.SearchProductsRequest;
 import hipstershop.ProductCatalogServiceGrpc.ProductCatalogServiceBlockingStub;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 
 public class ProductCatalogService implements dev.chords.choreographies.ProductCatalogService {
 
     protected ManagedChannel channel;
     protected ProductCatalogServiceBlockingStub connection;
+    protected Tracer tracer;
 
-    public ProductCatalogService(InetSocketAddress address) {
+    public ProductCatalogService(InetSocketAddress address, Tracer tracer) {
         channel = ManagedChannelBuilder
                 .forAddress(address.getHostName(), address.getPort())
                 .usePlaintext()
                 .build();
 
         this.connection = ProductCatalogServiceGrpc.newBlockingStub(channel);
+        this.tracer = tracer;
     }
 
     @Override
     public Products listProducts() {
         System.out.println("[PRODUCT_CATALOG] List products");
+
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("ProductCatalog: list products").startSpan();
+        }
 
         ListProductsResponse response = connection.listProducts(Empty.getDefaultInstance());
 
@@ -50,6 +60,9 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
                         prod.getPriceUsd().getNanos()),
                 prod.getCategoriesList())).toList();
 
+        if (span != null)
+            span.end();
+
         return new Products(new ArrayList<>(products));
     }
 
@@ -57,8 +70,23 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
     public Product getProduct(String productID) {
         System.out.println("[PRODUCT_CATALOG] Get product: productID=" + productID);
 
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("ProductCatalog: get product")
+                    .setAttribute("productID", productID)
+                    .startSpan();
+        }
+
+        Scope scope = span.makeCurrent();
+
         GetProductRequest request = GetProductRequest.newBuilder().setId(productID).build();
         Demo.Product p = connection.getProduct(request);
+
+        if (scope != null)
+            scope.close();
+
+        if (span != null)
+            span.end();
 
         return convertProduct(p);
     }
@@ -67,12 +95,22 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
     public Products searchProducts(String query) {
         System.out.println("[PRODUCT_CATALOG] Search products: query=" + query);
 
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("ProductCatalog: search products")
+                    .setAttribute("query", query)
+                    .startSpan();
+        }
+
         SearchProductsRequest request = SearchProductsRequest.newBuilder().setQuery(query).build();
         List<Product> products = connection
                 .searchProducts(request)
                 .getResultsList()
                 .stream()
                 .map(p -> convertProduct(p)).toList();
+
+        if (span != null)
+            span.end();
 
         return new Products(new ArrayList<>(products));
     }
@@ -81,8 +119,16 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
     public OrderItems lookupCartPrices(Cart cart) {
         System.out.println("[PRODUCT_CATALOG] Lookup cart prices");
 
+        Span span = null;
+        if (tracer != null) {
+            span = tracer.spanBuilder("ProductCatalog: lookup cart prices").startSpan();
+        }
+
         List<OrderItem> products = cart.items.stream()
                 .map(item -> new OrderItem(item, getProduct(item.product_id).priceUSD)).toList();
+
+        if (span != null)
+            span.end();
 
         return new OrderItems(new ArrayList<>(products));
     }

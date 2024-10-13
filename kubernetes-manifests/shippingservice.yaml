@@ -61,6 +61,10 @@ spec:
         - name: CHORAL_SHIPPING_TO_FRONTEND
           value: "frontend:5410"
 
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+
         readinessProbe:
           periodSeconds: 5
           grpc:

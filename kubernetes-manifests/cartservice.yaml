@@ -62,6 +62,10 @@ spec:
         - name: CHORAL_CART_TO_SHIPPING
           value: "shippingservice:5407"
 
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+
         resources:
           requests:
             cpu: 200m
