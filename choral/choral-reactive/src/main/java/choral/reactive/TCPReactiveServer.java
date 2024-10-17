@@ -159,7 +159,8 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
                 new Thread(() -> {
                     if (telemetrySession != null) {
                         System.out.println("Starting trace span for session: " + session);
-                        Span span = telemetrySession.startSpan("choreography session");
+                        // Span span = telemetrySession.startSpan("choreography session");
+                        Span span = telemetrySession.choreographySpan;
 
                         try (Scope scope = span.makeCurrent()) {
                             newSessionEvent.onNewSession(session, telemetrySession);

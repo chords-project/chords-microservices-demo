@@ -5,20 +5,21 @@ import dev.chords.choreographies.Money;
 import dev.chords.choreographies.OrderItems;
 import dev.chords.microservices.frontend.MoneyUtils.MoneyException;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
 
 public class ClientService implements dev.chords.choreographies.ClientService {
 
-    protected TelemetrySession telemetrySession;
+    protected Tracer tracer;
 
-    public ClientService(TelemetrySession telemetrySession) {
-        this.telemetrySession = telemetrySession;
+    public ClientService(Tracer tracer) {
+        this.tracer = tracer;
     }
 
     @Override
     public Money totalPrice(OrderItems orderItems, Money shippingCost) {
         Span span = null;
-        if (telemetrySession != null) {
-            span = telemetrySession.startSpan("ClientService: total price");
+        if (tracer != null) {
+            span = tracer.spanBuilder("ClientService: total price").startSpan();
         }
 
         try {

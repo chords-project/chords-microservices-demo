@@ -48,7 +48,7 @@ public class Test {
                 .startSpan();
 
         TelemetrySession initialTelemetrySession = new TelemetrySession(telemetry, session,
-                Context.current().with(span));
+                Context.current().with(span), null);
 
         try (TCPReactiveClient<String> client1 = new TCPReactiveClient<>("0.0.0.0:4567",
                 initialTelemetrySession);) {

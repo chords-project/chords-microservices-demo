@@ -70,7 +70,7 @@ public class FrontendController {
     @GetMapping("/cart/{userID}")
     String cart(@PathVariable String userID) {
         Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
-        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, Context.current());
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, Context.current(), null);
 
         try (
                 TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
@@ -104,7 +104,7 @@ public class FrontendController {
                 .startSpan();
 
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session,
-                Context.current().with(span));
+                Context.current().with(span), null);
 
         try (
                 Scope scope = span.makeCurrent();
@@ -122,7 +122,7 @@ public class FrontendController {
             System.out.println("[FRONTEND] Initiating placeOrder choreography with session: " + session);
 
             ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
-                    new ClientService(telemetrySession),
+                    new ClientService(telemetrySession.tracer),
                     cartClient.chanA(session),
                     currencyClient.chanA(session),
                     shippingClient.chanA(session),
