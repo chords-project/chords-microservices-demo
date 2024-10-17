@@ -7,6 +7,10 @@ import java.util.concurrent.ExecutionException;
 
 public class LocalReactiveQueue<C> implements ReactiveSender<C, Object>, ReactiveReceiver<C, Object> {
 
+    public interface NewSessionEvent<C> {
+        void onNewSession(Session<C> session);
+    }
+
     private final HashMap<Session<C>, LinkedList<Object>> sendQueue = new HashMap<>();
     private final HashMap<Session<C>, LinkedList<CompletableFuture<Object>>> recvQueue = new HashMap<>();
     private NewSessionEvent<C> newSessionEvent = null;
@@ -14,7 +18,6 @@ public class LocalReactiveQueue<C> implements ReactiveSender<C, Object>, Reactiv
     public LocalReactiveQueue() {
     }
 
-    @Override
     public void onNewSession(NewSessionEvent<C> event) {
         this.newSessionEvent = event;
     }

@@ -1,11 +1,17 @@
 package dev.chords.microservices.frontend;
 
-import choral.reactive.ReactiveReceiver.NewSessionEvent;
-import choral.reactive.tracing.JaegerConfiguration;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import choral.reactive.Session;
-import choral.reactive.SessionPool;
+import choral.reactive.TCPChoreographyManager;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
+import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.TelemetrySession;
 import dev.chords.choreographies.Cart;
 import dev.chords.choreographies.ChorGetCartItems_Client;
 import dev.chords.choreographies.ChorPlaceOrder_Client;
@@ -13,12 +19,11 @@ import dev.chords.choreographies.OrderResult;
 import dev.chords.choreographies.ReqPlaceOrder;
 import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopChoreography;
-import java.net.URISyntaxException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 @RestController
 public class FrontendController {
@@ -26,47 +31,35 @@ public class FrontendController {
     TCPReactiveServer<WebshopChoreography> cartToFrontendServer;
     TCPReactiveServer<WebshopChoreography> currencyToFrontendServer;
     TCPReactiveServer<WebshopChoreography> shippingToFrontendServer;
-    SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
+    TCPChoreographyManager<WebshopChoreography> manager;
+    OpenTelemetrySdk telemetry = null;
 
     public FrontendController() {
-        cartToFrontendServer = initializeServer("CART_TO_FRONTEND", ServiceResources.shared.cartToFrontend);
-        currencyToFrontendServer = initializeServer("CURRENCY_TO_FRONTEND", ServiceResources.shared.currencyToFrontend);
-        shippingToFrontendServer = initializeServer("SHIPPING_TO_FRONTEND", ServiceResources.shared.shippingToFrontend);
-    }
-
-    private TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address) {
-        return initializeServer(name, address, session -> {
-            // No choreographies are instantiated by a new session...
-            System.out.println("[FRONTEND] Received new session from " + name + " service: " + session);
-        });
-    }
-
-    private TCPReactiveServer<WebshopChoreography> initializeServer(
-            String name,
-            String address,
-            NewSessionEvent<WebshopChoreography> onNewSession) {
-        TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>(sessionPool);
-
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
         if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic tracing to: " + JAEGER_ENDPOINT);
-            server.configureTracing(JaegerConfiguration.initTracer(JAEGER_ENDPOINT));
+            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
+            this.telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "Frontend");
         }
 
-        server.onNewSession(onNewSession);
+        this.manager = new TCPChoreographyManager<>(this.telemetry);
 
-        Thread serverThread = new Thread(
-                () -> {
-                    try {
-                        server.listen(address);
-                    } catch (URISyntaxException e) {
-                        e.printStackTrace();
-                    }
-                },
-                "SERVER_" + name);
-        serverThread.start();
+        cartToFrontendServer = manager.configureServer(ServiceResources.shared.cartToFrontend, (ctx) -> {
+            System.out.println("[FRONTEND] Received new session from CART_TO_FRONTEND service: " + ctx.session);
+        });
 
-        return server;
+        currencyToFrontendServer = manager.configureServer(ServiceResources.shared.currencyToFrontend, (ctx) -> {
+            System.out.println("[FRONTEND] Received new session from CURRENCY_TO_FRONTEND service: " + ctx.session);
+        });
+
+        shippingToFrontendServer = manager.configureServer(ServiceResources.shared.shippingToFrontend, (ctx) -> {
+            System.out.println("[FRONTEND] Received new session from SHIPPING_TO_FRONTEND service: " + ctx.session);
+        });
+
+        new Thread(() -> {
+            manager.listen();
+        }, "FRONTEND_CHORAL_SERVERS").start();
+
+        System.out.println("[FRONTEND] Done configuring frontend controller");
     }
 
     @GetMapping("/ping")
@@ -76,11 +69,14 @@ public class FrontendController {
 
     @GetMapping("/cart/{userID}")
     String cart(@PathVariable String userID) {
+        Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, Context.current());
+
         try (
                 TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToCart)) {
+                        ServiceResources.shared.frontendToCart, telemetrySession)) {
             // Get items
-            Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
+
             System.out.println("Initiating getItem choreography with session: " + session);
 
             ChorGetCartItems_Client getItemsChor = new ChorGetCartItems_Client(
@@ -99,23 +95,34 @@ public class FrontendController {
     PlaceOrderResponse checkout(@RequestBody ReqPlaceOrder request) {
         System.out.println("[FRONTEND] Placing order: " + request);
 
+        Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.PLACE_ORDER);
+
+        Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
+                .spanBuilder("Frontend: Checkout request")
+                .setSpanKind(SpanKind.CLIENT)
+                .setAttribute("choreography.session", session.toString())
+                .startSpan();
+
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session,
+                Context.current().with(span));
+
         try (
+                Scope scope = span.makeCurrent();
                 TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToCart);
+                        ServiceResources.shared.frontendToCart, telemetrySession);
                 TCPReactiveClient<WebshopChoreography> currencyClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToCurrency);
+                        ServiceResources.shared.frontendToCurrency, telemetrySession);
                 TCPReactiveClient<WebshopChoreography> shippingClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToShipping);
+                        ServiceResources.shared.frontendToShipping, telemetrySession);
                 TCPReactiveClient<WebshopChoreography> paymentClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToPayment);) {
+                        ServiceResources.shared.frontendToPayment, telemetrySession);) {
             // Get items
-            Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.PLACE_ORDER);
-            sessionPool.registerSession(session);
+            manager.registerSession(session);
 
             System.out.println("[FRONTEND] Initiating placeOrder choreography with session: " + session);
 
             ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
-                    new ClientService(),
+                    new ClientService(telemetrySession),
                     cartClient.chanA(session),
                     currencyClient.chanA(session),
                     shippingClient.chanA(session),
@@ -128,6 +135,9 @@ public class FrontendController {
             return new PlaceOrderResponse(result);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            if (span != null)
+                span.end();
         }
     }
 }

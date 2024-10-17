@@ -107,10 +107,12 @@ spec:
             value: "paymentservice:5404"
 
           # Choral ingoing channels
+          - name: CHORAL_CART_TO_FRONTEND
+            value: "0.0.0.0:5405"
           - name: CHORAL_CURRENCY_TO_FRONTEND
             value: "0.0.0.0:5409"
           - name: CHORAL_SHIPPING_TO_FRONTEND
-            value: "0.0.0.0:5410"
+            value: "0.0.0.0:54010"
 
           # Tracing
           - name: JAEGER_ENDPOINT
@@ -133,11 +135,11 @@ spec:
           #   value: "" # This value would look like "http://123.123.123"
           resources:
             requests:
-              cpu: 300m
-              memory: 500Mi
+              cpu: 200m
+              memory: 300Mi
             limits:
               cpu: 400m
-              memory: 800Mi
+              memory: 500Mi
             # requests:
             #   cpu: 100m
             #   memory: 64Mi
@@ -162,12 +164,15 @@ spec:
   - name: choral-sidecar
     port: 8081
     targetPort: 8081
+  - name: choral-cart-to-frontend
+    port: 5405
+    targetPort: 5405
   - name: choral-currency-to-frontend
     port: 5409
     targetPort: 5409
   - name: choral-shipping-to-frontend
-    port: 5410
-    targetPort: 5410
+    port: 54010
+    targetPort: 54010
 ---
 apiVersion: v1
 kind: Service

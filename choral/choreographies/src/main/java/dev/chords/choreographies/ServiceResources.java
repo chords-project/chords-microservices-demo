@@ -19,6 +19,6 @@ public class ServiceResources {
             "0.0.0.0:5408");
 
     public String currencyToFrontend = System.getenv().getOrDefault("CHORAL_CURRENCY_TO_FRONTEND", "0.0.0.0:5409");
-    public String shippingToFrontend = System.getenv().getOrDefault("CHORAL_SHIPPING_TO_FRONTEND", "0.0.0.0:5410");
+    public String shippingToFrontend = System.getenv().getOrDefault("CHORAL_SHIPPING_TO_FRONTEND", "0.0.0.0:54010");
 
 }

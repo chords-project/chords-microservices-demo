@@ -59,7 +59,7 @@ spec:
 
         # Outgoing choral channels
         - name: CHORAL_SHIPPING_TO_FRONTEND
-          value: "frontend:5410"
+          value: "frontend:54010"
 
         # Tracing
         - name: JAEGER_ENDPOINT

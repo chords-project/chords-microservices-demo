@@ -1,5 +1,6 @@
 package choral.reactive;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -9,14 +10,20 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 
-public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, AutoCloseable {
+import choral.reactive.tracing.TelemetrySession;
+
+public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Closeable {
 
     private String address;
     private Socket connection;
     private ObjectOutputStream stream;
 
-    public TCPReactiveClient(String address) throws URISyntaxException, UnknownHostException, IOException {
+    private TelemetrySession telemetrySession;
+
+    public TCPReactiveClient(String address, TelemetrySession telemetrySession)
+            throws URISyntaxException, UnknownHostException, IOException {
         this.address = address;
+        this.telemetrySession = telemetrySession;
 
         System.out.println("TCPReactiveClient connecting: address=" + address);
 
@@ -33,6 +40,9 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Au
         System.out.println("TCPReactiveClient sending message: address=" + address + " session=" + session);
         try {
             TCPMessage<C> message = new TCPMessage<>(session, msg);
+
+            telemetrySession.injectSessionContext(message);
+
             stream.writeObject(message);
             stream.flush();
         } catch (IOException e) {

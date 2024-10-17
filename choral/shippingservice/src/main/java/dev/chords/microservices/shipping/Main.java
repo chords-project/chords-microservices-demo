@@ -1,18 +1,15 @@
 package dev.chords.microservices.shipping;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 
-import choral.reactive.Session;
-import choral.reactive.SessionPool;
-import choral.reactive.TCPReactiveClient;
+import choral.reactive.TCPChoreographyManager;
+import choral.reactive.TCPChoreographyManager.SessionContext;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Shipping;
 import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopChoreography;
-import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Main {
 
@@ -20,67 +17,46 @@ public class Main {
 
     public static TCPReactiveServer<WebshopChoreography> frontendServer = null;
     public static TCPReactiveServer<WebshopChoreography> cartServer = null;
-    public static SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
-    public static Tracer tracer = null;
+
+    public static TCPChoreographyManager<WebshopChoreography> manager;
+    public static OpenTelemetrySdk telemetry = null;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral shipping service");
 
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
         if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic tracing to: " + JAEGER_ENDPOINT);
-            tracer = JaegerConfiguration.initTracer(JAEGER_ENDPOINT);
+            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
+            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ShippingService");
         }
+
+        manager = new TCPChoreographyManager<>(telemetry);
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
-        shippingService = new ShippingService(new InetSocketAddress("localhost", rpcPort), tracer);
+        shippingService = new ShippingService(new InetSocketAddress("localhost", rpcPort),
+                telemetry.getTracer(JaegerConfiguration.TRACER_NAME));
 
-        frontendServer = initializeServer("FRONTEND_TO_SHIPPING", ServiceResources.shared.frontendToShipping);
-        cartServer = initializeServer("CART_TO_SHIPPING", ServiceResources.shared.cartToShipping);
+        frontendServer = manager.configureServer(ServiceResources.shared.frontendToShipping, Main::handleNewSession);
+        cartServer = manager.configureServer(ServiceResources.shared.cartToShipping, Main::handleNewSession);
+
+        manager.listen();
     }
 
-    public static TCPReactiveServer<WebshopChoreography> initializeServer(String name, String address) {
-        TCPReactiveServer<WebshopChoreography> server = new TCPReactiveServer<>(sessionPool);
-        server.onNewSession(Main::handleNewSession);
-
-        if (tracer != null) {
-            server.configureTracing(tracer);
-        }
-
-        Thread serverThread = new Thread(() -> {
-            try {
-                server.listen(address);
-            } catch (URISyntaxException e) {
-                e.printStackTrace();
-            }
-        }, "SERVER_" + name);
-        serverThread.start();
-
-        return server;
-    }
-
-    private static void handleNewSession(Session<WebshopChoreography> session) {
-        switch (session.choreographyID) {
+    private static void handleNewSession(SessionContext<WebshopChoreography> ctx) throws Exception {
+        switch (ctx.session.choreographyID) {
             case PLACE_ORDER:
-                System.out.println("[SHIPPING] New PLACE_ORDER request " + session);
+                System.out.println("[SHIPPING] New PLACE_ORDER request " + ctx.session);
 
-                try (TCPReactiveClient<WebshopChoreography> frontendClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.shippingToFrontend);) {
+                ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
+                        shippingService, frontendServer.chanB(ctx.session), cartServer.chanB(ctx.session),
+                        ctx.chanA(ServiceResources.shared.shippingToFrontend));
 
-                    ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
-                            shippingService, frontendServer.chanB(session), cartServer.chanB(session),
-                            frontendClient.chanA(session));
-
-                    placeOrderChor.placeOrder();
-                    System.out.println("[SHIPPING] PLACE_ORDER choreography completed " + session);
-
-                } catch (IOException | URISyntaxException e) {
-                    e.printStackTrace();
-                }
+                placeOrderChor.placeOrder();
+                System.out.println("[SHIPPING] PLACE_ORDER choreography completed " + ctx.session);
 
                 break;
             default:
-                System.out.println("[SHIPPING] Invalid choreography ID " + session.choreographyID);
+                System.out.println("[SHIPPING] Invalid choreography ID " + ctx.session.choreographyID);
                 break;
         }
     }

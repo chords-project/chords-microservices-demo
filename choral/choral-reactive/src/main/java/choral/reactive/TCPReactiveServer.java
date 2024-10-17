@@ -15,11 +15,18 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import choral.reactive.tracing.TelemetrySession;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, AutoCloseable {
+
+    public interface NewSessionEvent<C> {
+        void onNewSession(Session<C> session, TelemetrySession telemetrySession) throws Exception;
+    }
 
     private final HashMap<Session<C>, LinkedList<Serializable>> sendQueue = new HashMap<>();
     private final HashMap<Session<C>, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
@@ -28,28 +35,22 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
     private ServerSocket serverSocket = null;
     private SessionPool<C> sessionPool;
 
-    private Tracer tracer = null;
+    private OpenTelemetrySdk telemetry = null;
 
-    public TCPReactiveServer(SessionPool<C> sessionPool) {
+    public TCPReactiveServer(SessionPool<C> sessionPool, OpenTelemetrySdk telemetry) {
         this.sessionPool = sessionPool;
+        this.telemetry = telemetry;
     }
 
     public void listen(String address) throws URISyntaxException {
+        System.out.println("TCPReactiveServer listening starting on " + address);
+
         URI uri = new URI(null, address, null, null, null).parseServerAuthority();
         InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
         try {
             serverSocket = new ServerSocket(addr.getPort(), 50, addr.getAddress());
-            System.out.println("TCPReactiveServer listening on " + serverSocket.getLocalSocketAddress());
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    System.out.println("TCPReactiveServer shutting down reactive server gracefully...");
-                    serverSocket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }, "SHUTDOWN_HOOK_TCPReactiveServer"));
+            System.out.println("TCPReactiveServer listening successfully on " + serverSocket.getLocalSocketAddress());
 
             while (true) {
                 Socket connection = serverSocket.accept();
@@ -70,7 +71,12 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
                     while (true) {
                         try {
                             TCPMessage<C> msg = (TCPMessage<C>) stream.readObject();
-                            receiveMessage(connection, msg.session, msg.message);
+
+                            TelemetrySession telemetrySession = null;
+                            if (telemetry != null)
+                                telemetrySession = new TelemetrySession(telemetry, msg);
+
+                            receiveMessage(connection, msg.session, msg.message, telemetrySession);
                         } catch (StreamCorruptedException | ClassNotFoundException e) {
                             System.out.println(
                                     "TCPReactiveServer failed to deserialize class: address="
@@ -89,14 +95,8 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
         }
     }
 
-    @Override
     public void onNewSession(NewSessionEvent<C> event) {
         this.newSessionEvent = event;
-    }
-
-    public void configureTracing(Tracer tracer) {
-        System.out.println("TCPReactiveServer configuring tracing");
-        this.tracer = tracer;
     }
 
     @SuppressWarnings("unchecked")
@@ -129,7 +129,11 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
         }
     }
 
-    private void receiveMessage(Socket connection, Session<C> session, Serializable msg) {
+    private void receiveMessage(
+            Socket connection,
+            Session<C> session,
+            Serializable msg,
+            TelemetrySession telemetrySession) {
         System.out.println(
                 "TCPReactiveServer received message: address=" + connection.getInetAddress() + " session=" + session);
 
@@ -153,23 +157,30 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
             if (isNewSession) {
                 // Handle new session in new thread
                 new Thread(() -> {
-                    System.out.println("Starting trace span for session: " + session);
+                    if (telemetrySession != null) {
+                        System.out.println("Starting trace span for session: " + session);
+                        Span span = telemetrySession.startSpan("choreography session");
 
-                    if (tracer != null) {
-                        Span span = tracer.spanBuilder("choreography session")
-                                .setAttribute("choreography.session", session.toString())
-                                .startSpan();
+                        try (Scope scope = span.makeCurrent()) {
+                            newSessionEvent.onNewSession(session, telemetrySession);
+                        } catch (Exception e) {
+                            System.err.println("Exception caught for session: " + session);
+                            e.printStackTrace();
 
-                        try (Scope scope = span.makeCurrent();) {
-                            newSessionEvent.onNewSession(session);
-                            cleanupKey(session);
+                            span.recordException(e, Attributes.builder().put("error", true).build());
                         }
 
+                        cleanupKey(session);
                         span.end();
                         System.out.println("Ended trace span for session: " + session);
                     } else {
                         System.out.println("Not starting span since tracer is null");
-                        newSessionEvent.onNewSession(session);
+                        try {
+                            newSessionEvent.onNewSession(session, null);
+                        } catch (Exception e) {
+                            System.err.println("Exception caught for session: " + session);
+                            e.printStackTrace();
+                        }
                         cleanupKey(session);
                     }
                 }, "NEW_SESSION_HANDLER_" + session).start();
