@@ -17,7 +17,6 @@ import java.util.concurrent.ExecutionException;
 
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -160,7 +159,11 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
                     if (telemetrySession != null) {
                         System.out.println("Starting trace span for session: " + session);
                         // Span span = telemetrySession.startSpan("choreography session");
-                        Span span = telemetrySession.choreographySpan;
+                        Span span = telemetrySession.makeChoreographySpan();
+
+                        telemetrySession.log("receive message", Attributes.builder()
+                                .put("message.sender", connection.getInetAddress().toString())
+                                .build());
 
                         try (Scope scope = span.makeCurrent()) {
                             newSessionEvent.onNewSession(session, telemetrySession);
@@ -168,12 +171,14 @@ public class TCPReactiveServer<C> implements ReactiveReceiver<C, Serializable>, 
                             System.err.println("Exception caught for session: " + session);
                             e.printStackTrace();
 
-                            span.recordException(e, Attributes.builder().put("error", true).build());
+                            span.setAttribute("error", true);
+                            span.recordException(e);
+                        } finally {
+                            span.end();
                         }
 
                         cleanupKey(session);
-                        span.end();
-                        System.out.println("Ended trace span for session: " + session);
+                        // System.out.println("Ended trace span for session: " + session);
                     } else {
                         System.out.println("Not starting span since tracer is null");
                         try {

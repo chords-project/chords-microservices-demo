@@ -1,7 +1,11 @@
 package choral.reactive.tracing;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 import choral.reactive.Session;
 import choral.reactive.TCPMessage;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.SpanKind;
@@ -16,7 +20,7 @@ public class TelemetrySession {
 
     private Session<?> session;
 
-    public final Span choreographySpan;
+    private Span choreographySpan = null;
 
     private Context choreographyContext;
     private SpanContext senderLinkContext;
@@ -30,28 +34,38 @@ public class TelemetrySession {
         this.choreographyContext = telemetry.getPropagators()
                 .getTextMapPropagator()
                 .extract(Context.current(), msg, new HeaderTextMapGetter());
-
-        choreographySpan = makeChoreographySpan();
     }
 
-    public TelemetrySession(OpenTelemetrySdk telemetry, Session<?> session, Context sessionContext,
-            SpanContext senderSpanContext) {
+    // Configure initial telemetry session
+    public TelemetrySession(OpenTelemetrySdk telemetry, Session<?> session, Span span) {
         this.telemetry = telemetry;
         this.session = session;
         this.tracer = this.telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
-        this.senderLinkContext = senderSpanContext;
-        this.choreographyContext = sessionContext;
-
-        this.choreographySpan = makeChoreographySpan();
+        this.senderLinkContext = null;
+        this.choreographyContext = Context.current().with(span);
+        this.choreographySpan = span;
     }
 
-    private Span makeChoreographySpan() {
-        return tracer.spanBuilder("choreography session")
+    public Span makeChoreographySpan() {
+        if (this.choreographySpan != null)
+            throw new RuntimeException("TelemetrySession::makeChoreographySpan may only be called once");
+
+        this.choreographySpan = tracer.spanBuilder("choreography session")
                 .setParent(choreographyContext)
                 .addLink(senderLinkContext)
                 .setSpanKind(SpanKind.SERVER)
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
+
+        return this.choreographySpan;
+    }
+
+    public void log(String message) {
+        choreographySpan.addEvent(message);
+    }
+
+    public void log(String message, Attributes attributes) {
+        choreographySpan.addEvent(message, attributes);
     }
 
     public void injectSessionContext(TCPMessage<?> msg) {
@@ -61,4 +75,9 @@ public class TelemetrySession {
 
         msg.senderSpanContext = new TCPMessage.SerializedSpanContext(choreographySpan.getSpanContext());
     }
+
+    // @Override
+    // public void close() throws IOException {
+    // choreographySpan.end();
+    // }
 }

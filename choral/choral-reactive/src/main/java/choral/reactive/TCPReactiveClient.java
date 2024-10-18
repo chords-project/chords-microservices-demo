@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 
+import io.opentelemetry.api.common.Attributes;
 import choral.reactive.tracing.TelemetrySession;
 
 public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Closeable {
@@ -40,6 +41,8 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Cl
         System.out.println("TCPReactiveClient sending message: address=" + address + " session=" + session);
         try {
             TCPMessage<C> message = new TCPMessage<>(session, msg);
+
+            telemetrySession.log("Send message", Attributes.builder().put("channel.recipient", address).build());
 
             telemetrySession.injectSessionContext(message);
 

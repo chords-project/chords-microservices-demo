@@ -70,7 +70,14 @@ public class FrontendController {
     @GetMapping("/cart/{userID}")
     String cart(@PathVariable String userID) {
         Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
-        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, Context.current(), null);
+
+        Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
+                .spanBuilder("Frontend: Get cart request")
+                .setSpanKind(SpanKind.CLIENT)
+                .setAttribute("choreography.session", session.toString())
+                .startSpan();
+
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
         try (
                 TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
@@ -103,8 +110,7 @@ public class FrontendController {
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
 
-        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session,
-                Context.current().with(span), null);
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
         try (
                 Scope scope = span.makeCurrent();

@@ -8,7 +8,6 @@ import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Test {
@@ -47,20 +46,24 @@ public class Test {
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
 
-        TelemetrySession initialTelemetrySession = new TelemetrySession(telemetry, session,
-                Context.current().with(span), null);
+        TelemetrySession initialTelemetrySession = new TelemetrySession(telemetry, session, span);
 
         try (TCPReactiveClient<String> client1 = new TCPReactiveClient<>("0.0.0.0:4567",
                 initialTelemetrySession);) {
             var chan = client1.chanA(session);
+
             chan.com("hello");
+
+            Thread.sleep(200);
+
             chan.com("world");
 
-            Thread.sleep(5000);
+            Thread.sleep(2000);
             System.out.println("Done");
         } catch (URISyntaxException | IOException | InterruptedException e) {
             e.printStackTrace();
         } finally {
+            System.out.println("Ending choreography span");
             span.end();
         }
     }
