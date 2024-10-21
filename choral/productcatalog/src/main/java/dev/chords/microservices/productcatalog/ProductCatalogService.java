@@ -84,9 +84,9 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
 
         GetProductRequest request = GetProductRequest.newBuilder().setId(productID).build();
 
-        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
+        Span requestSpan = tracer.spanBuilder("send request").startSpan();
         Demo.Product p = connection.getProduct(request);
-        // requestSpan.end();
+        requestSpan.end();
 
         if (scope != null)
             scope.close();

@@ -59,9 +59,9 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
             request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
         }
 
-        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
+        Span requestSpan = tracer.spanBuilder("send request").startSpan();
         GetQuoteResponse response = connection.getQuote(request.build());
-        // requestSpan.end();
+        requestSpan.end();
 
         Demo.Money m = response.getCostUsd();
 

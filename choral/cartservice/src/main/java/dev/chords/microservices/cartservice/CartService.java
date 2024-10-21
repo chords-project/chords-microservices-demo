@@ -55,9 +55,9 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
                                 .setQuantity(quantity))
                 .build();
 
-        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
+        Span requestSpan = tracer.spanBuilder("send request").startSpan();
         connection.addItem(request);
-        // requestSpan.end();
+        requestSpan.end();
 
         if (scope != null)
             scope.close();
@@ -82,9 +82,9 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
                 .setUserId(userID)
                 .build();
 
-        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
+        Span requestSpan = tracer.spanBuilder("send request").startSpan();
         Demo.Cart cart = connection.getCart(request);
-        // requestSpan.end();
+        requestSpan.end();
 
         List<CartItem> items = cart.getItemsList().stream()
                 .map(item -> new CartItem(item.getProductId(), item.getQuantity())).toList();
@@ -110,9 +110,9 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
 
         EmptyCartRequest request = EmptyCartRequest.newBuilder().setUserId(userID).build();
 
-        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
+        Span requestSpan = tracer.spanBuilder("send request").startSpan();
         connection.emptyCart(request);
-        // requestSpan.end();
+        requestSpan.end();
 
         if (scope != null)
             scope.close();

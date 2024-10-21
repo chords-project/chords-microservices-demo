@@ -75,9 +75,9 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
                 .setToCode(toCurrency)
                 .build();
 
-        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
+        Span requestSpan = tracer.spanBuilder("send request").startSpan();
         Demo.Money m = connection.convert(request);
-        // requestSpan.end();
+        requestSpan.end();
 
         if (scope != null)
             scope.close();
