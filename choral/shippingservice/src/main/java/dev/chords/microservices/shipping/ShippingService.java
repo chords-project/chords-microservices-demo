@@ -2,6 +2,8 @@ package dev.chords.microservices.shipping;
 
 import java.net.InetSocketAddress;
 
+import choral.reactive.ChannelConfigurator;
+import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.Address;
 import dev.chords.choreographies.Cart;
 import dev.chords.choreographies.CartItem;
@@ -17,6 +19,8 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class ShippingService implements dev.chords.choreographies.ShippingService {
 
@@ -24,14 +28,11 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
     protected ShippingServiceBlockingStub connection;
     protected Tracer tracer;
 
-    public ShippingService(InetSocketAddress address, Tracer tracer) {
-        channel = ManagedChannelBuilder
-                .forAddress(address.getHostName(), address.getPort())
-                .usePlaintext()
-                .build();
+    public ShippingService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
+        channel = ChannelConfigurator.makeChannel(address, telemetry);
 
         connection = ShippingServiceGrpc.newBlockingStub(channel);
-        this.tracer = tracer;
+        this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
     }
 
     @Override
@@ -39,8 +40,10 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
         System.out.println("[SHIPPING] Get quote");
 
         Span span = null;
+        Scope scope = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("ShippingService: get quote").startSpan();
+            span = tracer.spanBuilder("ShippingService.getQuote").startSpan();
+            scope = span.makeCurrent();
         }
 
         GetQuoteRequest.Builder request = GetQuoteRequest.newBuilder()
@@ -56,9 +59,14 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
             request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
         }
 
+        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
         GetQuoteResponse response = connection.getQuote(request.build());
+        // requestSpan.end();
 
         Demo.Money m = response.getCostUsd();
+
+        if (scope != null)
+            scope.close();
 
         if (span != null)
             span.end();
@@ -72,7 +80,7 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
 
         Span span = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("ShippingService: ship order").startSpan();
+            span = tracer.spanBuilder("ShippingService.shipOrder").startSpan();
         }
 
         ShipOrderRequest.Builder request = ShipOrderRequest.newBuilder()

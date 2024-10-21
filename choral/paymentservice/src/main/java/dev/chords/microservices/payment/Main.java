@@ -33,7 +33,7 @@ public class Main {
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
         paymentService = new PaymentService(new InetSocketAddress("localhost", rpcPort),
-                telemetry.getTracer(JaegerConfiguration.TRACER_NAME));
+                telemetry);
 
         frontendServer = manager.configureServer(ServiceResources.shared.frontendToPayment, Main::handleNewSession);
 

@@ -30,7 +30,7 @@ public class Main {
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "3550"));
         ProductCatalogService catalogService = new ProductCatalogService(new InetSocketAddress("localhost", rpcPort),
-                telemetry.getTracer(JaegerConfiguration.TRACER_NAME));
+                telemetry);
 
         cartServer = manager
                 .configureServer(ServiceResources.shared.cartToProductcatalog, (ctx) -> {

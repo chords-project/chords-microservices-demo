@@ -11,56 +11,6 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class TCPChoreographyManager<C> implements Closeable {
 
-    public static class SessionContext<C> implements Closeable {
-        private String serverAddress;
-        public final TCPReactiveServer<C> server;
-        public final Session<C> session;
-        private TelemetrySession telemetrySession;
-
-        private ArrayList<Closeable> closeHandles;
-
-        private SessionContext(String serverAddress, TCPReactiveServer<C> server, Session<C> session,
-                TelemetrySession telemetrySession) {
-            this.serverAddress = serverAddress;
-            this.server = server;
-            this.session = session;
-            this.telemetrySession = telemetrySession;
-
-            this.closeHandles = new ArrayList<>();
-        }
-
-        public ReactiveChannel_A<C, Serializable> chanA(String address) throws IOException, URISyntaxException {
-            TCPReactiveClient<C> client = new TCPReactiveClient<>(address, telemetrySession);
-            closeHandles.add(client);
-
-            return client.chanA(session);
-        }
-
-        public ReactiveChannel_B<C, Serializable> selfChanB() {
-            return server.chanB(session);
-        }
-
-        @Override
-        public void close() throws IOException {
-            for (var handle : closeHandles)
-                handle.close();
-        }
-    }
-
-    public interface NewSessionEvent<C> {
-        void onNewSession(SessionContext<C> ctx) throws Exception;
-    }
-
-    private class ServerConfiguration {
-        public final String address;
-        public final TCPReactiveServer<C> server;
-
-        public ServerConfiguration(String address, TCPReactiveServer<C> server) {
-            this.address = address;
-            this.server = server;
-        }
-    }
-
     private OpenTelemetrySdk telemetry;
     private SessionPool<C> sessionPool;
 
@@ -132,5 +82,55 @@ public class TCPChoreographyManager<C> implements Closeable {
     public void close() throws IOException {
         for (var conf : servers)
             conf.server.close();
+    }
+
+    public static class SessionContext<C> implements Closeable {
+        private String serverAddress;
+        public final TCPReactiveServer<C> server;
+        public final Session<C> session;
+        private TelemetrySession telemetrySession;
+
+        private ArrayList<Closeable> closeHandles;
+
+        private SessionContext(String serverAddress, TCPReactiveServer<C> server, Session<C> session,
+                TelemetrySession telemetrySession) {
+            this.serverAddress = serverAddress;
+            this.server = server;
+            this.session = session;
+            this.telemetrySession = telemetrySession;
+
+            this.closeHandles = new ArrayList<>();
+        }
+
+        public ReactiveChannel_A<C, Serializable> chanA(String address) throws IOException, URISyntaxException {
+            TCPReactiveClient<C> client = new TCPReactiveClient<>(address, telemetrySession);
+            closeHandles.add(client);
+
+            return client.chanA(session);
+        }
+
+        public ReactiveChannel_B<C, Serializable> selfChanB() {
+            return server.chanB(session);
+        }
+
+        @Override
+        public void close() throws IOException {
+            for (var handle : closeHandles)
+                handle.close();
+        }
+    }
+
+    public interface NewSessionEvent<C> {
+        void onNewSession(SessionContext<C> ctx) throws Exception;
+    }
+
+    private class ServerConfiguration {
+        public final String address;
+        public final TCPReactiveServer<C> server;
+
+        public ServerConfiguration(String address, TCPReactiveServer<C> server) {
+            this.address = address;
+            this.server = server;
+        }
     }
 }

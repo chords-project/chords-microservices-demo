@@ -11,8 +11,12 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 import java.net.InetSocketAddress;
+
+import choral.reactive.ChannelConfigurator;
+import choral.reactive.tracing.JaegerConfiguration;
 
 public class PaymentService implements dev.chords.choreographies.PaymentService {
 
@@ -20,11 +24,11 @@ public class PaymentService implements dev.chords.choreographies.PaymentService 
     protected PaymentServiceBlockingStub connection;
     protected Tracer tracer;
 
-    public PaymentService(InetSocketAddress address, Tracer tracer) {
-        channel = ManagedChannelBuilder.forAddress(address.getHostName(), address.getPort()).usePlaintext().build();
+    public PaymentService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
+        channel = ChannelConfigurator.makeChannel(address, telemetry);
 
         this.connection = PaymentServiceGrpc.newBlockingStub(channel);
-        this.tracer = tracer;
+        this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
     }
 
     @Override
@@ -33,7 +37,7 @@ public class PaymentService implements dev.chords.choreographies.PaymentService 
 
         Span span = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("Payment: charge").startSpan();
+            span = tracer.spanBuilder("PaymentService.charge").startSpan();
         }
 
         ChargeRequest request = ChargeRequest.newBuilder()

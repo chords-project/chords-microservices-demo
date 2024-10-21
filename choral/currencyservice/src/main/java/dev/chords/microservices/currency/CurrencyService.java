@@ -4,6 +4,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import choral.reactive.ChannelConfigurator;
+import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.Money;
 import dev.chords.choreographies.OrderItem;
 import dev.chords.choreographies.OrderItems;
@@ -18,6 +20,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class CurrencyService implements dev.chords.choreographies.CurrencyService {
 
@@ -25,14 +28,10 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
     protected CurrencyServiceBlockingStub connection;
     protected Tracer tracer;
 
-    public CurrencyService(InetSocketAddress address, Tracer tracer) {
-        channel = ManagedChannelBuilder
-                .forAddress(address.getHostName(), address.getPort())
-                .usePlaintext()
-                .build();
-
+    public CurrencyService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
+        channel = ChannelConfigurator.makeChannel(address, telemetry);
         connection = CurrencyServiceGrpc.newBlockingStub(channel);
-        this.tracer = tracer;
+        this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
     }
 
     @Override
@@ -41,7 +40,7 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
 
         Span span = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("CurrencyService: supported currencies").startSpan();
+            span = tracer.spanBuilder("CurrencyService.supportedCurrencies").startSpan();
         }
 
         GetSupportedCurrenciesResponse response = connection.getSupportedCurrencies(Empty.getDefaultInstance());
@@ -57,8 +56,13 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
         System.out.println("[CURRENCY] Convert currencies: from=" + from.currencyCode + ", to=" + toCurrency);
 
         Span span = null;
+        Scope scope = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("CurrencyService: convert currency").startSpan();
+            span = tracer.spanBuilder("CurrencyService.convertCurrency")
+                    .setAttribute("request.from", from.currencyCode)
+                    .setAttribute("request.to", toCurrency)
+                    .startSpan();
+            scope = span.makeCurrent();
         }
 
         CurrencyConversionRequest request = CurrencyConversionRequest.newBuilder()
@@ -71,7 +75,12 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
                 .setToCode(toCurrency)
                 .build();
 
+        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
         Demo.Money m = connection.convert(request);
+        // requestSpan.end();
+
+        if (scope != null)
+            scope.close();
 
         if (span != null)
             span.end();
@@ -86,7 +95,9 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
         Span span = null;
         Scope scope = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("CurrencyService: convert products").startSpan();
+            span = tracer.spanBuilder("CurrencyService.convertProducts")
+                    .setAttribute("request.toCurrency", toCurrency)
+                    .startSpan();
             scope = span.makeCurrent();
         }
 

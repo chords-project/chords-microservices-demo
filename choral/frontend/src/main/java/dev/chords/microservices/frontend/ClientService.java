@@ -19,7 +19,7 @@ public class ClientService implements dev.chords.choreographies.ClientService {
     public Money totalPrice(OrderItems orderItems, Money shippingCost) {
         Span span = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("ClientService: total price").startSpan();
+            span = tracer.spanBuilder("ClientService.totalPrice").startSpan();
         }
 
         try {

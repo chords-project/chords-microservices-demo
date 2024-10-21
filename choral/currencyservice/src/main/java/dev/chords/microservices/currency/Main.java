@@ -34,7 +34,7 @@ public class Main {
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "7000"));
         currencyService = new CurrencyService(new InetSocketAddress("localhost", rpcPort),
-                telemetry.getTracer(JaegerConfiguration.TRACER_NAME));
+                telemetry);
 
         frontendServer = manager.configureServer(ServiceResources.shared.frontendToCurrency, Main::handleNewSession);
         productServer = manager.configureServer(ServiceResources.shared.productcatalogToCurrency,

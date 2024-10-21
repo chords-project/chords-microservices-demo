@@ -51,6 +51,10 @@ spec:
           value: "8080"
         - name: DISABLE_PROFILER
           value: "1"
+        - name: ENABLE_TRACING
+          value: "1"
+        - name: COLLECTOR_SERVICE_ADDR
+          value: "jaeger-collector:4317"
         readinessProbe:
           periodSeconds: 5
           grpc:

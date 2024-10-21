@@ -4,6 +4,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import choral.reactive.ChannelConfigurator;
+import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.Cart;
 import dev.chords.choreographies.Money;
 import dev.chords.choreographies.OrderItem;
@@ -22,6 +24,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class ProductCatalogService implements dev.chords.choreographies.ProductCatalogService {
 
@@ -29,14 +32,11 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
     protected ProductCatalogServiceBlockingStub connection;
     protected Tracer tracer;
 
-    public ProductCatalogService(InetSocketAddress address, Tracer tracer) {
-        channel = ManagedChannelBuilder
-                .forAddress(address.getHostName(), address.getPort())
-                .usePlaintext()
-                .build();
+    public ProductCatalogService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
+        channel = ChannelConfigurator.makeChannel(address, telemetry);
 
         this.connection = ProductCatalogServiceGrpc.newBlockingStub(channel);
-        this.tracer = tracer;
+        this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
     }
 
     @Override
@@ -45,10 +45,13 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
 
         Span span = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("ProductCatalog: list products").startSpan();
+            span = tracer.spanBuilder("ProductCatalogService.listProducts").startSpan();
         }
 
         ListProductsResponse response = connection.listProducts(Empty.getDefaultInstance());
+
+        if (span != null)
+            span.addEvent("Request sent, restructuring products");
 
         List<Product> products = response.getProductsList().stream().map(prod -> new Product(
                 prod.getId(),
@@ -71,16 +74,19 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
         System.out.println("[PRODUCT_CATALOG] Get product: productID=" + productID);
 
         Span span = null;
+        Scope scope = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("ProductCatalog: get product")
-                    .setAttribute("productID", productID)
+            span = tracer.spanBuilder("ProductCatalogService.getProduct")
+                    .setAttribute("request.productID", productID)
                     .startSpan();
+            scope = span.makeCurrent();
         }
 
-        Scope scope = span.makeCurrent();
-
         GetProductRequest request = GetProductRequest.newBuilder().setId(productID).build();
+
+        // Span requestSpan = tracer.spanBuilder("send request").startSpan();
         Demo.Product p = connection.getProduct(request);
+        // requestSpan.end();
 
         if (scope != null)
             scope.close();
@@ -97,8 +103,8 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
 
         Span span = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("ProductCatalog: search products")
-                    .setAttribute("query", query)
+            span = tracer.spanBuilder("ProductCatalogService.searchProducts")
+                    .setAttribute("request.query", query)
                     .startSpan();
         }
 
@@ -120,12 +126,17 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
         System.out.println("[PRODUCT_CATALOG] Lookup cart prices");
 
         Span span = null;
+        Scope scope = null;
         if (tracer != null) {
-            span = tracer.spanBuilder("ProductCatalog: lookup cart prices").startSpan();
+            span = tracer.spanBuilder("ProductCatalogService.lookupCartPrices").startSpan();
+            span.makeCurrent();
         }
 
         List<OrderItem> products = cart.items.stream()
                 .map(item -> new OrderItem(item, getProduct(item.product_id).priceUSD)).toList();
+
+        if (scope != null)
+            scope.close();
 
         if (span != null)
             span.end();

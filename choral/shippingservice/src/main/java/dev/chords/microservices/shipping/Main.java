@@ -34,7 +34,7 @@ public class Main {
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
         shippingService = new ShippingService(new InetSocketAddress("localhost", rpcPort),
-                telemetry.getTracer(JaegerConfiguration.TRACER_NAME));
+                telemetry);
 
         frontendServer = manager.configureServer(ServiceResources.shared.frontendToShipping, Main::handleNewSession);
         cartServer = manager.configureServer(ServiceResources.shared.cartToShipping, Main::handleNewSession);

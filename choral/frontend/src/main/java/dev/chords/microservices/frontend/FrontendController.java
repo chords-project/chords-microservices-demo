@@ -21,7 +21,6 @@ import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopChoreography;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 

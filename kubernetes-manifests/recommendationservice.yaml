@@ -61,6 +61,10 @@ spec:
           value: "productcatalogservice:3550"
         - name: DISABLE_PROFILER
           value: "1"
+        - name: ENABLE_TRACING
+          value: "1"
+        - name: COLLECTOR_SERVICE_ADDR
+          value: "jaeger-collector:4317"
         resources:
           requests:
             cpu: 100m

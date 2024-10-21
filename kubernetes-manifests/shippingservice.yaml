@@ -50,6 +50,10 @@ spec:
           value: "50051"
         - name: DISABLE_PROFILER
           value: "1"
+        - name: ENABLE_TRACING
+          value: "1"
+        - name: COLLECTOR_SERVICE_ADDR
+          value: "jaeger-collector:4317"
 
         # Ingoing choral channels
         - name: CHORAL_FRONTEND_TO_SHIPPING

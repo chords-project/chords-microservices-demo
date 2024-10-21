@@ -23,13 +23,11 @@ public class Main {
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "CartService");
         }
 
+        TCPChoreographyManager<WebshopChoreography> manager = new TCPChoreographyManager<>(telemetry);
+
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("ASPNETCORE_HTTP_PORTS", "7070"));
         CartService cartService = new CartService(new InetSocketAddress("localhost", rpcPort),
-                telemetry.getTracer(JaegerConfiguration.TRACER_NAME));
-
-        // SessionPool<WebshopChoreography> sessionPool = new SessionPool<>();
-
-        TCPChoreographyManager<WebshopChoreography> manager = new TCPChoreographyManager<>(telemetry);
+                telemetry);
 
         manager.configureServer(ServiceResources.shared.frontendToCart, (ctx) -> {
             switch (ctx.session.choreographyID) {
