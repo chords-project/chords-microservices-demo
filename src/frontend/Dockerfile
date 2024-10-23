@@ -16,9 +16,9 @@ FROM golang:1.23.1-alpine@sha256:ac67716dd016429be8d4c2c53a248d7bcdf06d34127d3dc
 WORKDIR /src
 
 # restore dependencies
-COPY go.mod go.sum ./
+COPY service/go.mod service/go.sum ./
 RUN go mod download
-COPY . .
+COPY service/ .
 
 # Skaffold passes in debug-oriented compiler flags
 ARG SKAFFOLD_GO_GCFLAGS
@@ -29,8 +29,8 @@ FROM openjdk:24-slim-bullseye@sha256:d3d89f0ff751bd92d856f11a0b3223744fbe55ee95b
 
 WORKDIR /src
 COPY --from=builder /go/bin/frontend /src/server
-COPY ./templates ./templates
-COPY ./static ./static
+COPY service/templates ./templates
+COPY service/static ./static
 
 # Definition of this variable is used by 'skaffold debug' to identify a golang binary.
 # Default behavior - a failure prints a stack trace for the current goroutine.

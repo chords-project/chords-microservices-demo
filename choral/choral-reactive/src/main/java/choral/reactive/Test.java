@@ -19,8 +19,15 @@ public class Test {
 
         TCPReactiveServer<SimpleSession> server = new TCPReactiveServer<>("server", telemetry, (ctx) -> {
             try {
-                System.out
-                        .println("Received message on session: " + ctx.session + " from sender: " + ctx.session.sender);
+                System.out.println(
+                        "SERVER: Received message: " + ctx.session + " from sender: " + ctx.session.sender);
+
+                String firstMsg = ctx.chanB("client").com();
+                String secondMsg = ctx.chanB("client").com();
+
+                System.out.println("SERVER: Received first message: " + firstMsg);
+                System.out.println("SERVER: Received second message: " + secondMsg);
+
                 Thread.sleep(500);
 
             } catch (InterruptedException e) {

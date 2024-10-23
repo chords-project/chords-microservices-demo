@@ -104,10 +104,11 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
             }
         } catch (EOFException e) {
-            System.out.println("TCPReactiveServer client disconnected: address=" +
+            System.out.println("TCPReactiveServer client disconnected: service=" + serviceName + " address=" +
                     connection.getInetAddress());
         } catch (IOException e) {
-            System.out.println("TCPReactiveServer client exception: address=" + connection.getInetAddress());
+            System.out.println("TCPReactiveServer client exception: service=" + serviceName + " address="
+                    + connection.getInetAddress());
             e.printStackTrace();
         }
     }
@@ -116,7 +117,8 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
     @Override
     public <T extends Serializable> T recv(S session) {
         System.out.println(
-                "TCPReactiveServer waiting to receive: sender=" + session.senderName() + " session=" + session);
+                "TCPReactiveServer waiting to receive: service=" + serviceName + " sender=" + session.senderName()
+                        + " session=" + session);
         CompletableFuture<Serializable> future = new CompletableFuture<>();
 
         synchronized (this) {
@@ -161,7 +163,8 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             TCPMessage<S> msg,
             TelemetrySession telemetrySession) {
         System.out.println(
-                "TCPReactiveServer received message: address=" + connection.getInetAddress() + " session="
+                "TCPReactiveServer received message: service=" + serviceName + " address=" + connection.getInetAddress()
+                        + " session="
                         + msg.session);
 
         synchronized (this) {
@@ -174,10 +177,10 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
                     enqueueSend(msg.session, msg.message);
                 } else {
                     CompletableFuture<Serializable> future = this.recvQueue.get(msg.session).removeFirst();
-                    future.complete(msg);
+                    future.complete(msg.message);
                 }
             } else {
-                // this is a new flow, enqueue the message and notify the event handler
+                // this is a new flow, enqueue the message
                 enqueueSend(msg.session, msg.message);
             }
 
@@ -192,7 +195,9 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
                     try (Scope scope = span.makeCurrent()) {
 
-                        System.out.println("TCPReactiveServer new session: " + msg.session);
+                        System.out.println(
+                                "TCPReactiveServer handle new session: service=" + serviceName + " session="
+                                        + msg.session);
 
                         SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session, telemetrySession);
                         newSessionEvent.onNewSession(sessionCtx);

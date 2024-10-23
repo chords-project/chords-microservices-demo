@@ -23,7 +23,7 @@ RUN apk add --update --no-cache \
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY service/package*.json ./
 
 RUN npm install --only=production
 
@@ -35,8 +35,9 @@ WORKDIR /usr/src/app
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 
-COPY . .
+COPY service/ .
 
+COPY ./entrypoint.sh .
 RUN chmod 755 ./entrypoint.sh
 
 COPY choral-build/currencyservice-1.0-SNAPSHOT.jar choral-currencyservice.jar
