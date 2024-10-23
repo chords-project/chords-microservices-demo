@@ -1,13 +1,13 @@
 package dev.chords.microservices.frontend;
 
+import java.net.URISyntaxException;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import choral.reactive.Session;
-import choral.reactive.TCPChoreographyManager;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -18,7 +18,9 @@ import dev.chords.choreographies.ChorPlaceOrder_Client;
 import dev.chords.choreographies.OrderResult;
 import dev.chords.choreographies.ReqPlaceOrder;
 import dev.chords.choreographies.ServiceResources;
-import dev.chords.choreographies.WebshopChoreography;
+import dev.chords.choreographies.WebshopSession;
+import dev.chords.choreographies.WebshopSession.Choreography;
+import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Scope;
@@ -27,10 +29,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 @RestController
 public class FrontendController {
 
-    TCPReactiveServer<WebshopChoreography> cartToFrontendServer;
-    TCPReactiveServer<WebshopChoreography> currencyToFrontendServer;
-    TCPReactiveServer<WebshopChoreography> shippingToFrontendServer;
-    TCPChoreographyManager<WebshopChoreography> manager;
+    TCPReactiveServer<WebshopSession> server;
     OpenTelemetrySdk telemetry = null;
 
     public FrontendController() {
@@ -40,22 +39,21 @@ public class FrontendController {
             this.telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "Frontend");
         }
 
-        this.manager = new TCPChoreographyManager<>(this.telemetry);
-
-        cartToFrontendServer = manager.configureServer(ServiceResources.shared.cartToFrontend, (ctx) -> {
-            System.out.println("[FRONTEND] Received new session from CART_TO_FRONTEND service: " + ctx.session);
-        });
-
-        currencyToFrontendServer = manager.configureServer(ServiceResources.shared.currencyToFrontend, (ctx) -> {
-            System.out.println("[FRONTEND] Received new session from CURRENCY_TO_FRONTEND service: " + ctx.session);
-        });
-
-        shippingToFrontendServer = manager.configureServer(ServiceResources.shared.shippingToFrontend, (ctx) -> {
-            System.out.println("[FRONTEND] Received new session from SHIPPING_TO_FRONTEND service: " + ctx.session);
-        });
+        server = new TCPReactiveServer<>(
+                Service.FRONTEND.name(),
+                this.telemetry,
+                (ctx) -> {
+                    System.out.println(
+                            "[FRONTEND] Received new session from " + ctx.session.senderName() + " service: "
+                                    + ctx.session);
+                });
 
         new Thread(() -> {
-            manager.listen();
+            try {
+                server.listen(ServiceResources.shared.frontend);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
         }, "FRONTEND_CHORAL_SERVERS").start();
 
         System.out.println("[FRONTEND] Done configuring frontend controller");
@@ -68,7 +66,7 @@ public class FrontendController {
 
     @GetMapping("/cart/{userID}")
     String cart(@PathVariable String userID) {
-        Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.GET_CART_ITEMS);
+        WebshopSession session = WebshopSession.makeSession(Choreography.GET_CART_ITEMS, Service.FRONTEND);
 
         Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
                 .spanBuilder("Frontend: Get cart request")
@@ -79,15 +77,17 @@ public class FrontendController {
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
         try (
-                TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToCart, telemetrySession)) {
+                TCPReactiveClient<WebshopSession> cartClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.cart,
+                        Service.FRONTEND.name(),
+                        telemetrySession)) {
             // Get items
 
             System.out.println("Initiating getItem choreography with session: " + session);
 
             ChorGetCartItems_Client getItemsChor = new ChorGetCartItems_Client(
                     cartClient.chanA(session),
-                    cartToFrontendServer.chanB(session));
+                    server.chanB(session));
 
             Cart cart = getItemsChor.getItems("user1");
             return "Got back cart: " + cart.userID + ", " + cart.items;
@@ -101,7 +101,7 @@ public class FrontendController {
     PlaceOrderResponse checkout(@RequestBody ReqPlaceOrder request) {
         System.out.println("[FRONTEND] Placing order: " + request);
 
-        Session<WebshopChoreography> session = Session.makeSession(WebshopChoreography.PLACE_ORDER);
+        WebshopSession session = WebshopSession.makeSession(Choreography.PLACE_ORDER, Service.FRONTEND);
 
         Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
                 .spanBuilder("Frontend: Checkout request")
@@ -113,16 +113,27 @@ public class FrontendController {
 
         try (
                 Scope scope = span.makeCurrent();
-                TCPReactiveClient<WebshopChoreography> cartClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToCart, telemetrySession);
-                TCPReactiveClient<WebshopChoreography> currencyClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToCurrency, telemetrySession);
-                TCPReactiveClient<WebshopChoreography> shippingClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToShipping, telemetrySession);
-                TCPReactiveClient<WebshopChoreography> paymentClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.frontendToPayment, telemetrySession);) {
+                TCPReactiveClient<WebshopSession> cartClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.cart,
+                        Service.FRONTEND.name(),
+                        telemetrySession);
+
+                TCPReactiveClient<WebshopSession> currencyClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.currency,
+                        Service.FRONTEND.name(),
+                        telemetrySession);
+
+                TCPReactiveClient<WebshopSession> shippingClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.shipping,
+                        Service.FRONTEND.name(),
+                        telemetrySession);
+
+                TCPReactiveClient<WebshopSession> paymentClient = new TCPReactiveClient<>(
+                        ServiceResources.shared.payment,
+                        Service.FRONTEND.name(),
+                        telemetrySession);) {
             // Get items
-            manager.registerSession(session);
+            server.registerSession(session);
 
             System.out.println("[FRONTEND] Initiating placeOrder choreography with session: " + session);
 
@@ -132,8 +143,8 @@ public class FrontendController {
                     currencyClient.chanA(session),
                     shippingClient.chanA(session),
                     paymentClient.chanA(session),
-                    currencyToFrontendServer.chanB(session),
-                    shippingToFrontendServer.chanB(session));
+                    server.chanB(session, Service.CURRENCY.name()),
+                    server.chanB(session, Service.SHIPPING.name()));
 
             OrderResult result = placeOrderChor.placeOrder(request);
 

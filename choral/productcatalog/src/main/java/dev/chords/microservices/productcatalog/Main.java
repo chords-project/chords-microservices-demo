@@ -2,19 +2,18 @@ package dev.chords.microservices.productcatalog;
 
 import java.net.InetSocketAddress;
 
-import choral.reactive.TCPChoreographyManager;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_ProductCatalog;
 import dev.chords.choreographies.ServiceResources;
-import dev.chords.choreographies.WebshopChoreography;
+import dev.chords.choreographies.WebshopSession;
+import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Main {
 
-    public static TCPReactiveServer<WebshopChoreography> cartServer = null;
+    public static TCPReactiveServer<WebshopSession> cartServer = null;
 
-    public static TCPChoreographyManager<WebshopChoreography> manager;
     public static OpenTelemetrySdk telemetry = null;
 
     public static void main(String[] args) throws Exception {
@@ -26,23 +25,23 @@ public class Main {
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ProductCatalogService");
         }
 
-        manager = new TCPChoreographyManager<>(telemetry);
-
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "3550"));
         ProductCatalogService catalogService = new ProductCatalogService(new InetSocketAddress("localhost", rpcPort),
                 telemetry);
 
-        cartServer = manager
-                .configureServer(ServiceResources.shared.cartToProductcatalog, (ctx) -> {
-                    switch (ctx.session.choreographyID) {
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(
+                Service.PRODUCT_CATALOG.name(),
+                telemetry,
+                (ctx) -> {
+                    switch (ctx.session.choreography) {
                         case PLACE_ORDER:
                             System.out
-                                    .println("[PRODUCT_CATALOG] New PLACE_ORDER request" + ctx.session.choreographyID);
+                                    .println("[PRODUCT_CATALOG] New PLACE_ORDER request" + ctx.session.choreography);
 
                             ChorPlaceOrder_ProductCatalog placeOrderChor = new ChorPlaceOrder_ProductCatalog(
                                     catalogService,
                                     cartServer.chanB(ctx.session),
-                                    ctx.chanA(ServiceResources.shared.productcatalogToCurrency));
+                                    ctx.chanA(ServiceResources.shared.currency));
 
                             placeOrderChor.placeOrder();
                             System.out.println("[PRODUCT_CATALOG] PLACE_ORDER choreography completed " + ctx.session);
@@ -50,11 +49,11 @@ public class Main {
                             break;
                         default:
                             System.out
-                                    .println("[PRODUCT_CATALOG] Invalid choreography ID " + ctx.session.choreographyID);
+                                    .println("[PRODUCT_CATALOG] Invalid choreography ID " + ctx.session.choreography);
                             break;
                     }
                 });
 
-        manager.listen();
+        server.listen(ServiceResources.shared.productCatalog);
     }
 }

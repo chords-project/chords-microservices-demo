@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7-labs
-
 # Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +35,7 @@ WORKDIR /usr/src/app
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 
-COPY --exclude=choral-build/ . .
+COPY . .
 
 RUN chmod 755 ./entrypoint.sh
 

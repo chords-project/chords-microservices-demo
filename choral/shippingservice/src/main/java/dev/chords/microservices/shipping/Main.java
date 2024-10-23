@@ -2,23 +2,22 @@ package dev.chords.microservices.shipping;
 
 import java.net.InetSocketAddress;
 
-import choral.reactive.TCPChoreographyManager;
-import choral.reactive.TCPChoreographyManager.SessionContext;
 import choral.reactive.TCPReactiveServer;
+import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Shipping;
 import dev.chords.choreographies.ServiceResources;
-import dev.chords.choreographies.WebshopChoreography;
+import dev.chords.choreographies.WebshopSession;
+import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Main {
 
     public static ShippingService shippingService;
 
-    public static TCPReactiveServer<WebshopChoreography> frontendServer = null;
-    public static TCPReactiveServer<WebshopChoreography> cartServer = null;
+    public static TCPReactiveServer<WebshopSession> frontendServer = null;
+    public static TCPReactiveServer<WebshopSession> cartServer = null;
 
-    public static TCPChoreographyManager<WebshopChoreography> manager;
     public static OpenTelemetrySdk telemetry = null;
 
     public static void main(String[] args) throws Exception {
@@ -30,33 +29,33 @@ public class Main {
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ShippingService");
         }
 
-        manager = new TCPChoreographyManager<>(telemetry);
-
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
         shippingService = new ShippingService(new InetSocketAddress("localhost", rpcPort),
                 telemetry);
 
-        frontendServer = manager.configureServer(ServiceResources.shared.frontendToShipping, Main::handleNewSession);
-        cartServer = manager.configureServer(ServiceResources.shared.cartToShipping, Main::handleNewSession);
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(
+                Service.SHIPPING.name(),
+                telemetry,
+                Main::handleNewSession);
 
-        manager.listen();
+        server.listen(ServiceResources.shared.shipping);
     }
 
-    private static void handleNewSession(SessionContext<WebshopChoreography> ctx) throws Exception {
-        switch (ctx.session.choreographyID) {
+    private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
+        switch (ctx.session.choreography) {
             case PLACE_ORDER:
                 System.out.println("[SHIPPING] New PLACE_ORDER request " + ctx.session);
 
                 ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
                         shippingService, frontendServer.chanB(ctx.session), cartServer.chanB(ctx.session),
-                        ctx.chanA(ServiceResources.shared.shippingToFrontend));
+                        ctx.chanA(ServiceResources.shared.frontend));
 
                 placeOrderChor.placeOrder();
                 System.out.println("[SHIPPING] PLACE_ORDER choreography completed " + ctx.session);
 
                 break;
             default:
-                System.out.println("[SHIPPING] Invalid choreography ID " + ctx.session.choreographyID);
+                System.out.println("[SHIPPING] Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

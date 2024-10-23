@@ -3,18 +3,18 @@ package choral.reactive;
 import choral.channels.DiChannel_A;
 import choral.lang.Unit;
 
-public class ReactiveChannel_A<C, M> implements DiChannel_A<M> {
+public class ReactiveChannel_A<S extends Session, M> implements DiChannel_A<M> {
 
-    public final Session<C> session;
-    private final ReactiveSender<C, M> sender;
+    public final S session;
+    private final ReactiveSender<S, M> sender;
 
-    public ReactiveChannel_A(Session<C> session, ReactiveSender<C, M> sender) {
+    public ReactiveChannel_A(S session, ReactiveSender<S, M> sender) {
         this.session = session;
         this.sender = sender;
     }
 
     @Override
-    public <S extends M> Unit com(S msg) {
+    public <T extends M> Unit com(T msg) {
         // Associates each message with the key
         sender.send(session, msg);
         return Unit.id;

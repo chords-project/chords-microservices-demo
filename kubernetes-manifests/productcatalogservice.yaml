@@ -57,12 +57,12 @@ spec:
           value: "jaeger-collector:4317"
 
         # Ingoing choral channels
-        - name: CHORAL_CART_TO_PRODUCTCATALOG
-          value: "0.0.0.0:5406"
+        - name: CHORAL_PRODUCT_CATALOG
+          value: "0.0.0.0:5401"
 
         # Outgoing choral channels
-        - name: CHORAL_PRODUCTCATALOG_TO_CURRENCY
-          value: "currencyservice:5408"
+        - name: CHORAL_CURRENCY
+          value: "currencyservice:5401"
 
         # Tracing
         - name: JAEGER_ENDPOINT
@@ -96,9 +96,9 @@ spec:
   - name: grpc
     port: 3550
     targetPort: 3550
-  - name: choral-cart-to-productcatalog
-    port: 5406
-    targetPort: 5406
+  - name: choral-sidecar
+    port: 5401
+    targetPort: 5401
 ---
 apiVersion: v1
 kind: ServiceAccount

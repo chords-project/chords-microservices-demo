@@ -1,8 +1,5 @@
 package choral.reactive.tracing;
 
-import java.io.Closeable;
-import java.io.IOException;
-
 import choral.reactive.Session;
 import choral.reactive.TCPMessage;
 import io.opentelemetry.api.common.Attributes;
@@ -18,7 +15,7 @@ public class TelemetrySession {
     private OpenTelemetrySdk telemetry;
     public final Tracer tracer;
 
-    private Session<?> session;
+    private Session session;
 
     private Span choreographySpan = null;
 
@@ -37,7 +34,7 @@ public class TelemetrySession {
     }
 
     // Configure initial telemetry session
-    public TelemetrySession(OpenTelemetrySdk telemetry, Session<?> session, Span span) {
+    public TelemetrySession(OpenTelemetrySdk telemetry, Session session, Span span) {
         this.telemetry = telemetry;
         this.session = session;
         this.tracer = this.telemetry.getTracer(JaegerConfiguration.TRACER_NAME);

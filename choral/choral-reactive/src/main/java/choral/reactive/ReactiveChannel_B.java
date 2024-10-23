@@ -3,11 +3,11 @@ package choral.reactive;
 import choral.channels.DiChannel_B;
 import choral.lang.Unit;
 
-public class ReactiveChannel_B<C, M> implements DiChannel_B<M> {
-    private final Session<C> session;
-    private final ReactiveReceiver<C, M> receiver;
+public class ReactiveChannel_B<S extends Session, M> implements DiChannel_B<M> {
+    private final S session;
+    private final ReactiveReceiver<S, M> receiver;
 
-    public ReactiveChannel_B(Session<C> session, ReactiveReceiver<C, M> receiver) {
+    public ReactiveChannel_B(S session, ReactiveReceiver<S, M> receiver) {
         this.session = session;
         this.receiver = receiver;
     }

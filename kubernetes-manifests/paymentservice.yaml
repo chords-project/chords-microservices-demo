@@ -57,8 +57,8 @@ spec:
           value: "jaeger-collector:4317"
 
         # Ingoing choral channels
-        - name: CHORAL_FRONTEND_TO_PAYMENT
-          value: "0.0.0.0:5404"
+        - name: CHORAL_PAYMENT
+          value: "0.0.0.0:5401"
 
         # Tracing
         - name: JAEGER_ENDPOINT
@@ -92,9 +92,9 @@ spec:
   - name: grpc
     port: 50051
     targetPort: 50051
-  - name: frontend-to-payment
-    port: 5404
-    targetPort: 5404
+  - name: choral-sidecar
+    port: 5401
+    targetPort: 5401
 ---
 apiVersion: v1
 kind: ServiceAccount

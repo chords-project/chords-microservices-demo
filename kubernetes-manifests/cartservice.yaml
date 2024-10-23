@@ -55,16 +55,16 @@ spec:
           value: "jaeger-collector:4317"
 
         # Ingoing choral channels
-        - name: CHORAL_FRONTEND_TO_CART
+        - name: CHORAL_CART
           value: "0.0.0.0:5401"
 
         # Outgoing choral channels
-        - name: CHORAL_CART_TO_FRONTEND
-          value: "frontend:5405"
-        - name: CHORAL_CART_TO_PRODUCTCATALOG
-          value: "productcatalogservice:5406"
-        - name: CHORAL_CART_TO_SHIPPING
-          value: "shippingservice:5407"
+        - name: CHORAL_FRONTEND
+          value: "frontend:5401"
+        - name: CHORAL_PRODUCT_CATALOG
+          value: "productcatalogservice:5401"
+        - name: CHORAL_SHIPPING
+          value: "shippingservice:5401"
 
         # Tracing
         - name: JAEGER_ENDPOINT
@@ -101,7 +101,7 @@ spec:
   - name: grpc
     port: 7070
     targetPort: 7070
-  - name: choral-frontend-to-cart
+  - name: choral-sidecar
     port: 5401
     targetPort: 5401
 ---

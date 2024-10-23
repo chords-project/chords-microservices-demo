@@ -17,19 +17,23 @@ public class Test {
         final String JAEGER_ENDPOINT = "http://localhost:4317";
         OpenTelemetrySdk telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "Test");
 
-        TCPChoreographyManager<String> managerA = new TCPChoreographyManager<>(telemetry);
-
-        managerA.configureServer("0.0.0.0:4567", (ctx) -> {
+        TCPReactiveServer<SimpleSession> server = new TCPReactiveServer<>("server", telemetry, (ctx) -> {
             try {
-                System.out.println("Received message on session: " + ctx.session);
+                System.out
+                        .println("Received message on session: " + ctx.session + " from sender: " + ctx.session.sender);
                 Thread.sleep(500);
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         });
 
         new Thread(() -> {
-            managerA.listen();
+            try {
+                server.listen("0.0.0.0:4567");
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
         }).start();
 
         runClient(telemetry);
@@ -39,7 +43,7 @@ public class Test {
 
         Tracer tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
 
-        Session<String> session = Session.makeSession("chor");
+        SimpleSession session = SimpleSession.makeSession("chor", "client");
         Span span = tracer
                 .spanBuilder("client connect")
                 .setSpanKind(SpanKind.CLIENT)
@@ -48,7 +52,8 @@ public class Test {
 
         TelemetrySession initialTelemetrySession = new TelemetrySession(telemetry, session, span);
 
-        try (TCPReactiveClient<String> client1 = new TCPReactiveClient<>("0.0.0.0:4567",
+        try (TCPReactiveClient<SimpleSession> client1 = new TCPReactiveClient<>("0.0.0.0:4567",
+                "client",
                 initialTelemetrySession);) {
             var chan = client1.chanA(session);
 

@@ -58,14 +58,12 @@ spec:
           value: "jaeger-collector:4317"
 
         # Ingoing choral channels
-        - name: CHORAL_FRONTEND_TO_CURRENCY
-          value: "0.0.0.0:5402"
-        - name: CHORAL_PRODUCTCATALOG_TO_CURRENCY
-          value: "0.0.0.0:5408"
+        - name: CHORAL_CURRENCY
+          value: "0.0.0.0:5401"
 
         # Outgoing choral channels
-        - name: CHORAL_CURRENCY_TO_FRONTEND
-          value: "frontend:5409"
+        - name: CHORAL_FRONTEND
+          value: "frontend:5401"
 
         # Tracing
         - name: JAEGER_ENDPOINT
@@ -99,12 +97,9 @@ spec:
   - name: grpc
     port: 7000
     targetPort: 7000
-  - name: frontend-to-currency
-    port: 5402
-    targetPort: 5402
-  - name: productcatalog-to-currency
-    port: 5408
-    targetPort: 5408
+  - name: choral-sidecar
+    port: 5401
+    targetPort: 5401
 ---
 apiVersion: v1
 kind: ServiceAccount

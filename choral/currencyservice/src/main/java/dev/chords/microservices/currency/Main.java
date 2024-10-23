@@ -2,24 +2,19 @@ package dev.chords.microservices.currency;
 
 import java.net.InetSocketAddress;
 
-import choral.reactive.TCPChoreographyManager;
-import choral.reactive.TCPChoreographyManager.SessionContext;
 import choral.reactive.TCPReactiveServer;
+import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Currency;
 import dev.chords.choreographies.ServiceResources;
-import dev.chords.choreographies.WebshopChoreography;
+import dev.chords.choreographies.WebshopSession;
+import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Main {
 
-    public static CurrencyService currencyService;
-
-    public static TCPReactiveServer<WebshopChoreography> frontendServer = null;
-    public static TCPReactiveServer<WebshopChoreography> productServer = null;
-
-    public static TCPChoreographyManager<WebshopChoreography> manager;
-    public static OpenTelemetrySdk telemetry = null;
+    private static CurrencyService currencyService;
+    private static OpenTelemetrySdk telemetry = null;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral currency service");
@@ -30,36 +25,35 @@ public class Main {
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "CurrencyService");
         }
 
-        manager = new TCPChoreographyManager<>(telemetry);
-
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "7000"));
         currencyService = new CurrencyService(new InetSocketAddress("localhost", rpcPort),
                 telemetry);
 
-        frontendServer = manager.configureServer(ServiceResources.shared.frontendToCurrency, Main::handleNewSession);
-        productServer = manager.configureServer(ServiceResources.shared.productcatalogToCurrency,
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(
+                Service.CURRENCY.name(),
+                telemetry,
                 Main::handleNewSession);
 
-        manager.listen();
+        server.listen(ServiceResources.shared.currency);
     }
 
-    private static void handleNewSession(SessionContext<WebshopChoreography> ctx) throws Exception {
-        switch (ctx.session.choreographyID) {
+    private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
+        switch (ctx.session.choreography) {
             case PLACE_ORDER:
                 System.out.println("[CURRENCY] New PLACE_ORDER request " + ctx.session);
 
                 ChorPlaceOrder_Currency placeOrderChor = new ChorPlaceOrder_Currency(
                         currencyService,
-                        frontendServer.chanB(ctx.session),
-                        productServer.chanB(ctx.session),
-                        ctx.chanA(ServiceResources.shared.currencyToFrontend));
+                        ctx.chanB(Service.FRONTEND.name()),
+                        ctx.chanB(Service.PRODUCT_CATALOG.name()),
+                        ctx.chanA(ServiceResources.shared.frontend));
 
                 placeOrderChor.placeOrder();
                 System.out.println("[CURRENCY] PLACE_ORDER choreography completed " + ctx.session);
 
                 break;
             default:
-                System.out.println("Invalid choreography ID " + ctx.session.choreographyID);
+                System.out.println("Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

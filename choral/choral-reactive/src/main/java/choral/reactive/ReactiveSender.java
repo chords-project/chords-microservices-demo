@@ -1,9 +1,9 @@
 package choral.reactive;
 
-public interface ReactiveSender<C, M> {
-    void send(Session<C> session, M msg);
+public interface ReactiveSender<S extends Session, M> {
+    void send(S session, M msg);
 
-    default ReactiveChannel_A<C, M> chanA(Session<C> session) {
+    default ReactiveChannel_A<S, M> chanA(S session) {
         return new ReactiveChannel_A<>(session, this);
     }
 }

@@ -1,17 +1,23 @@
 package dev.chords.microservices.cartservice;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 
-import choral.reactive.TCPChoreographyManager;
+import choral.reactive.TCPReactiveServer;
+import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorAddCartItem_Cart;
 import dev.chords.choreographies.ChorGetCartItems_Cart;
 import dev.chords.choreographies.ChorPlaceOrder_Cart;
 import dev.chords.choreographies.ServiceResources;
-import dev.chords.choreographies.WebshopChoreography;
+import dev.chords.choreographies.WebshopSession;
+import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Main {
+
+    private static CartService cartService;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral cart service");
@@ -23,50 +29,52 @@ public class Main {
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "CartService");
         }
 
-        TCPChoreographyManager<WebshopChoreography> manager = new TCPChoreographyManager<>(telemetry);
-
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("ASPNETCORE_HTTP_PORTS", "7070"));
-        CartService cartService = new CartService(new InetSocketAddress("localhost", rpcPort),
+        cartService = new CartService(new InetSocketAddress("localhost", rpcPort),
                 telemetry);
 
-        manager.configureServer(ServiceResources.shared.frontendToCart, (ctx) -> {
-            switch (ctx.session.choreographyID) {
-                case ADD_CART_ITEM:
-                    System.out.println("[CART] New ADD_CART_ITEM request " + ctx.session);
-                    ChorAddCartItem_Cart addItemChor = new ChorAddCartItem_Cart(
-                            ctx.selfChanB(),
-                            cartService);
-                    addItemChor.addItem();
-                    break;
-                case GET_CART_ITEMS:
-                    System.out.println("[CART] New GET_CART_ITEMS request " + ctx.session);
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(
+                Service.CART.name(), telemetry, Main::handleNewSession);
 
-                    ChorGetCartItems_Cart getItemsChor = new ChorGetCartItems_Cart(
-                            ctx.selfChanB(),
-                            ctx.chanA(ServiceResources.shared.cartToFrontend),
-                            cartService);
-                    getItemsChor.getItems();
+        server.listen(ServiceResources.shared.cart);
+    }
 
-                    break;
-                case PLACE_ORDER:
-                    System.out.println("[CART] New PLACE_ORDER request " + ctx.session);
+    private static void handleNewSession(SessionContext<WebshopSession> ctx)
+            throws IOException, URISyntaxException {
+        switch (ctx.session.choreography) {
+            case ADD_CART_ITEM:
+                System.out.println("[CART] New ADD_CART_ITEM request " + ctx.session);
+                ChorAddCartItem_Cart addItemChor = new ChorAddCartItem_Cart(
+                        ctx.chanB(WebshopSession.Service.FRONTEND.name()),
+                        cartService);
+                addItemChor.addItem();
+                break;
+            case GET_CART_ITEMS:
+                System.out.println("[CART] New GET_CART_ITEMS request " + ctx.session);
 
-                    ChorPlaceOrder_Cart placeOrderChor = new ChorPlaceOrder_Cart(
-                            cartService,
-                            ctx.selfChanB(),
-                            ctx.chanA(ServiceResources.shared.cartToProductcatalog),
-                            ctx.chanA(ServiceResources.shared.cartToShipping));
+                ChorGetCartItems_Cart getItemsChor = new ChorGetCartItems_Cart(
+                        ctx.chanB(WebshopSession.Service.FRONTEND.name()),
+                        ctx.chanA(ServiceResources.shared.frontend),
+                        cartService);
+                getItemsChor.getItems();
 
-                    placeOrderChor.placeOrder();
-                    System.out.println("[CART] PLACE_ORDER choreography completed " + ctx.session);
+                break;
+            case PLACE_ORDER:
+                System.out.println("[CART] New PLACE_ORDER request " + ctx.session);
 
-                    break;
-                default:
-                    System.out.println("Invalid choreography ID " + ctx.session.choreographyID);
-                    break;
-            }
-        });
+                ChorPlaceOrder_Cart placeOrderChor = new ChorPlaceOrder_Cart(
+                        cartService,
+                        ctx.chanB(WebshopSession.Service.FRONTEND.name()),
+                        ctx.chanA(ServiceResources.shared.productCatalog),
+                        ctx.chanA(ServiceResources.shared.shipping));
 
-        manager.listen();
+                placeOrderChor.placeOrder();
+                System.out.println("[CART] PLACE_ORDER choreography completed " + ctx.session);
+
+                break;
+            default:
+                System.out.println("Invalid choreography " + ctx.session.choreographyName());
+                break;
+        }
     }
 }

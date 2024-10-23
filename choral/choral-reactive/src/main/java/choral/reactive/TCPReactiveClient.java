@@ -13,17 +13,19 @@ import java.net.UnknownHostException;
 import io.opentelemetry.api.common.Attributes;
 import choral.reactive.tracing.TelemetrySession;
 
-public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Closeable {
+public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, Serializable>, Closeable {
 
-    private String address;
-    private Socket connection;
-    private ObjectOutputStream stream;
+    private final String address;
+    private final String serviceName;
+    private final Socket connection;
+    private final ObjectOutputStream stream;
 
-    private TelemetrySession telemetrySession;
+    private final TelemetrySession telemetrySession;
 
-    public TCPReactiveClient(String address, TelemetrySession telemetrySession)
+    public TCPReactiveClient(String address, String serviceName, TelemetrySession telemetrySession)
             throws URISyntaxException, UnknownHostException, IOException {
         this.address = address;
+        this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
 
         System.out.println("TCPReactiveClient connecting: address=" + address);
@@ -37,10 +39,15 @@ public class TCPReactiveClient<C> implements ReactiveSender<C, Serializable>, Cl
     }
 
     @Override
-    public void send(Session<C> session, Serializable msg) {
+    public void send(S session, Serializable msg) {
         System.out.println("TCPReactiveClient sending message: address=" + address + " session=" + session);
         try {
-            TCPMessage<C> message = new TCPMessage<>(session, msg);
+
+            // Unchecked cast is safe since it's a precondition of the method.
+            @SuppressWarnings("unchecked")
+            S newSession = (S) session.replacingSender(serviceName);
+
+            TCPMessage<S> message = new TCPMessage<>(newSession, msg);
 
             telemetrySession.log("Send message", Attributes.builder().put("channel.recipient", address).build());
 
