@@ -37,9 +37,12 @@ COPY --from=builder /usr/src/app/node_modules ./node_modules
 
 COPY service/ .
 
+COPY ./entrypoint.sh .
 RUN chmod 755 ./entrypoint.sh
 
-COPY choral-build/paymentservice-1.0-SNAPSHOT.jar choral-paymentservice.jar
+COPY ./choral-build/paymentservice.tar /choral/paymentservice.tar
+RUN tar -xvaf /choral/paymentservice.tar -C /choral/ \
+    && rm /choral/paymentservice.tar
 
 EXPOSE 50051
 

@@ -39,7 +39,9 @@ ENV GOTRACEBACK=single
 COPY ./entrypoint.sh .
 RUN chmod 755 ./entrypoint.sh
 
-COPY ./choral-build/shippingservice-1.0-SNAPSHOT.jar /src/choral-shippingservice.jar
+COPY ./choral-build/shippingservice.tar /choral/shippingservice.tar
+RUN tar -xvaf /choral/shippingservice.tar -C /choral/ \
+    && rm /choral/shippingservice.tar
 
 EXPOSE 50051
 ENTRYPOINT ["/src/entrypoint.sh"]

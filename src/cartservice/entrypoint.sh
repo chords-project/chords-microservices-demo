@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 
 # Start cart service
-/app/cartservice &
+/app/cartservice
 
 # Start choral wrapper
-java -jar /choral/cartservice.jar &
+/choral/cartservice/bin/cartservice &
 
 # Wait for any process to exit
 wait

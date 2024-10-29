@@ -4,7 +4,7 @@
 node server.js &
 
 # Start choral sidecar
-java -jar choral-currencyservice.jar &
+/choral/currencyservice/bin/currencyservice &
 
 # Wait for any process to exit
 wait

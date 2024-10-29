@@ -40,7 +40,9 @@ COPY service/ .
 COPY ./entrypoint.sh .
 RUN chmod 755 ./entrypoint.sh
 
-COPY choral-build/currencyservice-1.0-SNAPSHOT.jar choral-currencyservice.jar
+COPY ./choral-build/currencyservice.tar /choral/currencyservice.tar
+RUN tar -xvaf /choral/currencyservice.tar -C /choral/ \
+    && rm /choral/currencyservice.tar
 
 EXPOSE 7000
 

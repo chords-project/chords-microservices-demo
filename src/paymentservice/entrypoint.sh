@@ -4,7 +4,7 @@
 node index.js &
 
 # Start choral sidecar
-java -jar choral-paymentservice.jar &
+/choral/paymentservice/bin/paymentservice &
 
 # Wait for any process to exit
 wait

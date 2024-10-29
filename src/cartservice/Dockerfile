@@ -16,12 +16,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0.401-noble@sha256:d37cbb248b78027e3f149ea422bc9dc3bbf5b8c47bd1150e14c9849462235e91 AS builder
 WORKDIR /app
 COPY service/src/cartservice.csproj .
-RUN dotnet restore cartservice.csproj \
-    -r linux-x64
+RUN dotnet restore cartservice.csproj
+# -r linux-x64
+
 COPY service/src/ .
 RUN dotnet publish cartservice.csproj \
     -p:PublishSingleFile=true \
-    -r linux-x64 \
+    # -r linux-x64 \
     --self-contained true \
     -p:PublishTrimmed=true \
     -p:TrimMode=full \
@@ -29,31 +30,25 @@ RUN dotnet publish cartservice.csproj \
     -o /cartservice
 
 # https://mcr.microsoft.com/product/dotnet/runtime-deps
-# FROM mcr.microsoft.com/dotnet/runtime-deps:8.0.8-noble-chiseled@sha256:7c86350773464d70bd15b2804c0e52f6c0f6b27d05d0fc607ff16abeb84dedd0
-# FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim@sha256:dfd55dc4b11cf81696d03d1592a2ba95f40eeaeb0bd6615705bd58d556d771c0
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine3.18-arm64v8
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine@sha256:cd52298239f7553c2c18cd4ad5952bcfac7c49c3fa2da04ef5b2504dfd6bb1eb
 
-# RUN apt update && apt install -y default-jre
-# COPY ./choral-build/cartservice-1.0-SNAPSHOT.jar /choral/cartservice.jar
-
-# WORKDIR /app
-
-# COPY ./entrypoint.sh .
-# RUN chmod 755 ./entrypoint.sh
-
-# COPY --from=builder /cartservice .
-
-# EXPOSE 7070
-# ENV DOTNET_EnableDiagnostics=0 \
-#     ASPNETCORE_HTTP_PORTS=7070
-
-# USER 1000
-# ENTRYPOINT ["/app/entrypoint.sh"]
+# RUN apt update && apt install -y openjdk-21-jre
+RUN apk add --no-cache openjdk21
 
 WORKDIR /app
+
+COPY ./entrypoint.sh .
+RUN chmod 755 ./entrypoint.sh
+
 COPY --from=builder /cartservice .
+
+COPY ./choral-build/cartservice.tar /choral/cartservice.tar
+RUN tar -xvaf /choral/cartservice.tar -C /choral/ \
+    && rm /choral/cartservice.tar
+
 EXPOSE 7070
 ENV DOTNET_EnableDiagnostics=0 \
-    ASPNETCORE_URLS=http://*:7070
+    ASPNETCORE_HTTP_PORTS=7070
+
 USER 1000
-ENTRYPOINT ["/app/cartservice"]
+ENTRYPOINT ["/app/entrypoint.sh"]

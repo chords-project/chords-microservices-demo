@@ -4,7 +4,7 @@
 /src/shippingservice &
 
 # Start choral sidecar
-java -jar /src/choral-shippingservice.jar &
+/choral/shippingservice/bin/shippingservice &
 
 # Wait for any process to exit
 wait

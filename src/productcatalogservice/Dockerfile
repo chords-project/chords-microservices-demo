@@ -40,7 +40,9 @@ ENV GOTRACEBACK=single
 COPY ./entrypoint.sh .
 RUN chmod 755 ./entrypoint.sh
 
-COPY ./choral-build/productcatalog-1.0-SNAPSHOT.jar /src/choral-productcatalog.jar
+COPY ./choral-build/productcatalog.tar /choral/productcatalog.tar
+RUN tar -xvaf /choral/productcatalog.tar -C /choral/ \
+    && rm /choral/productcatalog.tar
 
 EXPOSE 3550
 ENTRYPOINT ["/src/entrypoint.sh"]

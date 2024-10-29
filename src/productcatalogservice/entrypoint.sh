@@ -4,7 +4,7 @@
 /src/server &
 
 # Start choral sidecar
-java -jar /src/choral-productcatalog.jar &
+/choral/productcatalog/bin/productcatalog &
 
 # Wait for any process to exit
 wait
