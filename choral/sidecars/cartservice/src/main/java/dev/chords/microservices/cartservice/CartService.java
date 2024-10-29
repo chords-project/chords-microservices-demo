@@ -13,7 +13,6 @@ import hipstershop.Demo;
 import hipstershop.CartServiceGrpc.CartServiceBlockingStub;
 import hipstershop.Demo.EmptyCartRequest;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;

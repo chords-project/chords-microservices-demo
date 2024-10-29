@@ -23,7 +23,7 @@ public class Main {
         System.out.println("Starting choral cart service");
 
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
-        OpenTelemetrySdk telemetry = null;
+        OpenTelemetrySdk telemetry = OpenTelemetrySdk.builder().build();
         if (JAEGER_ENDPOINT != null) {
             System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "CartService");

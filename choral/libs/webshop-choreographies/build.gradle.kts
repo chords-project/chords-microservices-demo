@@ -8,6 +8,9 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 import com.google.protobuf.gradle.*
 
+group = "dev.chords"
+version = "0.1.0"
+
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
@@ -19,6 +22,7 @@ plugins {
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
+    mavenLocal()
 }
 
 var grpcVersion = "1.68.0"
@@ -35,11 +39,13 @@ dependencies {
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
     implementation(libs.guava)
 
+    implementation("dev.chords:choral-reactive")
+
     // ## gRPC ##
     runtimeOnly ("io.grpc:grpc-netty-shaded:${grpcVersion}")
-    implementation("com.google.protobuf:protobuf-java:3.6.1")
-    implementation ("io.grpc:grpc-protobuf:${grpcVersion}")
-    implementation ("io.grpc:grpc-stub:${grpcVersion}")
+    api("com.google.protobuf:protobuf-java:3.6.1")
+    api ("io.grpc:grpc-protobuf:${grpcVersion}")
+    api ("io.grpc:grpc-stub:${grpcVersion}")
 
     if (JavaVersion.current().isJava9Compatible()) {
         // Workaround for @javax.annotation.Generated
@@ -74,6 +80,42 @@ protobuf {
       }
     }
   }
+}
+
+tasks.register("compileChoral") {
+  val choreographies = listOf(
+    "ChorAddCartItem",
+    "ChorGetCartItems",
+    "ChorPlaceOrder"
+  )
+
+  doLast {
+    choreographies.forEach { name: String ->
+      val process = ProcessBuilder()
+            .command(listOf(
+              "choral", "epp",
+              "--sources=./src/main/choral",
+              "--headers=./src/main/choral",
+              "--target=${buildDir}/generated/choral",
+              name
+            ))
+            .directory(rootProject.projectDir)
+            .start()
+            .waitFor(60, TimeUnit.SECONDS)
+    }
+  }
+}
+
+tasks.build {
+    dependsOn("compileChoral")
+}
+
+sourceSets {
+   main {
+      java {
+         srcDir("${buildDir}/generated/choral")
+      }
+   }
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

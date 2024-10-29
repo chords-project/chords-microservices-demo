@@ -5,6 +5,9 @@
  * For more details on building Java & JVM projects, please refer to https://docs.gradle.org/8.10.2/userguide/building_java_projects.html in the Gradle documentation.
  */
 
+group = "dev.chords"
+version = "0.1.0"
+
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
@@ -33,24 +36,24 @@ dependencies {
     implementation(libs.guava)
 
     // ## Choral ##
-    implementation("org.choral-lang:choral:${choralVersion}")
-    implementation("org.choral-lang:runtime:${choralVersion}")
+    api("org.choral-lang:choral:${choralVersion}")
+    api("org.choral-lang:runtime:${choralVersion}")
 
     // ## OpenTelemetry SDK ##
 
     // using the bom ensures that all of your opentelemetry dependency versions are aligned
-    implementation(platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.9.0-alpha"))
+    api(platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.9.0-alpha"))
 
-    implementation("io.opentelemetry:opentelemetry-api")
-    implementation("io.opentelemetry:opentelemetry-sdk")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
-    implementation("io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha")
+    api("io.opentelemetry:opentelemetry-api")
+    api("io.opentelemetry:opentelemetry-sdk")
+    api("io.opentelemetry:opentelemetry-exporter-otlp")
+    api("io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha")
 
     // ## gRPC ##
     runtimeOnly ("io.grpc:grpc-netty-shaded:${grpcVersion}")
-    implementation ("io.grpc:grpc-protobuf:${grpcVersion}")
-    implementation ("io.grpc:grpc-stub:${grpcVersion}")
-    implementation ("io.grpc:grpc-opentelemetry:${grpcVersion}")
+    implementation("io.grpc:grpc-protobuf:${grpcVersion}")
+    implementation("io.grpc:grpc-stub:${grpcVersion}")
+    implementation("io.grpc:grpc-opentelemetry:${grpcVersion}")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
