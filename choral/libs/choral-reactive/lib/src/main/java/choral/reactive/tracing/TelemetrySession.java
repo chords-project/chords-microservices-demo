@@ -22,6 +22,10 @@ public class TelemetrySession {
     private Context choreographyContext;
     private SpanContext senderLinkContext;
 
+    public static TelemetrySession makeNoop(Session session) {
+        return new TelemetrySession(OpenTelemetrySdk.builder().build(), session, Span.getInvalid());
+    }
+
     public TelemetrySession(OpenTelemetrySdk telemetry, TCPMessage<?> msg) {
         this.telemetry = telemetry;
         this.session = msg.session;

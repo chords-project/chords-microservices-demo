@@ -10,7 +10,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class ChannelConfigurator {
     public static ManagedChannel makeChannel(InetSocketAddress address, OpenTelemetrySdk telemetry) {
-        ManagedChannelBuilder builder = ManagedChannelBuilder
+        ManagedChannelBuilder<?> builder = ManagedChannelBuilder
                 .forAddress(address.getHostName(), address.getPort())
                 .usePlaintext()
                 .keepAliveTime(5, TimeUnit.SECONDS)

@@ -13,12 +13,12 @@ public class ReactiveChannel_B<S extends Session, M> implements DiChannel_B<M> {
     }
 
     @Override
-    public <S extends M> S com() {
-        return receiver.<S>recv(session);
+    public <T extends M> T com() {
+        return receiver.<T>recv(session);
     }
 
     @Override
-    public <S extends M> S com(Unit unit) {
+    public <T extends M> T com(Unit unit) {
         return com();
     }
 

@@ -1,7 +1,6 @@
 package choral.reactive;
 
 import java.util.Random;
-import java.util.function.UnaryOperator;
 
 public class SimpleSession implements Session {
 
@@ -32,7 +31,7 @@ public class SimpleSession implements Session {
         if (this == other)
             return true;
 
-        if (!(other instanceof Session))
+        if (!(other instanceof SimpleSession))
             return false;
 
         SimpleSession that = (SimpleSession) other;
