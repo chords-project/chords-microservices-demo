@@ -14,12 +14,13 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 public class Main {
 
     private static CurrencyService currencyService;
-    private static OpenTelemetrySdk telemetry = null;
+    private static OpenTelemetrySdk telemetry;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral currency service");
 
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
+        telemetry = OpenTelemetrySdk.builder().build();
         if (JAEGER_ENDPOINT != null) {
             System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "CurrencyService");

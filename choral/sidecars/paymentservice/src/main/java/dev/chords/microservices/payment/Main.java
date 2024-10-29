@@ -17,12 +17,13 @@ public class Main {
 
     public static TCPReactiveServer<WebshopSession> frontendServer = null;
 
-    public static OpenTelemetrySdk telemetry = null;
+    public static OpenTelemetrySdk telemetry;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral payment service");
 
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
+        telemetry = OpenTelemetrySdk.builder().build();
         if (JAEGER_ENDPOINT != null) {
             System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
             telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "PaymentService");
