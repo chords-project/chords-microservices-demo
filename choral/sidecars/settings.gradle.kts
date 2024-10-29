@@ -10,5 +10,14 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
-includeBuild("../../libs/choral-reactive")
-includeBuild("../../libs/webshop-choreographies")
+includeBuild("../libs/choral-reactive")
+includeBuild("../libs/webshop-choreographies")
+
+include(
+    "cartservice",
+    "currencyservice",
+    "frontend",
+    "paymentservice",
+    "productcatalog",
+    "shippingservice"
+)
