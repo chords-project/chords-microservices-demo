@@ -40,7 +40,7 @@ ENV GOTRACEBACK=single
 COPY ./entrypoint.sh .
 RUN chmod 755 ./entrypoint.sh
 
-COPY ./choral-build/frontend-1.0-SNAPSHOT.jar /src/choral-frontend.jar
+COPY ./choral-build/frontend-0.1.0.jar /src/choral-frontend.jar
 
 EXPOSE 8080
 # ENTRYPOINT ["/src/server"]

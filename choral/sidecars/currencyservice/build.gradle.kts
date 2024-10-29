@@ -45,3 +45,11 @@ tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }
+
+tasks.register<Copy>("copyApp") {
+    dependsOn("distTar")
+
+    from(layout.buildDirectory.dir("distributions"))
+    include("*.tar")
+    into("../../../src/currencyservice/choral-build/")
+}

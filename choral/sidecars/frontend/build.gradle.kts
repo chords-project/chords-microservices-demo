@@ -49,3 +49,11 @@ tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }
+
+tasks.register<Copy>("copyApp") {
+    dependsOn("bootJar")
+
+    from(layout.buildDirectory.dir("libs"))
+    include("frontend-0.1.0.jar")
+    into("../../../src/frontend/choral-build/")
+}
