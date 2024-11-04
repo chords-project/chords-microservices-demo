@@ -293,6 +293,13 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             return client.chanA(session);
         }
 
+        public ReactiveSymChannel<S, Serializable> symChan(String clientService, String address)
+                throws UnknownHostException, URISyntaxException, IOException {
+            var a = chanA(address);
+            var b = chanB(clientService);
+            return new ReactiveSymChannel<>(a, b);
+        }
+
         private void close() throws IOException {
             for (Closeable closeable : closeHandles) {
                 closeable.close();

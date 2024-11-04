@@ -47,6 +47,11 @@ public class TelemetrySession {
         this.choreographySpan = span;
     }
 
+    // Configure dummy telemetry session
+    public TelemetrySession(Session session) {
+        this(OpenTelemetrySdk.builder().build(), session, Span.getInvalid());
+    }
+
     public Span makeChoreographySpan() {
         if (this.choreographySpan != null)
             throw new RuntimeException("TelemetrySession::makeChoreographySpan may only be called once");

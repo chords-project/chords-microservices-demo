@@ -41,7 +41,19 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = "dev.chords.microservices.benchmark.App"
+    mainClass = "dev.chords.microservices.benchmark.Benchmark"
+}
+
+tasks.register<JavaExec>("runA") {
+    dependsOn("classes")
+    mainClass = "dev.chords.microservices.benchmark.ServiceA"
+    classpath = sourceSets.main.get().runtimeClasspath
+}
+
+tasks.register<JavaExec>("runB") {
+    dependsOn("classes")
+    mainClass = "dev.chords.microservices.benchmark.ServiceB"
+    classpath = sourceSets.main.get().runtimeClasspath
 }
 
 tasks.named<Test>("test") {
