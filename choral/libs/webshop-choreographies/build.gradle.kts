@@ -91,7 +91,7 @@ tasks.register("compileChoral") {
 
   doLast {
     choreographies.forEach { name: String ->
-      val process = ProcessBuilder()
+      ProcessBuilder()
             .command(listOf(
               "choral", "epp",
               "--sources=./src/main/choral",
@@ -113,7 +113,7 @@ tasks.build {
 sourceSets {
    main {
       java {
-         srcDir("${buildDir}/generated/choral")
+         srcDir("${layout.buildDirectory}/generated/choral")
       }
    }
 }
