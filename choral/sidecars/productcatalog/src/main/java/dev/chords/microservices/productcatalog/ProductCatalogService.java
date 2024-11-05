@@ -129,7 +129,7 @@ public class ProductCatalogService implements dev.chords.choreographies.ProductC
         Scope scope = null;
         if (tracer != null) {
             span = tracer.spanBuilder("ProductCatalogService.lookupCartPrices").startSpan();
-            span.makeCurrent();
+            scope = span.makeCurrent();
         }
 
         List<OrderItem> products = cart.items.stream()

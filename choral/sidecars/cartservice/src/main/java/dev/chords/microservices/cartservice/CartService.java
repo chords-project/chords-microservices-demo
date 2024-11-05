@@ -43,7 +43,7 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
                     .setAttribute("request.quantity", quantity)
                     .startSpan();
 
-            span.makeCurrent();
+            scope = span.makeCurrent();
         }
 
         Demo.AddItemRequest request = Demo.AddItemRequest.newBuilder()

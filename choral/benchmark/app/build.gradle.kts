@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     application
+
+    id("com.google.protobuf") version "0.9.4"
 }
 
 repositories {
@@ -30,6 +32,12 @@ dependencies {
     implementation(libs.guava)
 
     implementation("dev.chords:choral-reactive")
+
+    // gRPC
+    runtimeOnly("io.grpc:grpc-netty-shaded:1.68.1")
+    implementation("io.grpc:grpc-protobuf:1.68.1")
+    implementation("io.grpc:grpc-stub:1.68.1")
+    compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -61,9 +69,11 @@ tasks.named<Test>("test") {
     useJUnitPlatform()
 }
 
+// Compile choral code
 tasks.register("compileChoral") {
     val choreographies = listOf(
-        "Choreography",
+        "SimpleChoreography",
+        "GreeterChoreography",
     )
 
     doLast {
@@ -101,4 +111,23 @@ sourceSets {
          srcDir("${buildDir}/generated/choral")
       }
    }
+}
+
+// Compile protobuf code
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.5"
+    }
+    plugins {
+        create("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.68.1"
+        }
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.plugins {
+                create("grpc") {}
+            }
+        }
+    }
 }

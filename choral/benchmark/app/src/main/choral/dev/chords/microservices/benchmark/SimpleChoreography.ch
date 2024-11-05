@@ -4,10 +4,10 @@ import java.io.Serializable;
 import choral.channels.DiChannel;
 import choral.channels.SymChannel;
 
-class Choreography@(A, B) {
+class SimpleChoreography@(A, B) {
     private SymChannel@(A, B)<Serializable> ch;
 
-    public Choreography(SymChannel@(A, B)<Serializable> ch) {
+    public SimpleChoreography(SymChannel@(A, B)<Serializable> ch) {
         this.ch = ch;
     }
 
