@@ -48,13 +48,15 @@ public class FrontendController {
                                     + ctx.session);
                 });
 
-        new Thread(() -> {
-            try {
-                server.listen(ServiceResources.shared.frontend);
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }, "FRONTEND_CHORAL_SERVERS").start();
+        Thread.ofPlatform()
+                .name("FRONTEND_CHORAL_SERVERS")
+                .start(() -> {
+                    try {
+                        server.listen(ServiceResources.shared.frontend);
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
 
         System.out.println("[FRONTEND] Done configuring frontend controller");
     }

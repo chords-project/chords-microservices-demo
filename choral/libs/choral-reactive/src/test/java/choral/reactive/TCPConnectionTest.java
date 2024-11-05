@@ -34,11 +34,11 @@ public class TCPConnectionTest {
             done.countDown();
         });
 
-        new Thread(() -> {
+        Thread.ofPlatform().start(() -> {
             assertDoesNotThrow(() -> {
                 server.listen("0.0.0.0:4567");
             });
-        }).start();
+        });
 
         assertDoesNotThrow(() -> {
             SimpleSession session = SimpleSession.makeSession("choreography", "client");

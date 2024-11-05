@@ -27,13 +27,15 @@ public class ServiceA {
     }
 
     public void listen(String address) {
-        new Thread(() -> {
-            try {
-                serverA.listen("localhost:8201");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }, "serviceA").start();
+        Thread.ofPlatform()
+                .name("serviceA")
+                .start(() -> {
+                    try {
+                        serverA.listen("localhost:8201");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
     }
 
     public void startPingPong() throws Exception {

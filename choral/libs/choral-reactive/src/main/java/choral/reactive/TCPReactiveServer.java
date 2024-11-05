@@ -9,7 +9,6 @@ import java.io.StreamCorruptedException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
@@ -72,9 +71,11 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
             while (true) {
                 Socket connection = serverSocket.accept();
-                new Thread(() -> {
-                    clientListen(connection);
-                }, "CLIENT_CONNECTION_" + connection).start();
+                Thread.ofPlatform()
+                        .name("CLIENT_CONNECTION_" + connection)
+                        .start(() -> {
+                            clientListen(connection);
+                        });
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -186,36 +187,39 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             }
 
             if (isNewSession) {
-                // Handle new session in new thread
-                new Thread(() -> {
-                    Span span = telemetrySession.makeChoreographySpan();
+                // Handle new session in another thread
+                Thread.ofPlatform()
+                        .name("NEW_SESSION_HANDLER_" + msg.session)
+                        .start(() -> {
+                            Span span = telemetrySession.makeChoreographySpan();
 
-                    telemetrySession.log("receive message", Attributes.builder()
-                            .put("message.sender", connection.getInetAddress().toString())
-                            .build());
+                            telemetrySession.log("receive message", Attributes.builder()
+                                    .put("message.sender", connection.getInetAddress().toString())
+                                    .build());
 
-                    try (Scope scope = span.makeCurrent()) {
+                            try (Scope scope = span.makeCurrent()) {
 
-                        System.out.println(
-                                "TCPReactiveServer handle new session: service=" + serviceName + " session="
-                                        + msg.session);
+                                System.out.println(
+                                        "TCPReactiveServer handle new session: service=" + serviceName + " session="
+                                                + msg.session);
 
-                        SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session, telemetrySession);
-                        newSessionEvent.onNewSession(sessionCtx);
-                        sessionCtx.close();
-                    } catch (Exception e) {
-                        System.err.println("Exception caught for session: " + msg.session);
-                        e.printStackTrace();
+                                SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session,
+                                        telemetrySession);
+                                newSessionEvent.onNewSession(sessionCtx);
+                                sessionCtx.close();
+                            } catch (Exception e) {
+                                System.err.println("Exception caught for session: " + msg.session);
+                                e.printStackTrace();
 
-                        span.setAttribute("error", true);
-                        span.recordException(e);
-                    } finally {
-                        span.end();
-                    }
+                                span.setAttribute("error", true);
+                                span.recordException(e);
+                            } finally {
+                                span.end();
+                            }
 
-                    cleanupKey(msg.session);
-                    // System.out.println("Ended trace span for session: " + session);
-                }, "NEW_SESSION_HANDLER_" + msg.session).start();
+                            cleanupKey(msg.session);
+                            // System.out.println("Ended trace span for session: " + session);
+                        });
             }
         }
     }

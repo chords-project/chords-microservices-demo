@@ -39,10 +39,11 @@ public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, 
                 enqueueSend(session, msg);
 
                 // Handle new session in the background
-                new Thread(() -> {
+
+                Thread.ofPlatform().start(() -> {
                     newSessionEvent.onNewSession(session);
                     cleanupKey(session);
-                }).start();
+                });
             }
         }
     }

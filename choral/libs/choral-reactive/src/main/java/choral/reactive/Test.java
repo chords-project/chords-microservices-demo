@@ -35,13 +35,13 @@ public class Test {
             }
         });
 
-        new Thread(() -> {
+        Thread.ofPlatform().start(() -> {
             try {
                 server.listen("0.0.0.0:4567");
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
-        }).start();
+        });
 
         runClient(telemetry);
     }

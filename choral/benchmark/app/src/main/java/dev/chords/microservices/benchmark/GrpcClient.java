@@ -1,8 +1,12 @@
 package dev.chords.microservices.benchmark;
 
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+
 import choral.reactive.tracing.JaegerConfiguration;
 import greeting.GreeterGrpc;
 import greeting.GreeterGrpc.GreeterBlockingStub;
+import greeting.GreeterGrpc.GreeterFutureStub;
 import greeting.Greeting.HelloReply;
 import greeting.Greeting.HelloRequest;
 import io.grpc.ManagedChannel;
@@ -16,6 +20,7 @@ public class GrpcClient implements GreeterService {
 
     ManagedChannel channel;
     GreeterBlockingStub blockingStub;
+    // GreeterFutureStub futureStub;
     Tracer tracer;
 
     GrpcClient(int port, OpenTelemetrySdk telemetry) {
@@ -27,6 +32,7 @@ public class GrpcClient implements GreeterService {
                 .build();
 
         this.blockingStub = GreeterGrpc.newBlockingStub(channel);
+        // this.futureStub = GreeterGrpc.newFutureStub(channel);
     }
 
     @Override
@@ -39,6 +45,11 @@ public class GrpcClient implements GreeterService {
         HelloReply reply;
         try (Scope scope = span.makeCurrent();) {
             reply = blockingStub.sayHello(HelloRequest.newBuilder().setName(name).build());
+
+            // reply =
+            // futureStub.sayHello(HelloRequest.newBuilder().setName(name).build()).get();
+            // } catch (InterruptedException | ExecutionException e) {
+            // throw new RuntimeException(e);
         } finally {
             span.end();
         }

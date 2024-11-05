@@ -3,6 +3,8 @@
  */
 package dev.chords.microservices.benchmark;
 
+import java.util.Scanner;
+
 import choral.reactive.tracing.JaegerConfiguration;
 
 public class Benchmark {
@@ -23,11 +25,25 @@ public class Benchmark {
         serviceA.listen(SERVICE_A);
         serviceB.listen(SERVICE_B);
 
-        // serviceA.startPingPong();
-        // serviceA.startPingPong();
-        // serviceA.startPingPong();
-
+        serviceA.startPingPong();
         serviceA.startGreeting();
+
+        Scanner input = new Scanner(System.in);
+        System.out.print("Press Enter to perform benchmark...");
+        input.nextLine();
+        input.close();
+
+        // serviceA.startGreeting();
+
+        for (int i = 0; i < 5; i++) {
+            serviceA.startPingPong();
+            Thread.sleep(50);
+        }
+
+        for (int i = 0; i < 5; i++) {
+            serviceA.startGreeting();
+            Thread.sleep(50);
+        }
 
         serviceA.close();
         serviceB.close();

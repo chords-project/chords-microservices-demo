@@ -41,13 +41,15 @@ public class ServiceB {
     }
 
     public void listen(String address) {
-        new Thread(() -> {
-            try {
-                serverB.listen(address);
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }, "serviceB").start();
+        Thread.ofPlatform()
+                .name("serviceB")
+                .start(() -> {
+                    try {
+                        serverB.listen(address);
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
     }
 
     public void close() throws Exception {
