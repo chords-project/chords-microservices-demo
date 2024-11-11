@@ -7,8 +7,6 @@ import java.net.URISyntaxException;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
-import dev.chords.choreographies.ChorAddCartItem_Cart;
-import dev.chords.choreographies.ChorGetCartItems_Cart;
 import dev.chords.choreographies.ChorPlaceOrder_Cart;
 import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopSession;
@@ -42,23 +40,6 @@ public class Main {
     private static void handleNewSession(SessionContext<WebshopSession> ctx)
             throws IOException, URISyntaxException {
         switch (ctx.session.choreography) {
-            case ADD_CART_ITEM:
-                System.out.println("[CART] New ADD_CART_ITEM request " + ctx.session);
-                ChorAddCartItem_Cart addItemChor = new ChorAddCartItem_Cart(
-                        ctx.chanB(WebshopSession.Service.FRONTEND.name()),
-                        cartService);
-                addItemChor.addItem();
-                break;
-            case GET_CART_ITEMS:
-                System.out.println("[CART] New GET_CART_ITEMS request " + ctx.session);
-
-                ChorGetCartItems_Cart getItemsChor = new ChorGetCartItems_Cart(
-                        ctx.chanB(WebshopSession.Service.FRONTEND.name()),
-                        ctx.chanA(ServiceResources.shared.frontend),
-                        cartService);
-                getItemsChor.getItems();
-
-                break;
             case PLACE_ORDER:
                 System.out.println("[CART] New PLACE_ORDER request " + ctx.session);
 

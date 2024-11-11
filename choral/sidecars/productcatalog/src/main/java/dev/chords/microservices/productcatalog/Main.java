@@ -12,8 +12,6 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Main {
 
-    public static TCPReactiveServer<WebshopSession> cartServer = null;
-
     public static OpenTelemetrySdk telemetry;
 
     public static void main(String[] args) throws Exception {
@@ -41,7 +39,7 @@ public class Main {
 
                             ChorPlaceOrder_ProductCatalog placeOrderChor = new ChorPlaceOrder_ProductCatalog(
                                     catalogService,
-                                    cartServer.chanB(ctx.session),
+                                    ctx.chanB(WebshopSession.Service.CART.name()),
                                     ctx.chanA(ServiceResources.shared.currency));
 
                             placeOrderChor.placeOrder();

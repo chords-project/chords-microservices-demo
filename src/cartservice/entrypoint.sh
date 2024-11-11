@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Start cart service
-/app/cartservice
+/app/cartservice &
 
 # Start choral wrapper
 /choral/cartservice/bin/cartservice &

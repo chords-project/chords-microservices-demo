@@ -81,7 +81,10 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         OrderItems@ProductCatalog cartPrices = productCatalogSvc.lookupCartPrices(cart_pc);
         
         // Convert currency of products
+        System@Currency.out.println("Waiting for client to send user currency..."@Currency);
         String@Currency userCurrency = ch_clientCurrency.<SerializableString>com(new SerializableString@Client(req.user_currency)).string;
+        System@Currency.out.println("Recieved user currency from client: "@Currency + userCurrency);
+
         OrderItems@Currency cartPrices_currency = ch_productCurrency.<OrderItems>com(cartPrices);
         OrderItems@Currency orderItems = currencySvc.convertProducts(cartPrices_currency, userCurrency);
         OrderItems@Client orderItems_client = ch_currencyClient.<OrderItems>com(orderItems);

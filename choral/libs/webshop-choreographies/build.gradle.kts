@@ -113,7 +113,7 @@ tasks.build {
 sourceSets {
    main {
       java {
-         srcDir("${layout.buildDirectory}/generated/choral")
+         srcDir("${buildDir}/generated/choral")
       }
    }
 }

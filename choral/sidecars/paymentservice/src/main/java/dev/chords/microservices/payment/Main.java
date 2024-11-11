@@ -15,8 +15,6 @@ public class Main {
 
     public static PaymentService paymentService;
 
-    public static TCPReactiveServer<WebshopSession> frontendServer = null;
-
     public static OpenTelemetrySdk telemetry;
 
     public static void main(String[] args) throws Exception {
@@ -48,7 +46,7 @@ public class Main {
 
                 ChorPlaceOrder_Payment placeOrderChor = new ChorPlaceOrder_Payment(
                         paymentService,
-                        frontendServer.chanB(ctx.session));
+                        ctx.chanB(WebshopSession.Service.FRONTEND.name()));
 
                 placeOrderChor.placeOrder();
                 System.out.println("[PAYMENT] PLACE_ORDER choreography completed " + ctx.session);

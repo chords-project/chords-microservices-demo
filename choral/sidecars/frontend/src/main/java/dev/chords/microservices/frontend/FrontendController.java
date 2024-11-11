@@ -3,7 +3,6 @@ package dev.chords.microservices.frontend;
 import java.net.URISyntaxException;
 
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,8 +11,6 @@ import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
-import dev.chords.choreographies.Cart;
-import dev.chords.choreographies.ChorGetCartItems_Client;
 import dev.chords.choreographies.ChorPlaceOrder_Client;
 import dev.chords.choreographies.OrderResult;
 import dev.chords.choreographies.ReqPlaceOrder;
@@ -64,39 +61,6 @@ public class FrontendController {
     @GetMapping("/ping")
     String ping() {
         return "pong";
-    }
-
-    @GetMapping("/cart/{userID}")
-    String cart(@PathVariable String userID) {
-        WebshopSession session = WebshopSession.makeSession(Choreography.GET_CART_ITEMS, Service.FRONTEND);
-
-        Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
-                .spanBuilder("Frontend: Get cart request")
-                .setSpanKind(SpanKind.CLIENT)
-                .setAttribute("choreography.session", session.toString())
-                .startSpan();
-
-        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
-
-        try (
-                TCPReactiveClient<WebshopSession> cartClient = new TCPReactiveClient<>(
-                        ServiceResources.shared.cart,
-                        Service.FRONTEND.name(),
-                        telemetrySession)) {
-            // Get items
-
-            System.out.println("Initiating getItem choreography with session: " + session);
-
-            ChorGetCartItems_Client getItemsChor = new ChorGetCartItems_Client(
-                    cartClient.chanA(session),
-                    server.chanB(session));
-
-            Cart cart = getItemsChor.getItems("user1");
-            return "Got back cart: " + cart.userID + ", " + cart.items;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Server error";
-        }
     }
 
     @PostMapping("/checkout")

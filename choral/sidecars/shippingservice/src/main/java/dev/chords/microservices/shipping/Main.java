@@ -15,9 +15,6 @@ public class Main {
 
     public static ShippingService shippingService;
 
-    public static TCPReactiveServer<WebshopSession> frontendServer = null;
-    public static TCPReactiveServer<WebshopSession> cartServer = null;
-
     public static OpenTelemetrySdk telemetry;
 
     public static void main(String[] args) throws Exception {
@@ -48,7 +45,9 @@ public class Main {
                 System.out.println("[SHIPPING] New PLACE_ORDER request " + ctx.session);
 
                 ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
-                        shippingService, frontendServer.chanB(ctx.session), cartServer.chanB(ctx.session),
+                        shippingService,
+                        ctx.chanB(WebshopSession.Service.FRONTEND.name()),
+                        ctx.chanB(WebshopSession.Service.CART.name()),
                         ctx.chanA(ServiceResources.shared.frontend));
 
                 placeOrderChor.placeOrder();

@@ -53,4 +53,29 @@ public class WebshopSession implements Session {
     public Session replacingSender(String senderName) {
         return new WebshopSession(choreography, Service.valueOf(senderName), sessionID);
     }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + choreography.hashCode();
+        result = prime * result + service.hashCode();
+        result = prime * result + sessionID.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
+
+        WebshopSession other = (WebshopSession) obj;
+
+        return choreography == other.choreography &&
+                service == other.service &&
+                sessionID.equals(other.sessionID);
+    }
+
 }

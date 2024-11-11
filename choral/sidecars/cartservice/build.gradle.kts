@@ -47,6 +47,8 @@ tasks.named<Test>("test") {
 }
 
 tasks.register<Copy>("copyApp") {
+    dependsOn(gradle.includedBuild("webshop-choreographies").task(":build"))
+    dependsOn(gradle.includedBuild("choral-reactive").task(":build"))
     dependsOn("distTar")
 
     from(layout.buildDirectory.dir("distributions"))

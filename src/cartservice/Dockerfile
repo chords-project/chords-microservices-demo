@@ -13,16 +13,14 @@
 # limitations under the License.
 
 # https://mcr.microsoft.com/product/dotnet/sdk
-FROM mcr.microsoft.com/dotnet/sdk:8.0.401-noble@sha256:d37cbb248b78027e3f149ea422bc9dc3bbf5b8c47bd1150e14c9849462235e91 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
 WORKDIR /app
 COPY service/src/cartservice.csproj .
 RUN dotnet restore cartservice.csproj
-# -r linux-x64
 
 COPY service/src/ .
 RUN dotnet publish cartservice.csproj \
     -p:PublishSingleFile=true \
-    # -r linux-x64 \
     --self-contained true \
     -p:PublishTrimmed=true \
     -p:TrimMode=full \
@@ -30,10 +28,11 @@ RUN dotnet publish cartservice.csproj \
     -o /cartservice
 
 # https://mcr.microsoft.com/product/dotnet/runtime-deps
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine@sha256:cd52298239f7553c2c18cd4ad5952bcfac7c49c3fa2da04ef5b2504dfd6bb1eb
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-noble
 
-# RUN apt update && apt install -y openjdk-21-jre
-RUN apk add --no-cache openjdk21
+# RUN apt update && apt install -y default-jre
+RUN apt update && apt install -y openjdk-21-jre
+# RUN apk add --no-cache openjdk21
 
 WORKDIR /app
 
@@ -51,4 +50,5 @@ ENV DOTNET_EnableDiagnostics=0 \
     ASPNETCORE_HTTP_PORTS=7070
 
 USER 1000
+
 ENTRYPOINT ["/app/entrypoint.sh"]
