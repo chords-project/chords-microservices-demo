@@ -9,15 +9,20 @@ import choral.reactive.tracing.JaegerConfiguration;
 
 public class Benchmark {
 
-    public static void main(String[] args) throws Exception {
+    final static String SERVICE_A = "localhost:8201";
+    final static String SERVICE_B = "localhost:8202";
+    final static int GRPC_PORT = 5430;
 
-        final String SERVICE_A = "localhost:8201";
-        final String SERVICE_B = "localhost:8202";
+    interface TestAction<T> {
+        void test(T value) throws Exception;
+    }
+
+    public static void benchmarkChoreography(TestAction<ServiceA> testAction) throws Exception {
 
         final String JAEGER_ENDPOINT = "http://localhost:4317";
 
         GrpcServer grpcServer = new GrpcServer();
-        grpcServer.start(5430);
+        grpcServer.start(GRPC_PORT);
 
         ServiceA serviceA = new ServiceA(JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ServiceA"), SERVICE_B);
         ServiceB serviceB = new ServiceB(JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ServiceB"), SERVICE_A);
@@ -25,28 +30,72 @@ public class Benchmark {
         serviceA.listen(SERVICE_A);
         serviceB.listen(SERVICE_B);
 
-        serviceA.startPingPong();
-        serviceA.startGreeting();
-
-        Scanner input = new Scanner(System.in);
-        System.out.print("Press Enter to perform benchmark...");
-        input.nextLine();
-        input.close();
-
-        // serviceA.startGreeting();
-
-        for (int i = 0; i < 5; i++) {
-            serviceA.startPingPong();
-            Thread.sleep(50);
-        }
-
-        for (int i = 0; i < 5; i++) {
-            serviceA.startGreeting();
-            Thread.sleep(50);
-        }
+        testAction.test(serviceA);
 
         serviceA.close();
         serviceB.close();
         grpcServer.stop();
+    }
+
+    public static void benchmarkGrpc(TestAction<GrpcClient> testAction) throws Exception {
+        final String JAEGER_ENDPOINT = "http://localhost:4317";
+
+        GrpcServer server = new GrpcServer();
+        GrpcClient client = new GrpcClient(GRPC_PORT, JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "GrpcClient"));
+
+        server.start(GRPC_PORT);
+
+        testAction.test(client);
+
+        client.shutdown();
+        server.stop();
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        benchmarkChoreography(serviceA -> {
+            serviceA.startPingPong();
+            serviceA.startGreeting();
+
+            // Scanner input = new Scanner(System.in);
+            // System.out.print("Press Enter to perform benchmark...");
+            // input.nextLine();
+            // input.close();
+
+            // serviceA.startGreeting();
+
+            for (int i = 0; i < 5; i++) {
+                serviceA.startPingPong();
+                Thread.sleep(100);
+            }
+
+            for (int i = 0; i < 5; i++) {
+                serviceA.startGreeting();
+                Thread.sleep(100);
+            }
+        });
+
+        benchmarkGrpc(client -> {
+            long startTime = System.currentTimeMillis();
+            client.greet("Warmup");
+            long endTime = System.currentTimeMillis();
+            System.out.println("Warmup took " + (endTime - startTime) + " ms");
+
+            // Scanner input = new Scanner(System.in);
+            // System.out.print("Press Enter to perform benchmark...");
+            // input.nextLine();
+            // input.close();
+
+            for (int i = 0; i < 20; i++) {
+                startTime = System.currentTimeMillis();
+                String greeting = client.greet("Name" + i);
+                endTime = System.currentTimeMillis();
+
+                System.out.println("Got back greeting: " + greeting + "(" + (endTime -
+                        startTime) + " ms)");
+                Thread.sleep(100);
+            }
+        });
+
     }
 }

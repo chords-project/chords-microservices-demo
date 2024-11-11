@@ -1,5 +1,6 @@
 package dev.chords.microservices.benchmark;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
@@ -55,5 +56,9 @@ public class GrpcClient implements GreeterService {
         }
 
         return reply.getMessage();
+    }
+
+    public void shutdown() {
+        channel.shutdown();
     }
 }
