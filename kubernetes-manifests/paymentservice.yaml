@@ -60,6 +60,10 @@ spec:
         - name: CHORAL_PAYMENT
           value: "0.0.0.0:5401"
 
+        # Outgoing choral channels
+        - name: CHORAL_FRONTEND
+          value: "frontend:5401"
+
         # Tracing
         - name: JAEGER_ENDPOINT
           value: "http://jaeger-collector:4317"

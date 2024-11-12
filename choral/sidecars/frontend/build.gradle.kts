@@ -59,3 +59,8 @@ tasks.register<Copy>("copyApp") {
     include("frontend-0.1.0.jar")
     into("../../../src/frontend/choral-build/")
 }
+
+tasks.build {
+    dependsOn(gradle.includedBuild("webshop-choreographies").task(":build"))
+    dependsOn(gradle.includedBuild("choral-reactive").task(":build"))
+}

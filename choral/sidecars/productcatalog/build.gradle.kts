@@ -55,3 +55,8 @@ tasks.register<Copy>("copyApp") {
     include("*.tar")
     into("../../../src/productcatalogservice/choral-build/")
 }
+
+tasks.build {
+    dependsOn(gradle.includedBuild("webshop-choreographies").task(":build"))
+    dependsOn(gradle.includedBuild("choral-reactive").task(":build"))
+}

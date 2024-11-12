@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
 import choral.channels.DiChannel;
+import choral.channels.SymChannel;
 
 public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Shipping) {
 
@@ -15,19 +16,16 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
     private ShippingService@Shipping shippingSvc;
     private PaymentService@Payment paymentSvc;
 
+    private SymChannel@(Client, Currency)<Serializable> ch_clientCurrency;
+    private SymChannel@(Client, Shipping)<Serializable> ch_clientShipping;
+    private SymChannel@(Client, Payment)<Serializable> ch_clientPayment;
+
     private DiChannel@(Client, Cart)<Serializable> ch_clientCart;
-    private DiChannel@(Client, Currency)<Serializable> ch_clientCurrency;
-    private DiChannel@(Client, Shipping)<Serializable> ch_clientShipping;
-    private DiChannel@(Client, Payment)<Serializable> ch_clientPayment;
     
     private DiChannel@(Cart, ProductCatalog)<Serializable> ch_cartProduct;
     private DiChannel@(Cart, Shipping)<Serializable> ch_cartShipping;
     
     private DiChannel@(ProductCatalog, Currency)<Serializable> ch_productCurrency;
-    
-    private DiChannel@(Currency, Client)<Serializable> ch_currencyClient;
-
-    private DiChannel@(Shipping, Client)<Serializable> ch_shippingClient;
 
     public ChorPlaceOrder(
         ClientService@Client clientSvc,
@@ -36,15 +34,13 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         CurrencyService@Currency currencySvc,
         ShippingService@Shipping shippingSvc,
         PaymentService@Payment paymentSvc,
+        SymChannel@(Client, Currency)<Serializable> ch_clientCurrency,
+        SymChannel@(Client, Shipping)<Serializable> ch_clientShipping,
+        SymChannel@(Client, Payment)<Serializable> ch_clientPayment,
         DiChannel@(Client, Cart)<Serializable> ch_clientCart,
-        DiChannel@(Client, Currency)<Serializable> ch_clientCurrency,
-        DiChannel@(Client, Shipping)<Serializable> ch_clientShipping,
-        DiChannel@(Client, Payment)<Serializable> ch_clientPayment,
         DiChannel@(Cart, ProductCatalog)<Serializable> ch_cartProduct,
         DiChannel@(Cart, Shipping)<Serializable> ch_cartShipping,
-        DiChannel@(ProductCatalog, Currency)<Serializable> ch_productCurrency,
-        DiChannel@(Currency, Client)<Serializable> ch_currencyClient,
-        DiChannel@(Shipping, Client)<Serializable> ch_shippingClient
+        DiChannel@(ProductCatalog, Currency)<Serializable> ch_productCurrency
     ) {
         this.clientSvc = clientSvc;
         this.cartSvc = cartSvc;
@@ -62,10 +58,6 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         this.ch_cartShipping = ch_cartShipping;
         
         this.ch_productCurrency = ch_productCurrency;
-        
-        this.ch_currencyClient = ch_currencyClient;
-
-        this.ch_shippingClient = ch_shippingClient;
     }
 
     public OrderResult@Client placeOrder(ReqPlaceOrder@Client req) {
@@ -87,23 +79,26 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
 
         OrderItems@Currency cartPrices_currency = ch_productCurrency.<OrderItems>com(cartPrices);
         OrderItems@Currency orderItems = currencySvc.convertProducts(cartPrices_currency, userCurrency);
-        OrderItems@Client orderItems_client = ch_currencyClient.<OrderItems>com(orderItems);
+        OrderItems@Client orderItems_client = ch_clientCurrency.<OrderItems>com(orderItems);
 
         // Calculate shipping
         Address@Shipping shippingAddress = ch_clientShipping.<Address>com(req.address);
         Cart@Shipping cart_shipping = ch_cartShipping.<Cart>com(userCart);
         Money@Shipping shippingCost = shippingSvc.getQuote(shippingAddress, cart_shipping);
-        Money@Client shippingCost_client = ch_shippingClient.<Money>com(shippingCost);
+        Money@Client shippingCost_client = ch_clientShipping.<Money>com(shippingCost);
 
         // Ship order
         String@Shipping trackingID = shippingSvc.shipOrder(shippingAddress, cart_shipping);
-        String@Client trackingID_client = ch_shippingClient.<SerializableString>com(new SerializableString@Shipping(trackingID)).string;
+        String@Client trackingID_client = ch_clientShipping.<SerializableString>com(new SerializableString@Shipping(trackingID)).string;
 
         // Charge card
         Money@Client totalPrice = clientSvc.totalPrice(orderItems_client, shippingCost_client);
         Money@Payment chargePrice = ch_clientPayment.<Money>com(totalPrice);
         CreditCardInfo@Payment creditCartInfo = ch_clientPayment.<CreditCardInfo>com(req.credit_card);
         String@Payment txID = paymentSvc.charge(chargePrice, creditCartInfo);
+
+        // Send back charge confirmation
+        Boolean@Client chargeSuccess = ch_clientPayment.<Boolean>com(true@Payment);
 
         // Bundle response at client
         UUID@Client orderID = UUID@Client.randomUUID();

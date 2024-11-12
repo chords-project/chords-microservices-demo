@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import choral.channels.SymChannel_A;
+import choral.reactive.ReactiveSymChannel;
 import choral.reactive.TCPReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -103,14 +105,24 @@ public class FrontendController {
 
             System.out.println("[FRONTEND] Initiating placeOrder choreography with session: " + session);
 
+            var currencyChan = new ReactiveSymChannel<>(
+                    currencyClient.chanA(session),
+                    server.chanB(session, Service.CURRENCY.name()));
+
+            var shippingChan = new ReactiveSymChannel<>(
+                    shippingClient.chanA(session),
+                    server.chanB(session, Service.SHIPPING.name()));
+
+            var paymentChan = new ReactiveSymChannel<>(
+                    paymentClient.chanA(session),
+                    server.chanB(session, Service.PAYMENT.name()));
+
             ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
                     new ClientService(telemetrySession.tracer),
-                    cartClient.chanA(session),
-                    currencyClient.chanA(session),
-                    shippingClient.chanA(session),
-                    paymentClient.chanA(session),
-                    server.chanB(session, Service.CURRENCY.name()),
-                    server.chanB(session, Service.SHIPPING.name()));
+                    currencyChan,
+                    shippingChan,
+                    paymentChan,
+                    cartClient.chanA(session));
 
             OrderResult result = placeOrderChor.placeOrder(request);
 

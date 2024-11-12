@@ -46,9 +46,8 @@ public class Main {
 
                 ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
                         shippingService,
-                        ctx.chanB(WebshopSession.Service.FRONTEND.name()),
-                        ctx.chanB(WebshopSession.Service.CART.name()),
-                        ctx.chanA(ServiceResources.shared.frontend));
+                        ctx.symChan(WebshopSession.Service.FRONTEND.name(), ServiceResources.shared.frontend),
+                        ctx.chanB(WebshopSession.Service.CART.name()));
 
                 placeOrderChor.placeOrder();
                 System.out.println("[SHIPPING] PLACE_ORDER choreography completed " + ctx.session);

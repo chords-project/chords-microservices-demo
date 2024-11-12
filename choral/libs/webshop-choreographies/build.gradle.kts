@@ -5,6 +5,10 @@
  * For more details on building Java & JVM projects, please refer to https://docs.gradle.org/8.10.2/userguide/building_java_projects.html in the Gradle documentation.
  */
 
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
+
 import org.apache.tools.ant.taskdefs.condition.Os
 import com.google.protobuf.gradle.*
 
@@ -83,27 +87,33 @@ protobuf {
 }
 
 tasks.register("compileChoral") {
-  val choreographies = listOf(
-    "ChorAddCartItem",
-    "ChorGetCartItems",
-    "ChorPlaceOrder"
-  )
+    val choreographies = listOf(
+        "ChorPlaceOrder",
+    )
 
-  doLast {
-    choreographies.forEach { name: String ->
-      ProcessBuilder()
-            .command(listOf(
-              "choral", "epp",
-              "--sources=./src/main/choral",
-              "--headers=./src/main/choral",
-              "--target=${buildDir}/generated/choral",
-              name
-            ))
-            .directory(rootProject.projectDir)
-            .start()
-            .waitFor(60, TimeUnit.SECONDS)
+    doLast {
+        choreographies.forEach { name: String ->
+            val process = ProcessBuilder()
+                .command(listOf(
+                    "choral", "epp",
+                    "--sources=./src/main/choral",
+                    "--headers=./src/main/choral",
+                    "--target=${buildDir}/generated/choral",
+                    name
+                ))
+                .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                .redirectError(ProcessBuilder.Redirect.PIPE)
+                .directory(rootProject.projectDir)
+                .start()
+
+            process.waitFor(60, TimeUnit.SECONDS)
+
+            if (process.exitValue() != 0) {
+                val output = BufferedReader(InputStreamReader(process.inputStream)).readText()
+                throw GradleException("Failed to generate choreography '$name':\n\n$output")
+            }
+        }
     }
-  }
 }
 
 tasks.build {

@@ -46,7 +46,7 @@ public class Main {
 
                 ChorPlaceOrder_Payment placeOrderChor = new ChorPlaceOrder_Payment(
                         paymentService,
-                        ctx.chanB(WebshopSession.Service.FRONTEND.name()));
+                        ctx.symChan(WebshopSession.Service.FRONTEND.name(), ServiceResources.shared.frontend));
 
                 placeOrderChor.placeOrder();
                 System.out.println("[PAYMENT] PLACE_ORDER choreography completed " + ctx.session);
