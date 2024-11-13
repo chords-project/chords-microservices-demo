@@ -347,4 +347,9 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             }
         }
     }
+
+    @Override
+    public String toString() {
+        return "TCPReactiveServer [serviceName=" + serviceName + "]";
+    }
 }

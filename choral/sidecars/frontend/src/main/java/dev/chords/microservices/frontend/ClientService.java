@@ -1,11 +1,11 @@
 package dev.chords.microservices.frontend;
 
-import choral.reactive.tracing.TelemetrySession;
 import dev.chords.choreographies.Money;
 import dev.chords.choreographies.OrderItems;
 import dev.chords.microservices.frontend.MoneyUtils.MoneyException;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 
 public class ClientService implements dev.chords.choreographies.ClientService {
 
@@ -17,12 +17,9 @@ public class ClientService implements dev.chords.choreographies.ClientService {
 
     @Override
     public Money totalPrice(OrderItems orderItems, Money shippingCost) {
-        Span span = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("ClientService.totalPrice").startSpan();
-        }
+        Span span = tracer.spanBuilder("ClientService.totalPrice").startSpan();
 
-        try {
+        try (Scope scope = span.makeCurrent()) {
             Money total = shippingCost;
 
             for (var item : orderItems.items) {
@@ -32,10 +29,11 @@ public class ClientService implements dev.chords.choreographies.ClientService {
 
             return total;
         } catch (MoneyException e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
             throw new RuntimeException(e);
         } finally {
-            if (span != null)
-                span.end();
+            span.end();
         }
     }
 }

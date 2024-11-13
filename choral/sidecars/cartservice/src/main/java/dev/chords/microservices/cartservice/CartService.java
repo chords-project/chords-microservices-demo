@@ -10,7 +10,7 @@ import dev.chords.choreographies.Cart;
 import dev.chords.choreographies.CartItem;
 import hipstershop.CartServiceGrpc;
 import hipstershop.Demo;
-import hipstershop.CartServiceGrpc.CartServiceBlockingStub;
+import hipstershop.CartServiceGrpc.CartServiceFutureStub;
 import hipstershop.Demo.EmptyCartRequest;
 import io.grpc.ManagedChannel;
 import io.opentelemetry.api.trace.Span;
@@ -21,13 +21,13 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 public class CartService implements dev.chords.choreographies.CartService, AutoCloseable {
 
     protected ManagedChannel channel;
-    protected CartServiceBlockingStub connection;
+    protected CartServiceFutureStub connection;
     protected Tracer tracer;
 
     public CartService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
         channel = ChannelConfigurator.makeChannel(address, telemetry);
 
-        this.connection = CartServiceGrpc.newBlockingStub(channel);
+        this.connection = CartServiceGrpc.newFutureStub(channel);
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
     }
 
@@ -54,9 +54,7 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
                                 .setQuantity(quantity))
                 .build();
 
-        Span requestSpan = tracer.spanBuilder("send request").startSpan();
         connection.addItem(request);
-        requestSpan.end();
 
         if (scope != null)
             scope.close();
@@ -69,55 +67,47 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
     public Cart getCart(String userID) {
         System.out.println("[CART] Get cart for user: " + userID);
 
-        Span span = null;
-        Scope scope = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("CartService.getCart")
-                    .setAttribute("request.userID", userID).startSpan();
-            scope = span.makeCurrent();
-        }
+        Span span = tracer.spanBuilder("CartService.getCart")
+                .setAttribute("request.userID", userID).startSpan();
 
-        Demo.GetCartRequest request = Demo.GetCartRequest.newBuilder()
-                .setUserId(userID)
-                .build();
+        try (Scope scope = span.makeCurrent();) {
 
-        Span requestSpan = tracer.spanBuilder("send request").startSpan();
-        Demo.Cart cart = connection.getCart(request);
-        requestSpan.end();
+            Demo.GetCartRequest request = Demo.GetCartRequest.newBuilder()
+                    .setUserId(userID)
+                    .build();
 
-        List<CartItem> items = cart.getItemsList().stream()
-                .map(item -> new CartItem(item.getProductId(), item.getQuantity())).toList();
+            Demo.Cart cart = connection.getCart(request).get(10, TimeUnit.SECONDS);
 
-        if (scope != null)
-            scope.close();
+            List<CartItem> items = cart.getItemsList().stream()
+                    .map(item -> new CartItem(item.getProductId(), item.getQuantity())).toList();
 
-        if (span != null)
+            return new Cart(cart.getUserId(), items);
+        } catch (Exception e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+
+            throw new RuntimeException(e);
+        } finally {
             span.end();
-
-        return new Cart(cart.getUserId(), items);
+        }
     }
 
     public void emptyCart(String userID) {
         System.out.println("[CART] Empty cart for user: " + userID);
 
-        Span span = null;
-        Scope scope = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("CartService.emptyCart").setAttribute("request.userID", userID).startSpan();
-            scope = span.makeCurrent();
-        }
+        Span span = tracer.spanBuilder("CartService.emptyCart").setAttribute("request.userID", userID).startSpan();
+        try (Scope scope = span.makeCurrent()) {
 
-        EmptyCartRequest request = EmptyCartRequest.newBuilder().setUserId(userID).build();
+            EmptyCartRequest request = EmptyCartRequest.newBuilder().setUserId(userID).build();
 
-        Span requestSpan = tracer.spanBuilder("send request").startSpan();
-        connection.emptyCart(request);
-        requestSpan.end();
-
-        if (scope != null)
-            scope.close();
-
-        if (span != null)
+            connection.emptyCart(request).get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+            throw new RuntimeException(e);
+        } finally {
             span.end();
+        }
     }
 
     @Override

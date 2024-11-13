@@ -1,6 +1,7 @@
 package dev.chords.microservices.shipping;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 import choral.reactive.ChannelConfigurator;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -14,7 +15,7 @@ import hipstershop.Demo.GetQuoteRequest;
 import hipstershop.Demo.GetQuoteResponse;
 import hipstershop.Demo.ShipOrderRequest;
 import hipstershop.Demo.ShipOrderResponse;
-import hipstershop.ShippingServiceGrpc.ShippingServiceBlockingStub;
+import hipstershop.ShippingServiceGrpc.ShippingServiceFutureStub;
 import io.grpc.ManagedChannel;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
@@ -24,13 +25,13 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 public class ShippingService implements dev.chords.choreographies.ShippingService {
 
     protected ManagedChannel channel;
-    protected ShippingServiceBlockingStub connection;
+    protected ShippingServiceFutureStub connection;
     protected Tracer tracer;
 
     public ShippingService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
         channel = ChannelConfigurator.makeChannel(address, telemetry);
 
-        connection = ShippingServiceGrpc.newBlockingStub(channel);
+        connection = ShippingServiceGrpc.newFutureStub(channel);
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
     }
 
@@ -38,69 +39,69 @@ public class ShippingService implements dev.chords.choreographies.ShippingServic
     public Money getQuote(Address address, Cart cart) {
         System.out.println("[SHIPPING] Get quote");
 
-        Span span = null;
-        Scope scope = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("ShippingService.getQuote").startSpan();
-            scope = span.makeCurrent();
-        }
+        Span span = tracer.spanBuilder("ShippingService.getQuote").startSpan();
 
-        GetQuoteRequest.Builder request = GetQuoteRequest.newBuilder()
-                .setAddress(
-                        Demo.Address.newBuilder()
-                                .setStreetAddress(address.street_address)
-                                .setCity(address.city)
-                                .setState(address.state)
-                                .setCountry(address.country)
-                                .setZipCode(address.zip_code));
+        try (Scope scope = span.makeCurrent()) {
 
-        for (CartItem item : cart.items) {
-            request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
-        }
+            GetQuoteRequest.Builder request = GetQuoteRequest.newBuilder()
+                    .setAddress(
+                            Demo.Address.newBuilder()
+                                    .setStreetAddress(address.street_address)
+                                    .setCity(address.city)
+                                    .setState(address.state)
+                                    .setCountry(address.country)
+                                    .setZipCode(address.zip_code));
 
-        Span requestSpan = tracer.spanBuilder("send request").startSpan();
-        GetQuoteResponse response = connection.getQuote(request.build());
-        requestSpan.end();
+            for (CartItem item : cart.items) {
+                request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
+            }
 
-        Demo.Money m = response.getCostUsd();
+            GetQuoteResponse response = connection.getQuote(request.build()).get(10, TimeUnit.SECONDS);
 
-        if (scope != null)
-            scope.close();
+            Demo.Money m = response.getCostUsd();
 
-        if (span != null)
+            return new Money(m.getCurrencyCode(), (int) m.getUnits(), m.getNanos());
+        } catch (Exception e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+            throw new RuntimeException(e);
+        } finally {
             span.end();
+        }
 
-        return new Money(m.getCurrencyCode(), (int) m.getUnits(), m.getNanos());
     }
 
     @Override
     public String shipOrder(Address address, Cart cart) {
         System.out.println("[SHIPPING] Ship order");
 
-        Span span = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("ShippingService.shipOrder").startSpan();
-        }
+        Span span = tracer.spanBuilder("ShippingService.shipOrder").startSpan();
 
-        ShipOrderRequest.Builder request = ShipOrderRequest.newBuilder()
-                .setAddress(
-                        Demo.Address.newBuilder()
-                                .setStreetAddress(address.street_address)
-                                .setCity(address.city)
-                                .setState(address.state)
-                                .setCountry(address.country)
-                                .setZipCode(address.zip_code));
+        try (Scope scope = span.makeCurrent()) {
 
-        for (CartItem item : cart.items) {
-            request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
-        }
+            ShipOrderRequest.Builder request = ShipOrderRequest.newBuilder()
+                    .setAddress(
+                            Demo.Address.newBuilder()
+                                    .setStreetAddress(address.street_address)
+                                    .setCity(address.city)
+                                    .setState(address.state)
+                                    .setCountry(address.country)
+                                    .setZipCode(address.zip_code));
 
-        ShipOrderResponse response = connection.shipOrder(request.build());
+            for (CartItem item : cart.items) {
+                request.addItems(Demo.CartItem.newBuilder().setProductId(item.product_id).setQuantity(item.quantity));
+            }
 
-        if (span != null)
+            ShipOrderResponse response = connection.shipOrder(request.build()).get(10, TimeUnit.SECONDS);
+
+            return response.getTrackingId();
+        } catch (Exception e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+            throw new RuntimeException(e);
+        } finally {
             span.end();
-
-        return response.getTrackingId();
+        }
     }
 
 }

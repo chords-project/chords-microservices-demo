@@ -34,7 +34,7 @@ public class TelemetrySession {
         this.senderLinkContext = msg.senderSpanContext.toSpanContext();
         this.choreographyContext = telemetry.getPropagators()
                 .getTextMapPropagator()
-                .extract(Context.current(), msg, new HeaderTextMapGetter());
+                .extract(Context.root(), msg, new HeaderTextMapGetter());
     }
 
     // Configure initial telemetry session
@@ -43,7 +43,7 @@ public class TelemetrySession {
         this.session = session;
         this.tracer = this.telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
         this.senderLinkContext = null;
-        this.choreographyContext = Context.current().with(span);
+        this.choreographyContext = Context.root().with(span);
         this.choreographySpan = span;
     }
 

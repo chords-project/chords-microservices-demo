@@ -11,6 +11,8 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import choral.reactive.tracing.TelemetrySession;
 
 public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, Serializable>, Closeable {
@@ -28,15 +30,21 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
         this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
 
-        log("TCPReactiveClient connecting");
+        Span span = telemetrySession.tracer.spanBuilder("TCPReactiveClient connect: " + address)
+                .setAttribute("channel.service", serviceName)
+                .startSpan();
 
-        URI uri = new URI(null, address, null, null, null).parseServerAuthority();
-        InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
+        try (Scope scope = span.makeCurrent()) {
 
-        this.connection = new Socket(addr.getHostName(), addr.getPort());
-        this.stream = new ObjectOutputStream(connection.getOutputStream());
+            URI uri = new URI(null, address, null, null, null).parseServerAuthority();
+            InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
-        log("TCPReactiveClient connected");
+            this.connection = new Socket(addr.getHostName(), addr.getPort());
+            this.stream = new ObjectOutputStream(connection.getOutputStream());
+
+        } finally {
+            span.end();
+        }
     }
 
     @Override
@@ -80,6 +88,11 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
     @Override
     public ReactiveChannel_A<S, Serializable> chanA(S session) {
         return new ReactiveChannel_A<>(session, this, telemetrySession);
+    }
+
+    @Override
+    public String toString() {
+        return "TCPReactiveClient [address=" + address + ", serviceName=" + serviceName + "]";
     }
 
 }

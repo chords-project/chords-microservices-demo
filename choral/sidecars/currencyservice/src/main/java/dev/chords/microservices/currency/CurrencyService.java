@@ -3,6 +3,7 @@ package dev.chords.microservices.currency;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import choral.reactive.ChannelConfigurator;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -10,13 +11,12 @@ import dev.chords.choreographies.Money;
 import dev.chords.choreographies.OrderItem;
 import dev.chords.choreographies.OrderItems;
 import hipstershop.CurrencyServiceGrpc;
-import hipstershop.CurrencyServiceGrpc.CurrencyServiceBlockingStub;
+import hipstershop.CurrencyServiceGrpc.CurrencyServiceFutureStub;
 import hipstershop.Demo;
 import hipstershop.Demo.CurrencyConversionRequest;
 import hipstershop.Demo.Empty;
 import hipstershop.Demo.GetSupportedCurrenciesResponse;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
@@ -25,12 +25,12 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 public class CurrencyService implements dev.chords.choreographies.CurrencyService {
 
     protected ManagedChannel channel;
-    protected CurrencyServiceBlockingStub connection;
+    protected CurrencyServiceFutureStub connection;
     protected Tracer tracer;
 
     public CurrencyService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
         channel = ChannelConfigurator.makeChannel(address, telemetry);
-        connection = CurrencyServiceGrpc.newBlockingStub(channel);
+        connection = CurrencyServiceGrpc.newFutureStub(channel);
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
     }
 
@@ -38,79 +38,76 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
     public List<String> supportedCurrencies() {
         System.out.println("[CURRENCY] Get supported currencies");
 
-        Span span = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("CurrencyService.supportedCurrencies").startSpan();
-        }
+        Span span = tracer.spanBuilder("CurrencyService.supportedCurrencies").startSpan();
 
-        GetSupportedCurrenciesResponse response = connection.getSupportedCurrencies(Empty.getDefaultInstance());
+        try (Scope scope = span.makeCurrent()) {
 
-        if (span != null)
+            GetSupportedCurrenciesResponse response = connection.getSupportedCurrencies(Empty.getDefaultInstance())
+                    .get(10, TimeUnit.SECONDS);
+
+            return response.getCurrencyCodesList();
+
+        } catch (Exception e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+            throw new RuntimeException(e);
+        } finally {
             span.end();
-
-        return response.getCurrencyCodesList();
+        }
     }
 
     @Override
     public Money convert(Money from, String toCurrency) {
         System.out.println("[CURRENCY] Convert currencies: from=" + from.currencyCode + ", to=" + toCurrency);
 
-        Span span = null;
-        Scope scope = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("CurrencyService.convertCurrency")
-                    .setAttribute("request.from", from.currencyCode)
-                    .setAttribute("request.to", toCurrency)
-                    .startSpan();
-            scope = span.makeCurrent();
-        }
+        Span span = tracer.spanBuilder("CurrencyService.convertCurrency")
+                .setAttribute("request.from", from.currencyCode)
+                .setAttribute("request.to", toCurrency)
+                .startSpan();
 
-        CurrencyConversionRequest request = CurrencyConversionRequest.newBuilder()
-                .setFrom(
-                        Demo.Money.newBuilder()
-                                .setCurrencyCode(from.currencyCode)
-                                .setUnits(from.units)
-                                .setNanos(from.nanos)
-                                .build())
-                .setToCode(toCurrency)
-                .build();
+        try (Scope scope = span.makeCurrent()) {
 
-        Span requestSpan = tracer.spanBuilder("send request").startSpan();
-        Demo.Money m = connection.convert(request);
-        requestSpan.end();
+            CurrencyConversionRequest request = CurrencyConversionRequest.newBuilder()
+                    .setFrom(
+                            Demo.Money.newBuilder()
+                                    .setCurrencyCode(from.currencyCode)
+                                    .setUnits(from.units)
+                                    .setNanos(from.nanos)
+                                    .build())
+                    .setToCode(toCurrency)
+                    .build();
 
-        if (scope != null)
-            scope.close();
+            Demo.Money m = connection.convert(request).get(10, TimeUnit.SECONDS);
 
-        if (span != null)
+            return new Money(m.getCurrencyCode(), (int) m.getUnits(), m.getNanos());
+
+        } catch (Exception e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+            throw new RuntimeException(e);
+        } finally {
             span.end();
-
-        return new Money(m.getCurrencyCode(), (int) m.getUnits(), m.getNanos());
+        }
     }
 
     @Override
     public OrderItems convertProducts(OrderItems products, String toCurrency) {
         System.out.println("[CURRENCY] Convert products: to=" + toCurrency);
 
-        Span span = null;
-        Scope scope = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("CurrencyService.convertProducts")
-                    .setAttribute("request.toCurrency", toCurrency)
-                    .startSpan();
-            scope = span.makeCurrent();
-        }
+        Span span = tracer.spanBuilder("CurrencyService.convertProducts")
+                .setAttribute("request.toCurrency", toCurrency)
+                .startSpan();
 
-        List<OrderItem> orderItemList = products.items.stream()
-                .map(product -> new OrderItem(product.item, convert(product.cost, toCurrency)))
-                .toList();
+        try (Scope scope = span.makeCurrent()) {
 
-        if (scope != null)
-            scope.close();
+            List<OrderItem> orderItemList = products.items.stream()
+                    .map(product -> new OrderItem(product.item, convert(product.cost, toCurrency)))
+                    .toList();
 
-        if (span != null)
+            return new OrderItems(new ArrayList<>(orderItemList));
+
+        } finally {
             span.end();
-
-        return new OrderItems(new ArrayList<>(orderItemList));
+        }
     }
 }

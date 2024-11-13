@@ -3,7 +3,8 @@ package choral.reactive;
 import choral.channels.DiChannel_A;
 import choral.lang.Unit;
 import choral.reactive.tracing.TelemetrySession;
-import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 
 public class ReactiveChannel_A<S extends Session, M> implements DiChannel_A<M> {
 
@@ -19,17 +20,20 @@ public class ReactiveChannel_A<S extends Session, M> implements DiChannel_A<M> {
 
     @Override
     public <T extends M> Unit com(T msg) {
-        Attributes attributes = Attributes.builder()
-                .put("channel.session", session.toString())
-                .put("channel.message", msg.toString())
-                .build();
+        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel send message")
+                .setAttribute("channel.session", session.toString())
+                .setAttribute("channel.message", msg.toString())
+                .setAttribute("channel.sender", sender.toString())
+                .startSpan();
 
-        telemetrySession.log("ReactiveChannel sending message", attributes);
+        try (Scope scope = span.makeCurrent()) {
 
-        // Associates each message with the key
-        sender.send(session, msg);
+            // Associates each message with the key
+            sender.send(session, msg);
 
-        telemetrySession.log("ReactiveChannel message sent", attributes);
+        }
+
+        span.end();
 
         return Unit.id;
     }
@@ -37,17 +41,17 @@ public class ReactiveChannel_A<S extends Session, M> implements DiChannel_A<M> {
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Enum<T>> Unit select(T msg) {
-        Attributes attributes = Attributes.builder()
-                .put("channel.session", session.toString())
-                .put("channel.label", msg.toString())
-                .build();
+        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel send message")
+                .setAttribute("channel.session", session.toString())
+                .setAttribute("channel.message", msg.toString())
+                .setAttribute("channel.sender", sender.toString())
+                .startSpan();
 
-        telemetrySession.log("ReactiveChannel sending select label", attributes);
+        try (Scope scope = span.makeCurrent()) {
+            sender.send(session, (M) msg);
+        }
 
-        Object msgO = msg;
-        sender.send(session, (M) msgO);
-
-        telemetrySession.log("ReactiveChannel sent select label", attributes);
+        span.end();
 
         return Unit.id;
     }
