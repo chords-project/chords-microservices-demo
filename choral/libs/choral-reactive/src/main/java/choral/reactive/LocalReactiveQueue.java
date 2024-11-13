@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import choral.reactive.tracing.TelemetrySession;
+
 public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, Object>, ReactiveReceiver<S, Object> {
 
     public interface NewSessionEvent<S extends Session> {
@@ -102,5 +104,14 @@ public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, 
             this.sendQueue.remove(session);
             this.recvQueue.remove(session);
         }
+    }
+
+    @Override
+    public ReactiveChannel_A<S, Object> chanA(S session) {
+        return new ReactiveChannel_A<>(session, this, TelemetrySession.makeNoop(session));
+    }
+
+    public ReactiveChannel_B<S, Object> chanB(S session) {
+        return new ReactiveChannel_B<>(session, this, TelemetrySession.makeNoop(session));
     }
 }

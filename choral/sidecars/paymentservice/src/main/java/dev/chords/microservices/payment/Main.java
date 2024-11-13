@@ -42,18 +42,18 @@ public class Main {
     private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
         switch (ctx.session.choreography) {
             case PLACE_ORDER:
-                System.out.println("[PAYMENT] New PLACE_ORDER request " + ctx.session);
+                ctx.log("[PAYMENT] New PLACE_ORDER request");
 
                 ChorPlaceOrder_Payment placeOrderChor = new ChorPlaceOrder_Payment(
                         paymentService,
                         ctx.symChan(WebshopSession.Service.FRONTEND.name(), ServiceResources.shared.frontend));
 
                 placeOrderChor.placeOrder();
-                System.out.println("[PAYMENT] PLACE_ORDER choreography completed " + ctx.session);
+                ctx.log("[PAYMENT] PLACE_ORDER choreography completed");
 
                 break;
             default:
-                System.out.println("[PAYMENT] Invalid choreography " + ctx.session.choreographyName());
+                ctx.log("[PAYMENT] Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

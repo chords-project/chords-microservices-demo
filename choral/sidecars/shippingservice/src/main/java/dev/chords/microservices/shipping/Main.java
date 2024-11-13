@@ -42,7 +42,7 @@ public class Main {
     private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
         switch (ctx.session.choreography) {
             case PLACE_ORDER:
-                System.out.println("[SHIPPING] New PLACE_ORDER request " + ctx.session);
+                ctx.log("[SHIPPING] New PLACE_ORDER request");
 
                 ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
                         shippingService,
@@ -50,11 +50,11 @@ public class Main {
                         ctx.chanB(WebshopSession.Service.CART.name()));
 
                 placeOrderChor.placeOrder();
-                System.out.println("[SHIPPING] PLACE_ORDER choreography completed " + ctx.session);
+                ctx.log("[SHIPPING] PLACE_ORDER choreography completed");
 
                 break;
             default:
-                System.out.println("[SHIPPING] Invalid choreography " + ctx.session.choreographyName());
+                ctx.log("[SHIPPING] Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

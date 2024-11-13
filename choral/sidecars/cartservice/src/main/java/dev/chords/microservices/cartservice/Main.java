@@ -41,7 +41,7 @@ public class Main {
             throws IOException, URISyntaxException {
         switch (ctx.session.choreography) {
             case PLACE_ORDER:
-                System.out.println("[CART] New PLACE_ORDER request " + ctx.session);
+                ctx.log("[CART] New PLACE_ORDER request");
 
                 ChorPlaceOrder_Cart placeOrderChor = new ChorPlaceOrder_Cart(
                         cartService,
@@ -50,11 +50,12 @@ public class Main {
                         ctx.chanA(ServiceResources.shared.shipping));
 
                 placeOrderChor.placeOrder();
-                System.out.println("[CART] PLACE_ORDER choreography completed " + ctx.session);
+
+                ctx.log("[CART] PLACE_ORDER choreography completed");
 
                 break;
             default:
-                System.out.println("Invalid choreography " + ctx.session.choreographyName());
+                ctx.log("[CART] Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

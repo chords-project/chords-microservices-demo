@@ -16,7 +16,6 @@ import hipstershop.Demo.ShipOrderRequest;
 import hipstershop.Demo.ShipOrderResponse;
 import hipstershop.ShippingServiceGrpc.ShippingServiceBlockingStub;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;

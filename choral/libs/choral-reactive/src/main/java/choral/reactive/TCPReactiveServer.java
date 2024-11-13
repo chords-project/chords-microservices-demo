@@ -32,6 +32,7 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
     private final HashMap<S, LinkedList<Serializable>> sendQueue = new HashMap<>();
     private final HashMap<S, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
+    private final HashMap<S, TelemetrySession> telemetrySessionMap = new HashMap<>();
 
     private final String serviceName;
     private final NewSessionEvent<S> newSessionEvent;
@@ -118,22 +119,36 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Serializable> T recv(S session) {
-        System.out.println(
-                "TCPReactiveServer waiting to receive: service=" + serviceName + " sender=" + session.senderName()
-                        + " session=" + session);
+        Attributes attributes = Attributes.builder()
+                .put("channel.service", serviceName)
+                .put("channel.sender", session.senderName())
+                .build();
+
+        TelemetrySession telemetrySession;
         CompletableFuture<Serializable> future = new CompletableFuture<>();
 
         synchronized (this) {
+
+            telemetrySession = telemetrySessionMap.getOrDefault(session,
+                    TelemetrySession.makeNoop(session));
+
             if (this.sendQueue.containsKey(session)) {
                 // Flow already exists, receive message from send...
 
                 if (this.sendQueue.get(session).isEmpty()) {
+                    telemetrySession.log(
+                            "TCPReactiveServer receive, session already exists, waiting for message to arrive",
+                            attributes);
                     this.recvQueue.get(session).add(future);
                 } else {
+                    telemetrySession.log("TCPReactiveServer receive, message already arrived", attributes);
                     future.complete(this.sendQueue.get(session).removeFirst());
                 }
             } else {
                 // Flow does not exist yet, wait for it to arrive...
+                telemetrySession.log(
+                        "TCPReactiveServer receive, session does not exist yet, waiting for message to arrive",
+                        attributes);
                 enqueueRecv(session, future);
             }
         }
@@ -141,6 +156,9 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
         try {
             return (T) future.get();
         } catch (InterruptedException | ExecutionException e) {
+
+            telemetrySession.recordException("TCPReactiveServer exception when receiving message", e, true, attributes);
+
             // It's the responsibility of the choreography to have the type cast match
             // Throw runtime exception if mismatch
             throw new RuntimeException(e);
@@ -155,15 +173,27 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
         // Safe since it is a precondition of the method
         @SuppressWarnings("unchecked")
-        S newSession = (S) session.replacingSender(clientName);
+        S senderSession = (S) session.replacingSender(clientName);
 
-        return new ReactiveChannel_B<>(newSession, this);
+        TelemetrySession telemetrySession;
+        synchronized (this) {
+            telemetrySession = telemetrySessionMap.getOrDefault(senderSession, TelemetrySession.makeNoop(session));
+        }
+
+        return new ReactiveChannel_B<S, Serializable>(senderSession, this, telemetrySession);
     }
 
     private void receiveMessage(
             Socket connection,
             TCPMessage<S> msg,
             TelemetrySession telemetrySession) {
+
+        Attributes attributes = Attributes.builder()
+                .put("channel.service", serviceName)
+                .put("channel.connection", connection.getInetAddress().toString())
+                .build();
+
+        // telemetrySession.log cannot be used, since the span has not been created yet
         System.out.println(
                 "TCPReactiveServer received message: service=" + serviceName + " address=" + connection.getInetAddress()
                         + " session="
@@ -193,32 +223,30 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
                         .start(() -> {
                             Span span = telemetrySession.makeChoreographySpan();
 
-                            telemetrySession.log("receive message", Attributes.builder()
-                                    .put("message.sender", connection.getInetAddress().toString())
-                                    .build());
+                            this.telemetrySessionMap.put(msg.session, telemetrySession);
 
                             try (Scope scope = span.makeCurrent()) {
 
-                                System.out.println(
-                                        "TCPReactiveServer handle new session: service=" + serviceName + " session="
-                                                + msg.session);
+                                telemetrySession.log("TCPReactiveServer handle new session",
+                                        Attributes.builder()
+                                                .put("service", serviceName)
+                                                .put("session", msg.session.toString()).build());
 
                                 SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session,
                                         telemetrySession);
                                 newSessionEvent.onNewSession(sessionCtx);
                                 sessionCtx.close();
                             } catch (Exception e) {
-                                System.err.println("Exception caught for session: " + msg.session);
-                                e.printStackTrace();
-
-                                span.setAttribute("error", true);
-                                span.recordException(e);
+                                telemetrySession.recordException(
+                                        "TCPReactiveServer session exception", e, true,
+                                        Attributes.builder()
+                                                .put("service", serviceName)
+                                                .put("session", msg.session.toString()).build());
                             } finally {
                                 span.end();
                             }
 
                             cleanupKey(msg.session);
-                            // System.out.println("Ended trace span for session: " + session);
                         });
             }
         }
@@ -248,6 +276,7 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
         synchronized (this) {
             this.sendQueue.remove(session);
             this.recvQueue.remove(session);
+            this.telemetrySessionMap.remove(session);
         }
     }
 
@@ -278,11 +307,11 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
          * coming from the given clientService on the same session.
          */
         public ReactiveChannel_B<S, Serializable> chanB(String clientService) {
-            // Safe since this is a precondition of method
+            // Safe since it is a precondition of the method
             @SuppressWarnings("unchecked")
             S newSession = (S) session.replacingSender(clientService);
 
-            return server.chanB(newSession);
+            return new ReactiveChannel_B<S, Serializable>(newSession, server, telemetrySession);
         }
 
         /**
@@ -302,6 +331,14 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             var a = chanA(address);
             var b = chanB(clientService);
             return new ReactiveSymChannel<>(a, b);
+        }
+
+        public void log(String message) {
+            telemetrySession.log(message);
+        }
+
+        public void log(String message, Attributes attributes) {
+            telemetrySession.log(message, attributes);
         }
 
         private void close() throws IOException {

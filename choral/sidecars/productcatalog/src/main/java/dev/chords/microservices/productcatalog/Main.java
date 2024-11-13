@@ -34,8 +34,7 @@ public class Main {
                 (ctx) -> {
                     switch (ctx.session.choreography) {
                         case PLACE_ORDER:
-                            System.out
-                                    .println("[PRODUCT_CATALOG] New PLACE_ORDER request" + ctx.session.choreography);
+                            ctx.log("[PRODUCT_CATALOG] New PLACE_ORDER request");
 
                             ChorPlaceOrder_ProductCatalog placeOrderChor = new ChorPlaceOrder_ProductCatalog(
                                     catalogService,
@@ -43,12 +42,11 @@ public class Main {
                                     ctx.chanA(ServiceResources.shared.currency));
 
                             placeOrderChor.placeOrder();
-                            System.out.println("[PRODUCT_CATALOG] PLACE_ORDER choreography completed " + ctx.session);
+                            ctx.log("[PRODUCT_CATALOG] PLACE_ORDER choreography completed");
 
                             break;
                         default:
-                            System.out
-                                    .println("[PRODUCT_CATALOG] Invalid choreography ID " + ctx.session.choreography);
+                            ctx.log("[PRODUCT_CATALOG] Invalid choreography ID " + ctx.session.choreography.name());
                             break;
                     }
                 });

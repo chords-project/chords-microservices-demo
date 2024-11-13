@@ -41,7 +41,7 @@ public class Main {
     private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
         switch (ctx.session.choreography) {
             case PLACE_ORDER:
-                System.out.println("[CURRENCY] New PLACE_ORDER request " + ctx.session);
+                ctx.log("[CURRENCY] New PLACE_ORDER request");
 
                 ChorPlaceOrder_Currency placeOrderChor = new ChorPlaceOrder_Currency(
                         currencyService,
@@ -49,11 +49,11 @@ public class Main {
                         ctx.chanB(Service.PRODUCT_CATALOG.name()));
 
                 placeOrderChor.placeOrder();
-                System.out.println("[CURRENCY] PLACE_ORDER choreography completed " + ctx.session);
+                ctx.log("[CURRENCY] PLACE_ORDER choreography completed");
 
                 break;
             default:
-                System.out.println("Invalid choreography " + ctx.session.choreographyName());
+                ctx.log("Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

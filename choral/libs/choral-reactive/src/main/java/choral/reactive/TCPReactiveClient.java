@@ -28,45 +28,58 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
         this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
 
-        System.out.println("TCPReactiveClient connecting: service=" + serviceName + " address=" + address);
+        log("TCPReactiveClient connecting");
 
         URI uri = new URI(null, address, null, null, null).parseServerAuthority();
         InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
         this.connection = new Socket(addr.getHostName(), addr.getPort());
         this.stream = new ObjectOutputStream(connection.getOutputStream());
-        System.out.println("TCPReactiveClient connected: service=" + serviceName + " address=" + address);
+
+        log("TCPReactiveClient connected");
     }
 
     @Override
     public void send(S session, Serializable msg) {
-        System.out.println("TCPReactiveClient sending message: service=" + serviceName + " address=" + address
-                + " session=" + session);
         try {
-
             // Unchecked cast is safe since it's a precondition of the method.
             @SuppressWarnings("unchecked")
             S newSession = (S) session.replacingSender(serviceName);
 
             TCPMessage<S> message = new TCPMessage<>(newSession, msg);
 
-            telemetrySession.log("Send message", Attributes.builder().put("channel.recipient", address).build());
-
             telemetrySession.injectSessionContext(message);
 
             stream.writeObject(message);
             stream.flush();
         } catch (IOException e) {
-            System.out.println("TCPReactiveClient exception: service=" + serviceName + " address=" + address);
-            e.printStackTrace();
+            telemetrySession.recordException(
+                    "Failed to send message",
+                    e,
+                    true,
+                    Attributes.builder()
+                            .put("service", serviceName)
+                            .put("address", address).build());
         }
     }
 
     @Override
     public void close() throws IOException {
-        System.out.println("TCPReactiveClient closing: service=" + serviceName + " address=" + address);
+        log("TCPReactiveClient closing");
         stream.close();
         connection.close();
+    }
+
+    private void log(String message) {
+        telemetrySession.log(message,
+                Attributes.builder()
+                        .put("address", address)
+                        .put("service", serviceName).build());
+    }
+
+    @Override
+    public ReactiveChannel_A<S, Serializable> chanA(S session) {
+        return new ReactiveChannel_A<>(session, this, telemetrySession);
     }
 
 }

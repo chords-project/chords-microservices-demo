@@ -67,11 +67,30 @@ public class TelemetrySession {
     }
 
     public void log(String message) {
-        choreographySpan.addEvent(message);
+        this.log(message, Attributes.empty());
     }
 
     public void log(String message, Attributes attributes) {
-        choreographySpan.addEvent(message, attributes);
+        Attributes extraAttributes = Attributes.builder().put("session", session.toString()).putAll(attributes).build();
+
+        System.out.println(message + ": " + attributesToString(extraAttributes));
+        choreographySpan.addEvent(message, extraAttributes);
+    }
+
+    public void recordException(String message, Exception e, boolean error, Attributes attributes) {
+        Attributes extraAttributes = Attributes.builder()
+                .put("session", session.toString()).put("message", message).putAll(attributes).build();
+
+        if (error)
+            choreographySpan.setAttribute("error", true);
+        choreographySpan.recordException(e, extraAttributes);
+
+        System.out.println(message + ": " + attributesToString(extraAttributes));
+        e.printStackTrace();
+    }
+
+    public void recordException(String message, Exception e, boolean error) {
+        this.recordException(message, e, error, Attributes.empty());
     }
 
     public void injectSessionContext(TCPMessage<?> msg) {
@@ -80,6 +99,14 @@ public class TelemetrySession {
                 .inject(choreographyContext, msg, new HeaderTextMapSetter());
 
         msg.senderSpanContext = new TCPMessage.SerializedSpanContext(choreographySpan.getSpanContext());
+    }
+
+    private String attributesToString(Attributes attributes) {
+        return String.join(", ",
+                attributes.asMap().entrySet()
+                        .stream()
+                        .map(entry -> entry.getKey().toString() + "=" + entry.getValue().toString())
+                        .toList());
     }
 
     // @Override
