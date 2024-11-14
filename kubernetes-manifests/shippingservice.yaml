@@ -62,6 +62,8 @@ spec:
         # Outgoing choral channels
         - name: CHORAL_FRONTEND
           value: "frontend:5401"
+        - name: CHORAL_CURRENCY
+          value: "currencyservice:5401"
 
         # Tracing
         - name: JAEGER_ENDPOINT

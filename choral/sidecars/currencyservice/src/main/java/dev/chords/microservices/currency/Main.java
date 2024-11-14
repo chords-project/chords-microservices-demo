@@ -46,7 +46,8 @@ public class Main {
                 ChorPlaceOrder_Currency placeOrderChor = new ChorPlaceOrder_Currency(
                         currencyService,
                         ctx.symChan(Service.FRONTEND.name(), ServiceResources.shared.frontend),
-                        ctx.chanB(Service.PRODUCT_CATALOG.name()));
+                        ctx.chanB(Service.PRODUCT_CATALOG.name()),
+                        ctx.chanB(Service.SHIPPING.name()));
 
                 placeOrderChor.placeOrder();
                 ctx.log("[CURRENCY] PLACE_ORDER choreography completed");

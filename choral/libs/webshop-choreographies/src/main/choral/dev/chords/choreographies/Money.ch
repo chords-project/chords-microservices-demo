@@ -19,4 +19,8 @@ public class Money@A implements Serializable@A {
         this.units = units;
         this.nanos = nanos;
     }
+
+    public String@A toString() {
+        return "[ Money price="@A+units+","@A+nanos+" currency="@A+currencyCode+" ]"@A;
+    }
 }

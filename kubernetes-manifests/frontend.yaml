@@ -136,11 +136,11 @@ spec:
           #   value: "" # This value would look like "http://123.123.123"
           resources:
             requests:
-              cpu: 200m
-              memory: 300Mi
-            limits:
               cpu: 400m
-              memory: 500Mi
+              memory: 256Mi
+            limits:
+              cpu: 800m
+              memory: 512Mi
             # requests:
             #   cpu: 100m
             #   memory: 64Mi

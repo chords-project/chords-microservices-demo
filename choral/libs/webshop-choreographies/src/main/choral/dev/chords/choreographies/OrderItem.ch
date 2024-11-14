@@ -11,4 +11,8 @@ public class OrderItem@A implements Serializable@A {
         this.item = item;
         this.cost = cost;
     }
+
+    public String@A toString() {
+        return "[ OrderItem item="@A+item+" cost="@A+cost+" ]"@A;
+    }
 }

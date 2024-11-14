@@ -27,6 +27,8 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
     
     private DiChannel@(ProductCatalog, Currency)<Serializable> ch_productCurrency;
 
+    private DiChannel@(Shipping, Currency)<Serializable> ch_shippingCurrency;
+
     public ChorPlaceOrder(
         ClientService@Client clientSvc,
         CartService@Cart cartSvc,
@@ -40,7 +42,8 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         DiChannel@(Client, Cart)<Serializable> ch_clientCart,
         DiChannel@(Cart, ProductCatalog)<Serializable> ch_cartProduct,
         DiChannel@(Cart, Shipping)<Serializable> ch_cartShipping,
-        DiChannel@(ProductCatalog, Currency)<Serializable> ch_productCurrency
+        DiChannel@(ProductCatalog, Currency)<Serializable> ch_productCurrency,
+        DiChannel@(Shipping, Currency)<Serializable> ch_shippingCurrency
     ) {
         this.clientSvc = clientSvc;
         this.cartSvc = cartSvc;
@@ -58,6 +61,8 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         this.ch_cartShipping = ch_cartShipping;
         
         this.ch_productCurrency = ch_productCurrency;
+        
+        this.ch_shippingCurrency = ch_shippingCurrency;
     }
 
     public OrderResult@Client placeOrder(ReqPlaceOrder@Client req) {
@@ -73,9 +78,7 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         OrderItems@ProductCatalog cartPrices = productCatalogSvc.lookupCartPrices(cart_pc);
         
         // Convert currency of products
-        System@Currency.out.println("Waiting for client to send user currency..."@Currency);
         String@Currency userCurrency = ch_clientCurrency.<SerializableString>com(new SerializableString@Client(req.user_currency)).string;
-        System@Currency.out.println("Recieved user currency from client: "@Currency + userCurrency);
 
         OrderItems@Currency cartPrices_currency = ch_productCurrency.<OrderItems>com(cartPrices);
         OrderItems@Currency orderItems = currencySvc.convertProducts(cartPrices_currency, userCurrency);
@@ -85,7 +88,11 @@ public class ChorPlaceOrder@(Client, Cart, ProductCatalog, Currency, Payment, Sh
         Address@Shipping shippingAddress = ch_clientShipping.<Address>com(req.address);
         Cart@Shipping cart_shipping = ch_cartShipping.<Cart>com(userCart);
         Money@Shipping shippingCost = shippingSvc.getQuote(shippingAddress, cart_shipping);
-        Money@Client shippingCost_client = ch_clientShipping.<Money>com(shippingCost);
+        
+        // Convert shipping currency
+        Money@Currency shippingCost_currency = ch_shippingCurrency.<Money>com(shippingCost);
+        Money@Currency convertedShippingCost = currencySvc.convert(shippingCost_currency, userCurrency);
+        Money@Client shippingCost_client = ch_clientCurrency.<Money>com(convertedShippingCost);
 
         // Ship order
         String@Shipping trackingID = shippingSvc.shipOrder(shippingAddress, cart_shipping);
