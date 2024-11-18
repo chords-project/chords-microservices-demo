@@ -42,7 +42,8 @@ public class TCPConnectionTest {
 
         assertDoesNotThrow(() -> {
             SimpleSession session = SimpleSession.makeSession("choreography", "client");
-            TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>("0.0.0.0:4567", "client",
+            TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(
+                    new TCPReactiveClientConnection("0.0.0.0:4567"), "client",
                     TelemetrySession.makeNoop(session));
 
             stats.clientSessionID = session.sessionID;

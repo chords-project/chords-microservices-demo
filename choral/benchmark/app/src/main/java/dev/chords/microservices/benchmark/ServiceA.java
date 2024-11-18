@@ -5,6 +5,7 @@ import java.io.Serializable;
 import choral.reactive.ReactiveSymChannel;
 import choral.reactive.SimpleSession;
 import choral.reactive.TCPReactiveClient;
+import choral.reactive.TCPReactiveClientConnection;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
@@ -16,11 +17,11 @@ public class ServiceA {
 
     private OpenTelemetrySdk telemetry;
     private TCPReactiveServer<SimpleSession> serverA;
-    private String addressServiceB;
+    private TCPReactiveClientConnection connectionServiceB;
 
-    public ServiceA(OpenTelemetrySdk telemetry, String addressServiceB) {
+    public ServiceA(OpenTelemetrySdk telemetry, String addressServiceB) throws Exception {
         this.telemetry = telemetry;
-        this.addressServiceB = addressServiceB;
+        this.connectionServiceB = new TCPReactiveClientConnection(addressServiceB);
         this.serverA = new TCPReactiveServer<>("serviceA", telemetry, (ctx) -> {
             System.out.println("ServiceA received new session");
         });
@@ -53,7 +54,7 @@ public class ServiceA {
                 session,
                 span);
 
-        try (TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(addressServiceB, "serviceA",
+        try (TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
                 telemetrySession);) {
 
             ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(
@@ -82,7 +83,7 @@ public class ServiceA {
                 session,
                 span);
 
-        try (TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(addressServiceB, "serviceA",
+        try (TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
                 telemetrySession);) {
 
             ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(

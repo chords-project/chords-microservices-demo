@@ -188,11 +188,6 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             TCPMessage<S> msg,
             TelemetrySession telemetrySession) {
 
-        Attributes attributes = Attributes.builder()
-                .put("channel.service", serviceName)
-                .put("channel.connection", connection.getInetAddress().toString())
-                .build();
-
         // telemetrySession.log cannot be used, since the span has not been created yet
         System.out.println(
                 "TCPReactiveServer received message: service=" + serviceName + " address=" + connection.getInetAddress()
@@ -319,16 +314,16 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
          * 
          * @param address the network address of the client to connect to.
          */
-        public ReactiveChannel_A<S, Serializable> chanA(String address)
+        public ReactiveChannel_A<S, Serializable> chanA(TCPReactiveClientConnection connection)
                 throws UnknownHostException, URISyntaxException, IOException {
-            TCPReactiveClient<S> client = new TCPReactiveClient<>(address, server.serviceName, telemetrySession);
+            TCPReactiveClient<S> client = new TCPReactiveClient<>(connection, server.serviceName, telemetrySession);
             closeHandles.add(client);
             return client.chanA(session);
         }
 
-        public ReactiveSymChannel<S, Serializable> symChan(String clientService, String address)
+        public ReactiveSymChannel<S, Serializable> symChan(String clientService, TCPReactiveClientConnection connection)
                 throws UnknownHostException, URISyntaxException, IOException {
-            var a = chanA(address);
+            var a = chanA(connection);
             var b = chanB(clientService);
             return new ReactiveSymChannel<>(a, b);
         }

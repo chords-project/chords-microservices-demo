@@ -2,49 +2,25 @@ package choral.reactive;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 
-import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 import choral.reactive.tracing.TelemetrySession;
+import io.opentelemetry.api.common.Attributes;
 
 public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, Serializable>, Closeable {
 
-    private final String address;
+    private final TCPReactiveClientConnection connection;
     private final String serviceName;
-    private final Socket connection;
-    private final ObjectOutputStream stream;
 
     private final TelemetrySession telemetrySession;
 
-    public TCPReactiveClient(String address, String serviceName, TelemetrySession telemetrySession)
-            throws URISyntaxException, UnknownHostException, IOException {
-        this.address = address;
+    public TCPReactiveClient(
+            TCPReactiveClientConnection connection,
+            String serviceName,
+            TelemetrySession telemetrySession) {
+        this.connection = connection;
         this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
-
-        Span span = telemetrySession.tracer.spanBuilder("TCPReactiveClient connect: " + address)
-                .setAttribute("channel.service", serviceName)
-                .startSpan();
-
-        try (Scope scope = span.makeCurrent()) {
-
-            URI uri = new URI(null, address, null, null, null).parseServerAuthority();
-            InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
-
-            this.connection = new Socket(addr.getHostName(), addr.getPort());
-            this.stream = new ObjectOutputStream(connection.getOutputStream());
-
-        } finally {
-            span.end();
-        }
     }
 
     @Override
@@ -58,30 +34,28 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
 
             telemetrySession.injectSessionContext(message);
 
-            stream.writeObject(message);
-            stream.flush();
-        } catch (IOException e) {
+            connection.sendObject(message);
+        } catch (IOException | InterruptedException e) {
             telemetrySession.recordException(
                     "Failed to send message",
                     e,
                     true,
                     Attributes.builder()
                             .put("service", serviceName)
-                            .put("address", address).build());
+                            .put("address", connection.address).build());
         }
     }
 
     @Override
     public void close() throws IOException {
         log("TCPReactiveClient closing");
-        stream.close();
         connection.close();
     }
 
     private void log(String message) {
         telemetrySession.log(message,
                 Attributes.builder()
-                        .put("address", address)
+                        .put("address", connection.address)
                         .put("service", serviceName).build());
     }
 
@@ -92,7 +66,7 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
 
     @Override
     public String toString() {
-        return "TCPReactiveClient [address=" + address + ", serviceName=" + serviceName + "]";
+        return "TCPReactiveClient [address=" + connection.address + ", serviceName=" + serviceName + "]";
     }
 
 }
