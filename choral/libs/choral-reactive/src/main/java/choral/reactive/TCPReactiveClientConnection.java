@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -29,13 +30,21 @@ public class TCPReactiveClientConnection implements AutoCloseable {
                     this.connection = new Socket(addr.getHostName(), addr.getPort());
                     this.stream = new ObjectOutputStream(connection.getOutputStream());
                     System.out.println("Successfully connected to client: " + address);
-                    this.connectedLatch.countDown();
                     break;
                 } catch (Exception e) {
-                    System.out.println("Failed to connect to client: attempt=" + (i + 1) + ", address=" + address);
-
+                    Duration waitTime = Duration.ofMillis((long) Math.pow(2, i) * 500L);
+                    System.out.println("Failed to connect to client: attempt=" + (i + 1) + ", address=" + address
+                            + ", retryWait=" + waitTime.toMillis() + "ms");
+                    try {
+                        Thread.sleep(waitTime);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                        break;
+                    }
                 }
             }
+
+            this.connectedLatch.countDown();
         });
     }
 

@@ -230,7 +230,6 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
                                 SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session,
                                         telemetrySession);
                                 newSessionEvent.onNewSession(sessionCtx);
-                                sessionCtx.close();
                             } catch (Exception e) {
                                 telemetrySession.recordException(
                                         "TCPReactiveServer session exception", e, true,
@@ -289,8 +288,6 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
         public final S session;
         private final TelemetrySession telemetrySession;
 
-        private final List<Closeable> closeHandles = new ArrayList<>();
-
         private SessionContext(TCPReactiveServer<S> server, S session, TelemetrySession telemetrySession) {
             this.server = server;
             this.session = session;
@@ -317,7 +314,6 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
         public ReactiveChannel_A<S, Serializable> chanA(TCPReactiveClientConnection connection)
                 throws UnknownHostException, URISyntaxException, IOException {
             TCPReactiveClient<S> client = new TCPReactiveClient<>(connection, server.serviceName, telemetrySession);
-            closeHandles.add(client);
             return client.chanA(session);
         }
 
@@ -334,12 +330,6 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
         public void log(String message, Attributes attributes) {
             telemetrySession.log(message, attributes);
-        }
-
-        private void close() throws IOException {
-            for (Closeable closeable : closeHandles) {
-                closeable.close();
-            }
         }
     }
 

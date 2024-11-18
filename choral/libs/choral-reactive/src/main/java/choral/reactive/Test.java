@@ -59,10 +59,12 @@ public class Test {
 
         TelemetrySession initialTelemetrySession = new TelemetrySession(telemetry, session, span);
 
-        try (TCPReactiveClient<SimpleSession> client1 = new TCPReactiveClient<>(
-                new TCPReactiveClientConnection("0.0.0.0:4567"),
-                "client",
-                initialTelemetrySession);) {
+        try (TCPReactiveClientConnection clientConn = new TCPReactiveClientConnection("0.0.0.0:4567")) {
+            TCPReactiveClient<SimpleSession> client1 = new TCPReactiveClient<>(
+                    clientConn,
+                    "client",
+                    initialTelemetrySession);
+
             var chan = client1.chanA(session);
 
             chan.com("hello");

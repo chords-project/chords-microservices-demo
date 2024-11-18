@@ -1,13 +1,12 @@
 package choral.reactive;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.Serializable;
 
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
 
-public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, Serializable>, Closeable {
+public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, Serializable> {
 
     private final TCPReactiveClientConnection connection;
     private final String serviceName;
@@ -44,12 +43,6 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
                             .put("service", serviceName)
                             .put("address", connection.address).build());
         }
-    }
-
-    @Override
-    public void close() throws IOException {
-        log("TCPReactiveClient closing");
-        connection.close();
     }
 
     private void log(String message) {

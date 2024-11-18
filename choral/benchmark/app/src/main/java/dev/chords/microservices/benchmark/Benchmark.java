@@ -3,8 +3,6 @@
  */
 package dev.chords.microservices.benchmark;
 
-import java.util.Scanner;
-
 import choral.reactive.tracing.JaegerConfiguration;
 
 public class Benchmark {

@@ -41,24 +41,24 @@ public class TCPConnectionTest {
         });
 
         assertDoesNotThrow(() -> {
-            SimpleSession session = SimpleSession.makeSession("choreography", "client");
-            TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(
-                    new TCPReactiveClientConnection("0.0.0.0:4567"), "client",
-                    TelemetrySession.makeNoop(session));
+            try (TCPReactiveClientConnection clientConn = new TCPReactiveClientConnection("0.0.0.0:4567");) {
+                SimpleSession session = SimpleSession.makeSession("choreography", "client");
+                TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(
+                        clientConn, "client",
+                        TelemetrySession.makeNoop(session));
 
-            stats.clientSessionID = session.sessionID;
+                stats.clientSessionID = session.sessionID;
 
-            var chan = client.chanA(session);
-            chan.com("hello");
-            chan.com("world");
+                var chan = client.chanA(session);
+                chan.com("hello");
+                chan.com("world");
 
-            client.close();
-
-            // Wait for server to handle messages before closing
-            boolean finished = done.await(5, TimeUnit.SECONDS);
-            assertTrue(finished);
-
-            server.close();
+                // Wait for server to handle messages before closing
+                boolean finished = done.await(5, TimeUnit.SECONDS);
+                assertTrue(finished);
+            } finally {
+                server.close();
+            }
         });
 
         assertEquals(1, stats.newSessionCount);

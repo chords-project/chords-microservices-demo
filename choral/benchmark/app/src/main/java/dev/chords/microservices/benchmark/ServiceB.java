@@ -55,6 +55,7 @@ public class ServiceB {
     }
 
     public void close() throws Exception {
+        connectionServiceA.close();
         serverB.close();
         telemetry.close();
     }

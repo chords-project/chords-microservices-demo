@@ -11,6 +11,7 @@ import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class ServiceA {
@@ -54,16 +55,15 @@ public class ServiceA {
                 session,
                 span);
 
-        try (TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
-                telemetrySession);) {
+        TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
+                telemetrySession);
 
-            ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(
-                    client.chanA(session),
-                    serverA.chanB(session, "serviceB"));
+        ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(
+                client.chanA(session),
+                serverA.chanB(session, "serviceB"));
 
-            SimpleChoreography_A chor = new SimpleChoreography_A(ch);
-            chor.pingPong();
-        }
+        SimpleChoreography_A chor = new SimpleChoreography_A(ch);
+        chor.pingPong();
 
         span.end();
     }
@@ -78,13 +78,15 @@ public class ServiceA {
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
 
-        TelemetrySession telemetrySession = new TelemetrySession(
-                telemetry,
-                session,
-                span);
+        try (Scope scope = span.makeCurrent()) {
 
-        try (TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
-                telemetrySession);) {
+            TelemetrySession telemetrySession = new TelemetrySession(
+                    telemetry,
+                    session,
+                    span);
+
+            TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
+                    telemetrySession);
 
             ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(
                     client.chanA(session),
@@ -92,12 +94,14 @@ public class ServiceA {
 
             GreeterChoreography_A chor = new GreeterChoreography_A(ch);
             chor.greet();
+
         }
 
         span.end();
     }
 
     public void close() throws Exception {
+        connectionServiceB.close();
         serverA.close();
         telemetry.close();
     }
