@@ -1,7 +1,6 @@
 package dev.chords.microservices.payment;
 
-import java.net.InetSocketAddress;
-
+import choral.reactive.TCPReactiveClientConnection;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -10,6 +9,7 @@ import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopSession;
 import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import java.net.InetSocketAddress;
 
 public class Main {
 
@@ -17,43 +17,68 @@ public class Main {
 
     public static OpenTelemetrySdk telemetry;
 
+    public static TCPReactiveClientConnection frontendConn;
+
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral payment service");
 
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
         telemetry = OpenTelemetrySdk.builder().build();
         if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
-            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "PaymentService");
+            System.out.println(
+                "Configuring choreographic telemetry to: " + JAEGER_ENDPOINT
+            );
+            telemetry = JaegerConfiguration.initTelemetry(
+                JAEGER_ENDPOINT,
+                "PaymentService"
+            );
         }
 
-        int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
-        paymentService = new PaymentService(new InetSocketAddress("localhost", rpcPort),
-                telemetry);
+        int rpcPort = Integer.parseInt(
+            System.getenv().getOrDefault("PORT", "50051")
+        );
+        paymentService = new PaymentService(
+            new InetSocketAddress("localhost", rpcPort),
+            telemetry
+        );
+
+        frontendConn = new TCPReactiveClientConnection(
+            ServiceResources.shared.frontend
+        );
 
         TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(
-                Service.PAYMENT.name(),
-                telemetry,
-                Main::handleNewSession);
+            Service.PAYMENT.name(),
+            telemetry,
+            Main::handleNewSession
+        );
 
         server.listen(ServiceResources.shared.payment);
     }
 
-    private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
+    private static void handleNewSession(SessionContext<WebshopSession> ctx)
+        throws Exception {
         switch (ctx.session.choreography) {
             case PLACE_ORDER:
                 ctx.log("[PAYMENT] New PLACE_ORDER request");
 
-                ChorPlaceOrder_Payment placeOrderChor = new ChorPlaceOrder_Payment(
+                ChorPlaceOrder_Payment placeOrderChor =
+                    new ChorPlaceOrder_Payment(
                         paymentService,
-                        ctx.symChan(WebshopSession.Service.FRONTEND.name(), ServiceResources.shared.frontend));
+                        ctx.symChan(
+                            WebshopSession.Service.FRONTEND.name(),
+                            frontendConn
+                        )
+                    );
 
                 placeOrderChor.placeOrder();
                 ctx.log("[PAYMENT] PLACE_ORDER choreography completed");
 
                 break;
             default:
-                ctx.log("[PAYMENT] Invalid choreography " + ctx.session.choreographyName());
+                ctx.log(
+                    "[PAYMENT] Invalid choreography " +
+                    ctx.session.choreographyName()
+                );
                 break;
         }
     }

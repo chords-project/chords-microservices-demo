@@ -1,13 +1,8 @@
 package dev.chords.microservices.benchmark;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-
 import choral.reactive.tracing.JaegerConfiguration;
 import greeting.GreeterGrpc;
 import greeting.GreeterGrpc.GreeterBlockingStub;
-import greeting.GreeterGrpc.GreeterFutureStub;
 import greeting.Greeting.HelloReply;
 import greeting.Greeting.HelloRequest;
 import io.grpc.ManagedChannel;
@@ -27,10 +22,7 @@ public class GrpcClient implements GreeterService {
     GrpcClient(int port, OpenTelemetrySdk telemetry) {
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
 
-        this.channel = ManagedChannelBuilder
-                .forAddress("localhost", port)
-                .usePlaintext()
-                .build();
+        this.channel = ManagedChannelBuilder.forAddress("localhost", port).usePlaintext().build();
 
         this.blockingStub = GreeterGrpc.newBlockingStub(channel);
         // this.futureStub = GreeterGrpc.newFutureStub(channel);
@@ -38,15 +30,11 @@ public class GrpcClient implements GreeterService {
 
     @Override
     public String greet(String name) {
-
-        Span span = tracer.spanBuilder("GrpcClient.greet")
-                .setAttribute("request.name", name)
-                .startSpan();
+        Span span = tracer.spanBuilder("GrpcClient.greet").setAttribute("request.name", name).startSpan();
 
         HelloReply reply;
         try (Scope scope = span.makeCurrent();) {
             reply = blockingStub.sayHello(HelloRequest.newBuilder().setName(name).build());
-
             // reply =
             // futureStub.sayHello(HelloRequest.newBuilder().setName(name).build()).get();
             // } catch (InterruptedException | ExecutionException e) {

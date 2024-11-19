@@ -13,47 +13,65 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class TCPReactiveClientConnection implements AutoCloseable {
+
     public final String address;
+    private final InetSocketAddress socketAddr;
     private Socket connection = null;
     private ObjectOutputStream stream = null;
     private CountDownLatch connectedLatch = new CountDownLatch(1);
 
     public TCPReactiveClientConnection(String address) throws URISyntaxException, UnknownHostException, IOException {
-        URI uri = new URI(null, address, null, null, null).parseServerAuthority();
-        InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
-
         this.address = address;
-
-        Thread.ofPlatform().start(() -> {
-            for (int i = 0; i < 5; i++) {
-                try {
-                    this.connection = new Socket(addr.getHostName(), addr.getPort());
-                    this.stream = new ObjectOutputStream(connection.getOutputStream());
-                    System.out.println("Successfully connected to client: " + address);
-                    break;
-                } catch (Exception e) {
-                    Duration waitTime = Duration.ofMillis((long) Math.pow(2, i) * 500L);
-                    System.out.println("Failed to connect to client: attempt=" + (i + 1) + ", address=" + address
-                            + ", retryWait=" + waitTime.toMillis() + "ms");
-                    try {
-                        Thread.sleep(waitTime);
-                    } catch (InterruptedException e1) {
-                        e1.printStackTrace();
-                        break;
-                    }
-                }
-            }
-
-            this.connectedLatch.countDown();
-        });
+        URI uri = new URI(null, address, null, null, null).parseServerAuthority();
+        this.socketAddr = new InetSocketAddress(uri.getHost(), uri.getPort());
+        connect();
     }
 
     public void sendObject(Serializable object) throws IOException, InterruptedException {
+        System.out.println("TCPReactiveClientConnection sendObject begin: " + object.toString());
+        this.connectedLatch.await(10, TimeUnit.SECONDS);
         synchronized (this) {
-            this.connectedLatch.await(10, TimeUnit.SECONDS);
+            System.out.println("TCPReactiveClientConnection sendObject inside lock");
             stream.writeObject(object);
             stream.flush();
         }
+        System.out.println("TCPReactiveClientConnection sendObject done");
+    }
+
+    public void connect() {
+        TCPReactiveClientConnection self = this;
+        Thread.ofPlatform()
+            .start(() -> {
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        synchronized (self) {
+                            this.connection = new Socket(socketAddr.getHostName(), socketAddr.getPort());
+                            this.stream = new ObjectOutputStream(connection.getOutputStream());
+                        }
+                        System.out.println("TCPReactiveClientConnection successfully connected to server: " + address);
+                        break;
+                    } catch (Exception e) {
+                        Duration waitTime = Duration.ofMillis((long) Math.pow(2, i) * 1000L);
+                        System.out.println(
+                            "TCPReactiveClientConnection failed to connect to client: attempt=" +
+                            (i + 1) +
+                            ", address=" +
+                            address +
+                            ", retryWait=" +
+                            waitTime.toMillis() +
+                            "ms"
+                        );
+                        try {
+                            Thread.sleep(waitTime);
+                        } catch (InterruptedException e1) {
+                            e1.printStackTrace();
+                            break;
+                        }
+                    }
+                }
+
+                this.connectedLatch.countDown();
+            });
     }
 
     @Override
