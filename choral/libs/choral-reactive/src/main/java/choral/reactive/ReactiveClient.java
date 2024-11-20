@@ -1,23 +1,21 @@
 package choral.reactive;
 
-import java.io.IOException;
-import java.io.Serializable;
-
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
+import java.io.IOException;
+import java.io.Serializable;
+import choral.reactive.ClientConnectionManager.Connection;
 
-public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, Serializable> {
+public class ReactiveClient<S extends Session> implements ReactiveSender<S, Serializable>, AutoCloseable {
 
-    private final TCPReactiveClientConnection connection;
+    private final Connection connection;
     private final String serviceName;
 
     private final TelemetrySession telemetrySession;
 
-    public TCPReactiveClient(
-            TCPReactiveClientConnection connection,
-            String serviceName,
-            TelemetrySession telemetrySession) {
-        this.connection = connection;
+    public ReactiveClient(ClientConnectionManager connectionManager, String serviceName,
+            TelemetrySession telemetrySession) throws IOException, InterruptedException {
+        this.connection = connectionManager.makeConnection();
         this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
     }
@@ -33,23 +31,19 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
 
             telemetrySession.injectSessionContext(message);
 
-            connection.sendObject(message);
+            connection.sendMessage(message);
         } catch (IOException | InterruptedException e) {
             telemetrySession.recordException(
                     "Failed to send message",
                     e,
                     true,
-                    Attributes.builder()
-                            .put("service", serviceName)
-                            .put("address", connection.address).build());
+                    Attributes.builder().put("service", serviceName).put("connection", connection.toString()).build());
         }
     }
 
     private void log(String message) {
         telemetrySession.log(message,
-                Attributes.builder()
-                        .put("address", connection.address)
-                        .put("service", serviceName).build());
+                Attributes.builder().put("connection", connection.toString()).put("service", serviceName).build());
     }
 
     @Override
@@ -59,7 +53,11 @@ public class TCPReactiveClient<S extends Session> implements ReactiveSender<S, S
 
     @Override
     public String toString() {
-        return "TCPReactiveClient [address=" + connection.address + ", serviceName=" + serviceName + "]";
+        return "TCPReactiveClient [connection=" + connection.toString() + ", serviceName=" + serviceName + "]";
     }
 
+    @Override
+    public void close() throws Exception {
+        connection.close();
+    }
 }

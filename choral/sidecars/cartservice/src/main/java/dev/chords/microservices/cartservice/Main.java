@@ -26,42 +26,23 @@ public class Main {
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
         OpenTelemetrySdk telemetry = OpenTelemetrySdk.builder().build();
         if (JAEGER_ENDPOINT != null) {
-            System.out.println(
-                "Configuring choreographic telemetry to: " + JAEGER_ENDPOINT
-            );
-            telemetry = JaegerConfiguration.initTelemetry(
-                JAEGER_ENDPOINT,
-                "CartService"
-            );
+            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
+            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "CartService");
         }
 
-        int rpcPort = Integer.parseInt(
-            System.getenv().getOrDefault("ASPNETCORE_HTTP_PORTS", "7070")
-        );
-        cartService = new CartService(
-            new InetSocketAddress("localhost", rpcPort),
-            telemetry
-        );
+        int rpcPort = Integer.parseInt(System.getenv().getOrDefault("ASPNETCORE_HTTP_PORTS", "7070"));
+        cartService = new CartService(new InetSocketAddress("localhost", rpcPort), telemetry);
 
-        shippingConn = new TCPReactiveClientConnection(
-            ServiceResources.shared.shipping
-        );
+        shippingConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.shipping);
 
-        productCatalogConn = new TCPReactiveClientConnection(
-            ServiceResources.shared.productCatalog
-        );
+        productCatalogConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.productCatalog);
 
-        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(
-            Service.CART.name(),
-            telemetry,
-            Main::handleNewSession
-        );
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.CART.name(), telemetry, Main::handleNewSession);
 
         server.listen(ServiceResources.shared.cart);
     }
 
-    private static void handleNewSession(SessionContext<WebshopSession> ctx)
-        throws IOException, URISyntaxException {
+    private static void handleNewSession(SessionContext<WebshopSession> ctx) throws IOException, URISyntaxException {
         switch (ctx.session.choreography) {
             case PLACE_ORDER:
                 ctx.log("[CART] New PLACE_ORDER request");
@@ -79,10 +60,7 @@ public class Main {
 
                 break;
             default:
-                ctx.log(
-                    "[CART] Invalid choreography " +
-                    ctx.session.choreographyName()
-                );
+                ctx.log("[CART] Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

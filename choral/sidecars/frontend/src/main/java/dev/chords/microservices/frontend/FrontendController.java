@@ -44,11 +44,11 @@ public class FrontendController {
         }
 
         try {
-            cartConn = new TCPReactiveClientConnection(ServiceResources.shared.cart);
-            currencyConn = new TCPReactiveClientConnection(ServiceResources.shared.currency);
-            shippingConn = new TCPReactiveClientConnection(ServiceResources.shared.shipping);
-            paymentConn = new TCPReactiveClientConnection(ServiceResources.shared.payment);
-        } catch (URISyntaxException | IOException e) {
+            cartConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.cart);
+            currencyConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.currency);
+            shippingConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.shipping);
+            paymentConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.payment);
+        } catch (URISyntaxException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }

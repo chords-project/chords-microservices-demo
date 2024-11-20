@@ -57,13 +57,13 @@ manifests:
 deploy:
   kubectl: {}
 
-portForward:
-  - resourceType: service
-    resourceName: jaeger-query
-    namespace: default
-    port: 16686
-    localPort: 16686
-    address: 127.0.0.1
+# portForward:
+#   - resourceType: service
+#     resourceName: jaeger-query
+#     namespace: default
+#     port: 16686
+#     localPort: 16686
+#     address: 127.0.0.1
 
 # "gcb" profile allows building and pushing the images
 # on Google Container Builder without requiring docker

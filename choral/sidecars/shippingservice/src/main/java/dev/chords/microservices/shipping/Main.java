@@ -26,66 +26,40 @@ public class Main {
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
         telemetry = OpenTelemetrySdk.builder().build();
         if (JAEGER_ENDPOINT != null) {
-            System.out.println(
-                "Configuring choreographic telemetry to: " + JAEGER_ENDPOINT
-            );
-            telemetry = JaegerConfiguration.initTelemetry(
-                JAEGER_ENDPOINT,
-                "ShippingService"
-            );
+            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
+            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ShippingService");
         }
 
-        int rpcPort = Integer.parseInt(
-            System.getenv().getOrDefault("PORT", "50051")
-        );
-        shippingService = new ShippingService(
-            new InetSocketAddress("localhost", rpcPort),
-            telemetry
-        );
+        int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
+        shippingService = new ShippingService(new InetSocketAddress("localhost", rpcPort), telemetry);
 
-        frontendConn = new TCPReactiveClientConnection(
-            ServiceResources.shared.frontend
-        );
+        frontendConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.frontend);
 
-        currencyConn = new TCPReactiveClientConnection(
-            ServiceResources.shared.currency
-        );
+        currencyConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.currency);
 
-        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(
-            Service.SHIPPING.name(),
-            telemetry,
-            Main::handleNewSession
-        );
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.SHIPPING.name(), telemetry, Main::handleNewSession);
 
         server.listen(ServiceResources.shared.shipping);
     }
 
-    private static void handleNewSession(SessionContext<WebshopSession> ctx)
-        throws Exception {
+    private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
         switch (ctx.session.choreography) {
             case PLACE_ORDER:
                 ctx.log("[SHIPPING] New PLACE_ORDER request");
 
-                ChorPlaceOrder_Shipping placeOrderChor =
-                    new ChorPlaceOrder_Shipping(
-                        shippingService,
-                        ctx.symChan(
-                            WebshopSession.Service.FRONTEND.name(),
-                            frontendConn
-                        ),
-                        ctx.chanB(WebshopSession.Service.CART.name()),
-                        ctx.chanA(currencyConn)
-                    );
+                ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
+                    shippingService,
+                    ctx.symChan(WebshopSession.Service.FRONTEND.name(), frontendConn),
+                    ctx.chanB(WebshopSession.Service.CART.name()),
+                    ctx.chanA(currencyConn)
+                );
 
                 placeOrderChor.placeOrder();
                 ctx.log("[SHIPPING] PLACE_ORDER choreography completed");
 
                 break;
             default:
-                ctx.log(
-                    "[SHIPPING] Invalid choreography " +
-                    ctx.session.choreographyName()
-                );
+                ctx.log("[SHIPPING] Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

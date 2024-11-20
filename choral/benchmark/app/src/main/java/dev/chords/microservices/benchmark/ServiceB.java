@@ -1,25 +1,25 @@
 package dev.chords.microservices.benchmark;
 
-import java.net.URISyntaxException;
-
+import choral.reactive.ClientConnectionManager;
 import choral.reactive.SimpleSession;
-import choral.reactive.TCPReactiveClientConnection;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import java.net.URISyntaxException;
 
 public class ServiceB {
+
     private OpenTelemetrySdk telemetry;
     private TCPReactiveServer<SimpleSession> serverB;
-    private TCPReactiveClientConnection connectionServiceA;
+    private ClientConnectionManager connectionServiceA;
     private GrpcClient grpcClient;
 
     public ServiceB(OpenTelemetrySdk telemetry, String addressServiceA) throws Exception {
         this.telemetry = telemetry;
         this.grpcClient = new GrpcClient(5430, telemetry);
-        this.connectionServiceA = new TCPReactiveClientConnection(addressServiceA);
+        this.connectionServiceA = ClientConnectionManager.makeConnectionManager(addressServiceA, telemetry);
 
-        this.serverB = new TCPReactiveServer<>("serviceB", telemetry, (ctx) -> {
+        this.serverB = new TCPReactiveServer<>("serviceB", telemetry, ctx -> {
             switch (ctx.session.choreographyID) {
                 case "ping-pong":
                     SimpleChoreography_B pingPongChor = new SimpleChoreography_B(
@@ -30,8 +30,7 @@ public class ServiceB {
                     break;
                 case "greeting":
                     GreeterChoreography_B greeterChor = new GreeterChoreography_B(
-                            ctx.symChan("serviceA", connectionServiceA),
-                            grpcClient);
+                            ctx.symChan("serviceA", connectionServiceA), grpcClient);
 
                     greeterChor.greet();
 
@@ -68,7 +67,5 @@ public class ServiceB {
 
         ServiceB service = new ServiceB(telemetry, "localhost:8201");
         service.serverB.listen("localhost:8202");
-
     }
-
 }

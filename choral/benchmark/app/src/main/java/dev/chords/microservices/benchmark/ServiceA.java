@@ -1,11 +1,9 @@
 package dev.chords.microservices.benchmark;
 
-import java.io.Serializable;
-
+import choral.reactive.ClientConnectionManager;
+import choral.reactive.ReactiveClient;
 import choral.reactive.ReactiveSymChannel;
 import choral.reactive.SimpleSession;
-import choral.reactive.TCPReactiveClient;
-import choral.reactive.TCPReactiveClientConnection;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
@@ -13,17 +11,18 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import java.io.Serializable;
 
 public class ServiceA {
 
     private OpenTelemetrySdk telemetry;
     private TCPReactiveServer<SimpleSession> serverA;
-    private TCPReactiveClientConnection connectionServiceB;
+    private ClientConnectionManager connectionServiceB;
 
     public ServiceA(OpenTelemetrySdk telemetry, String addressServiceB) throws Exception {
         this.telemetry = telemetry;
-        this.connectionServiceB = new TCPReactiveClientConnection(addressServiceB);
-        this.serverA = new TCPReactiveServer<>("serviceA", telemetry, (ctx) -> {
+        this.connectionServiceB = ClientConnectionManager.makeConnectionManager(addressServiceB, telemetry);
+        this.serverA = new TCPReactiveServer<>("serviceA", telemetry, ctx -> {
             System.out.println("ServiceA received new session");
         });
     }
@@ -44,57 +43,54 @@ public class ServiceA {
         SimpleSession session = SimpleSession.makeSession("ping-pong", "serviceA");
         serverA.registerSession(session);
 
-        Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
+        Span span = telemetry
+                .getTracer(JaegerConfiguration.TRACER_NAME)
                 .spanBuilder("ping-pong")
                 .setSpanKind(SpanKind.CLIENT)
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
 
-        TelemetrySession telemetrySession = new TelemetrySession(
-                telemetry,
-                session,
-                span);
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
-        TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
-                telemetrySession);
+        try (Scope scope = span.makeCurrent();
+                ReactiveClient<SimpleSession> client = new ReactiveClient<>(
+                        connectionServiceB,
+                        "serviceA",
+                        telemetrySession);) {
 
-        ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(
-                client.chanA(session),
-                serverA.chanB(session, "serviceB"));
+            ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(client.chanA(session),
+                    serverA.chanB(session, "serviceB"));
 
-        SimpleChoreography_A chor = new SimpleChoreography_A(ch);
-        chor.pingPong();
-
-        span.end();
+            SimpleChoreography_A chor = new SimpleChoreography_A(ch);
+            chor.pingPong();
+        } finally {
+            span.end();
+        }
     }
 
     public void startGreeting() throws Exception {
         SimpleSession session = SimpleSession.makeSession("greeting", "serviceA");
         serverA.registerSession(session);
 
-        Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
+        Span span = telemetry
+                .getTracer(JaegerConfiguration.TRACER_NAME)
                 .spanBuilder("greeting")
                 .setSpanKind(SpanKind.CLIENT)
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
 
-        try (Scope scope = span.makeCurrent()) {
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
-            TelemetrySession telemetrySession = new TelemetrySession(
-                    telemetry,
-                    session,
-                    span);
+        try (Scope scope = span.makeCurrent();
+                ReactiveClient<SimpleSession> client = new ReactiveClient<>(connectionServiceB,
+                        "serviceA",
+                        telemetrySession);) {
 
-            TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(connectionServiceB, "serviceA",
-                    telemetrySession);
-
-            ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(
-                    client.chanA(session),
+            ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(client.chanA(session),
                     serverA.chanB(session, "serviceB"));
 
             GreeterChoreography_A chor = new GreeterChoreography_A(ch);
             chor.greet();
-
         }
 
         span.end();

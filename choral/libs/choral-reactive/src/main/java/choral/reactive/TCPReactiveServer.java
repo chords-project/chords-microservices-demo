@@ -10,12 +10,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.io.StreamCorruptedException;
+import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -68,10 +68,10 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             while (true) {
                 Socket connection = serverSocket.accept();
                 Thread.ofPlatform()
-                    .name("CLIENT_CONNECTION_" + connection)
-                    .start(() -> {
-                        clientListen(connection);
-                    });
+                        .name("CLIENT_CONNECTION_" + connection)
+                        .start(() -> {
+                            clientListen(connection);
+                        });
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -93,15 +93,18 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
                             receiveMessage(connection, msg, telemetrySession);
                         } catch (StreamCorruptedException | ClassNotFoundException e) {
-                            System.out.println("TCPReactiveServer failed to deserialize class: address=" + connection.getInetAddress());
+                            System.out.println("TCPReactiveServer failed to deserialize class: address="
+                                    + connection.getInetAddress());
                         }
                     }
                 }
             }
         } catch (EOFException e) {
-            System.out.println("TCPReactiveServer client disconnected: service=" + serviceName + " address=" + connection.getInetAddress());
+            System.out.println("TCPReactiveServer client disconnected: service=" + serviceName + " address="
+                    + connection.getInetAddress());
         } catch (IOException e) {
-            System.out.println("TCPReactiveServer client exception: service=" + serviceName + " address=" + connection.getInetAddress());
+            System.out.println("TCPReactiveServer client exception: service=" + serviceName + " address="
+                    + connection.getInetAddress());
             e.printStackTrace();
         }
     }
@@ -109,7 +112,8 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Serializable> T recv(S session) {
-        Attributes attributes = Attributes.builder().put("channel.service", serviceName).put("channel.sender", session.senderName()).build();
+        Attributes attributes = Attributes.builder().put("channel.service", serviceName)
+                .put("channel.sender", session.senderName()).build();
 
         TelemetrySession telemetrySession;
         CompletableFuture<Serializable> future = new CompletableFuture<>();
@@ -121,7 +125,9 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
                 // Flow already exists, receive message from send...
 
                 if (this.sendQueue.get(session).isEmpty()) {
-                    telemetrySession.log("TCPReactiveServer receive, session already exists, waiting for message to arrive", attributes);
+                    telemetrySession.log(
+                            "TCPReactiveServer receive, session already exists, waiting for message to arrive",
+                            attributes);
                     this.recvQueue.get(session).add(future);
                 } else {
                     telemetrySession.log("TCPReactiveServer receive, message already arrived", attributes);
@@ -129,7 +135,9 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
                 }
             } else {
                 // Flow does not exist yet, wait for it to arrive...
-                telemetrySession.log("TCPReactiveServer receive, session does not exist yet, waiting for message to arrive", attributes);
+                telemetrySession.log(
+                        "TCPReactiveServer receive, session does not exist yet, waiting for message to arrive",
+                        attributes);
                 enqueueRecv(session, future);
             }
         }
@@ -165,8 +173,8 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
     private void receiveMessage(Socket connection, TCPMessage<S> msg, TelemetrySession telemetrySession) {
         // telemetrySession.log cannot be used, since the span has not been created yet
         System.out.println(
-            "TCPReactiveServer received message: service=" + serviceName + " address=" + connection.getInetAddress() + " session=" + msg.session
-        );
+                "TCPReactiveServer received message: service=" + serviceName + " address=" + connection.getInetAddress()
+                        + " session=" + msg.session);
 
         synchronized (this) {
             boolean isNewSession = knownSessionIDs.add(msg.session.sessionID());
@@ -188,33 +196,35 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
             if (isNewSession) {
                 // Handle new session in another thread
                 Thread.ofPlatform()
-                    .name("NEW_SESSION_HANDLER_" + msg.session)
-                    .start(() -> {
-                        Span span = telemetrySession.makeChoreographySpan();
+                        .name("NEW_SESSION_HANDLER_" + msg.session)
+                        .start(() -> {
+                            Span span = telemetrySession.makeChoreographySpan();
 
-                        this.telemetrySessionMap.put(msg.session, telemetrySession);
+                            this.telemetrySessionMap.put(msg.session, telemetrySession);
 
-                        try (Scope scope = span.makeCurrent()) {
                             telemetrySession.log(
-                                "TCPReactiveServer handle new session",
-                                Attributes.builder().put("service", serviceName).put("session", msg.session.toString()).build()
-                            );
+                                    "TCPReactiveServer handle new session",
+                                    Attributes.builder().put("service", serviceName)
+                                            .put("session", msg.session.toString()).build());
 
-                            SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session, telemetrySession);
-                            newSessionEvent.onNewSession(sessionCtx);
-                        } catch (Exception e) {
-                            telemetrySession.recordException(
-                                "TCPReactiveServer session exception",
-                                e,
-                                true,
-                                Attributes.builder().put("service", serviceName).put("session", msg.session.toString()).build()
-                            );
-                        } finally {
-                            span.end();
-                        }
+                            try (Scope scope = span.makeCurrent();
+                                    SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session,
+                                            telemetrySession);) {
 
-                        cleanupKey(msg.session);
-                    });
+                                newSessionEvent.onNewSession(sessionCtx);
+                            } catch (Exception e) {
+                                telemetrySession.recordException(
+                                        "TCPReactiveServer session exception",
+                                        e,
+                                        true,
+                                        Attributes.builder().put("service", serviceName)
+                                                .put("session", msg.session.toString()).build());
+                            } finally {
+                                span.end();
+                            }
+
+                            cleanupKey(msg.session);
+                        });
             }
         }
     }
@@ -256,11 +266,12 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
         void onNewSession(SessionContext<S> ctx) throws Exception;
     }
 
-    public static class SessionContext<S extends Session> {
+    public static class SessionContext<S extends Session> implements AutoCloseable {
 
         private final TCPReactiveServer<S> server;
         public final S session;
         private final TelemetrySession telemetrySession;
+        private final HashSet<AutoCloseable> closeHandles = new HashSet<>();
 
         private SessionContext(TCPReactiveServer<S> server, S session, TelemetrySession telemetrySession) {
             this.server = server;
@@ -285,14 +296,17 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
          *
          * @param address the network address of the client to connect to.
          */
-        public ReactiveChannel_A<S, Serializable> chanA(TCPReactiveClientConnection connection) throws UnknownHostException, URISyntaxException, IOException {
-            TCPReactiveClient<S> client = new TCPReactiveClient<>(connection, server.serviceName, telemetrySession);
+        public ReactiveChannel_A<S, Serializable> chanA(ClientConnectionManager connectionManager)
+                throws IOException, InterruptedException {
+            ReactiveClient<S> client = new ReactiveClient<>(connectionManager, server.serviceName, telemetrySession);
+            closeHandles.add(client);
             return client.chanA(session);
         }
 
-        public ReactiveSymChannel<S, Serializable> symChan(String clientService, TCPReactiveClientConnection connection)
-            throws UnknownHostException, URISyntaxException, IOException {
-            var a = chanA(connection);
+        public ReactiveSymChannel<S, Serializable> symChan(String clientService,
+                ClientConnectionManager connectionManager)
+                throws IOException, InterruptedException {
+            var a = chanA(connectionManager);
             var b = chanB(clientService);
             return new ReactiveSymChannel<>(a, b);
         }
@@ -303,6 +317,13 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
         public void log(String message, Attributes attributes) {
             telemetrySession.log(message, attributes);
+        }
+
+        @Override
+        public void close() throws Exception {
+            for (AutoCloseable handle : closeHandles) {
+                handle.close();
+            }
         }
     }
 

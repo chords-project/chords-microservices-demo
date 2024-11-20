@@ -2,18 +2,19 @@ package choral.reactive;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import choral.reactive.tracing.TelemetrySession;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.Test;
-
-import choral.reactive.tracing.TelemetrySession;
 
 public class TCPConnectionTest {
 
     @Test
     void testClientServerConnection() {
         class Stats {
+
             int newSessionCount = 0;
             int clientSessionID = -1;
             SimpleSession receivedSession = null;
@@ -24,7 +25,7 @@ public class TCPConnectionTest {
         Stats stats = new Stats();
         CountDownLatch done = new CountDownLatch(1);
 
-        TCPReactiveServer<SimpleSession> server = new TCPReactiveServer<>("server", (ctx) -> {
+        TCPReactiveServer<SimpleSession> server = new TCPReactiveServer<>("server", ctx -> {
             System.out.println("New session: " + ctx.session);
             stats.receivedSession = ctx.session;
             stats.newSessionCount++;
@@ -34,18 +35,19 @@ public class TCPConnectionTest {
             done.countDown();
         });
 
-        Thread.ofPlatform().start(() -> {
-            assertDoesNotThrow(() -> {
-                server.listen("0.0.0.0:4567");
-            });
-        });
+        Thread.ofPlatform()
+                .start(() -> {
+                    assertDoesNotThrow(() -> {
+                        server.listen("0.0.0.0:4567");
+                    });
+                });
 
         assertDoesNotThrow(() -> {
-            try (TCPReactiveClientConnection clientConn = new TCPReactiveClientConnection("0.0.0.0:4567");) {
+            try (ClientConnectionManager connManager = ClientConnectionManager.makeConnectionManager("0.0.0.0:4567",
+                    OpenTelemetrySdk.builder().build());) {
                 SimpleSession session = SimpleSession.makeSession("choreography", "client");
-                TCPReactiveClient<SimpleSession> client = new TCPReactiveClient<>(
-                        clientConn, "client",
-                        TelemetrySession.makeNoop(session));
+                ReactiveClient<SimpleSession> client = new ReactiveClient<>(
+                        connManager, "client", TelemetrySession.makeNoop(session));
 
                 stats.clientSessionID = session.sessionID;
 
@@ -55,6 +57,7 @@ public class TCPConnectionTest {
 
                 // Wait for server to handle messages before closing
                 boolean finished = done.await(5, TimeUnit.SECONDS);
+                client.close();
                 assertTrue(finished);
             } finally {
                 server.close();
