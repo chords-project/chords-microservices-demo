@@ -3,7 +3,7 @@ package dev.chords.microservices.frontend;
 import choral.reactive.ReactiveSymChannel;
 import choral.reactive.ClientConnectionManager;
 import choral.reactive.ReactiveClient;
-import choral.reactive.TCPReactiveServer;
+import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
 import dev.chords.choreographies.ChorPlaceOrder_Client;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class FrontendController {
 
-    TCPReactiveServer<WebshopSession> server;
+    ReactiveServer<WebshopSession> server;
     OpenTelemetrySdk telemetry = null;
 
     ClientConnectionManager cartConn;
@@ -52,7 +52,7 @@ public class FrontendController {
             throw new RuntimeException(e);
         }
 
-        server = new TCPReactiveServer<>(Service.FRONTEND.name(), this.telemetry, ctx -> {
+        server = new ReactiveServer<>(Service.FRONTEND.name(), this.telemetry, ctx -> {
             System.out.println(
                     "[FRONTEND] Received new session from " + ctx.session.senderName() + " service: " + ctx.session);
         });

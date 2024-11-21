@@ -4,7 +4,7 @@ import choral.reactive.ClientConnectionManager;
 import choral.reactive.ReactiveClient;
 import choral.reactive.ReactiveSymChannel;
 import choral.reactive.SimpleSession;
-import choral.reactive.TCPReactiveServer;
+import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.trace.Span;
@@ -16,13 +16,13 @@ import java.io.Serializable;
 public class ServiceA {
 
     private OpenTelemetrySdk telemetry;
-    private TCPReactiveServer<SimpleSession> serverA;
+    private ReactiveServer<SimpleSession> serverA;
     private ClientConnectionManager connectionServiceB;
 
     public ServiceA(OpenTelemetrySdk telemetry, String addressServiceB) throws Exception {
         this.telemetry = telemetry;
         this.connectionServiceB = ClientConnectionManager.makeConnectionManager(addressServiceB, telemetry);
-        this.serverA = new TCPReactiveServer<>("serviceA", telemetry, ctx -> {
+        this.serverA = new ReactiveServer<>("serviceA", telemetry, ctx -> {
             System.out.println("ServiceA received new session");
         });
     }

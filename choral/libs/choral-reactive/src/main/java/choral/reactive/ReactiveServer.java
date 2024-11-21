@@ -5,16 +5,8 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.io.StreamCorruptedException;
-import java.io.Closeable;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,7 +14,8 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S, Serializable>, AutoCloseable {
+public class ReactiveServer<S extends Session>
+        implements ServerConnectionManager.ServerEvents, ReactiveReceiver<S, Serializable>, AutoCloseable {
 
     private final HashSet<Integer> knownSessionIDs = new HashSet<>();
 
@@ -33,80 +26,22 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
     private final String serviceName;
     private final NewSessionEvent<S> newSessionEvent;
     private final OpenTelemetrySdk telemetry;
+    private final ServerConnectionManager connectionManager;
 
-    private ServerSocket serverSocket = null;
-
-    public TCPReactiveServer(String serviceName, OpenTelemetrySdk telemetry, NewSessionEvent<S> newSessionEvent) {
+    public ReactiveServer(String serviceName, OpenTelemetrySdk telemetry, NewSessionEvent<S> newSessionEvent) {
         this.serviceName = serviceName;
         this.telemetry = telemetry;
         this.newSessionEvent = newSessionEvent;
+        this.connectionManager = ServerConnectionManager.makeConnectionManager(this, telemetry);
     }
 
-    public TCPReactiveServer(String serviceName, NewSessionEvent<S> newSessionEvent) {
+    public ReactiveServer(String serviceName, NewSessionEvent<S> newSessionEvent) {
         // Pass NoOp telemetry sdk
         this(serviceName, OpenTelemetrySdk.builder().build(), newSessionEvent);
     }
 
-    /**
-     * Start the server listening on the given address, blocking the thread.
-     *
-     * @param address the address for the server to listen on. Example
-     *                "0.0.0.0:1234"
-     * @throws URISyntaxException if the onNewSession event handler has not been
-     *                            registered before calling
-     */
     public void listen(String address) throws URISyntaxException {
-        System.out.println("TCPReactiveServer listener starting on " + address);
-
-        URI uri = new URI(null, address, null, null, null).parseServerAuthority();
-        InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
-
-        try {
-            serverSocket = new ServerSocket(addr.getPort(), 50, addr.getAddress());
-            System.out.println("TCPReactiveServer listening successfully on " + serverSocket.getLocalSocketAddress());
-
-            while (true) {
-                Socket connection = serverSocket.accept();
-                Thread.ofPlatform()
-                        .name("CLIENT_CONNECTION_" + connection)
-                        .start(() -> {
-                            clientListen(connection);
-                        });
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    protected void clientListen(Socket connection) {
-        try {
-            System.out.println("TCPReactiveServer client connected: address=" + connection.getInetAddress());
-            while (true) {
-                try (ObjectInputStream stream = new ObjectInputStream(connection.getInputStream())) {
-                    while (true) {
-                        try {
-                            @SuppressWarnings("unchecked")
-                            TCPMessage<S> msg = (TCPMessage<S>) stream.readObject();
-
-                            TelemetrySession telemetrySession = null;
-                            telemetrySession = new TelemetrySession(telemetry, msg);
-
-                            receiveMessage(connection, msg, telemetrySession);
-                        } catch (StreamCorruptedException | ClassNotFoundException e) {
-                            System.out.println("TCPReactiveServer failed to deserialize class: address="
-                                    + connection.getInetAddress());
-                        }
-                    }
-                }
-            }
-        } catch (EOFException e) {
-            System.out.println("TCPReactiveServer client disconnected: service=" + serviceName + " address="
-                    + connection.getInetAddress());
-        } catch (IOException e) {
-            System.out.println("TCPReactiveServer client exception: service=" + serviceName + " address="
-                    + connection.getInetAddress());
-            e.printStackTrace();
-        }
+        connectionManager.listen(address);
     }
 
     @SuppressWarnings("unchecked")
@@ -170,11 +105,11 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
         return new ReactiveChannel_B<S, Serializable>(senderSession, this, telemetrySession);
     }
 
-    private void receiveMessage(Socket connection, TCPMessage<S> msg, TelemetrySession telemetrySession) {
-        // telemetrySession.log cannot be used, since the span has not been created yet
-        System.out.println(
-                "TCPReactiveServer received message: service=" + serviceName + " address=" + connection.getInetAddress()
-                        + " session=" + msg.session);
+    @Override
+    public void messageReceived(Object message) {
+        @SuppressWarnings("unchecked")
+        TCPMessage<S> msg = (TCPMessage<S>) message;
+        final TelemetrySession telemetrySession = new TelemetrySession(telemetry, msg);
 
         synchronized (this) {
             boolean isNewSession = knownSessionIDs.add(msg.session.sessionID());
@@ -259,7 +194,7 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
     @Override
     public void close() throws IOException {
-        serverSocket.close();
+        connectionManager.close();
     }
 
     public interface NewSessionEvent<S extends Session> {
@@ -268,12 +203,12 @@ public class TCPReactiveServer<S extends Session> implements ReactiveReceiver<S,
 
     public static class SessionContext<S extends Session> implements AutoCloseable {
 
-        private final TCPReactiveServer<S> server;
+        private final ReactiveServer<S> server;
         public final S session;
         private final TelemetrySession telemetrySession;
         private final HashSet<AutoCloseable> closeHandles = new HashSet<>();
 
-        private SessionContext(TCPReactiveServer<S> server, S session, TelemetrySession telemetrySession) {
+        private SessionContext(ReactiveServer<S> server, S session, TelemetrySession telemetrySession) {
             this.server = server;
             this.session = session;
             this.telemetrySession = telemetrySession;

@@ -25,7 +25,7 @@ public class TCPConnectionTest {
         Stats stats = new Stats();
         CountDownLatch done = new CountDownLatch(1);
 
-        TCPReactiveServer<SimpleSession> server = new TCPReactiveServer<>("server", ctx -> {
+        ReactiveServer<SimpleSession> server = new ReactiveServer<>("server", ctx -> {
             System.out.println("New session: " + ctx.session);
             stats.receivedSession = ctx.session;
             stats.newSessionCount++;

@@ -2,7 +2,7 @@ package dev.chords.microservices.benchmark;
 
 import choral.reactive.ClientConnectionManager;
 import choral.reactive.SimpleSession;
-import choral.reactive.TCPReactiveServer;
+import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.net.URISyntaxException;
@@ -10,7 +10,7 @@ import java.net.URISyntaxException;
 public class ServiceB {
 
     private OpenTelemetrySdk telemetry;
-    private TCPReactiveServer<SimpleSession> serverB;
+    private ReactiveServer<SimpleSession> serverB;
     private ClientConnectionManager connectionServiceA;
     private GrpcClient grpcClient;
 
@@ -19,7 +19,7 @@ public class ServiceB {
         this.grpcClient = new GrpcClient(5430, telemetry);
         this.connectionServiceA = ClientConnectionManager.makeConnectionManager(addressServiceA, telemetry);
 
-        this.serverB = new TCPReactiveServer<>("serviceB", telemetry, ctx -> {
+        this.serverB = new ReactiveServer<>("serviceB", telemetry, ctx -> {
             switch (ctx.session.choreographyID) {
                 case "ping-pong":
                     SimpleChoreography_B pingPongChor = new SimpleChoreography_B(

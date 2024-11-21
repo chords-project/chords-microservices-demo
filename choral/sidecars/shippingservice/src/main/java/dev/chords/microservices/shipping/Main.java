@@ -1,8 +1,8 @@
 package dev.chords.microservices.shipping;
 
 import choral.reactive.ClientConnectionManager;
-import choral.reactive.TCPReactiveServer;
-import choral.reactive.TCPReactiveServer.SessionContext;
+import choral.reactive.ReactiveServer;
+import choral.reactive.ReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Shipping;
 import dev.chords.choreographies.ServiceResources;
@@ -37,7 +37,7 @@ public class Main {
 
         currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
 
-        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.SHIPPING.name(), telemetry,
+        ReactiveServer<WebshopSession> server = new ReactiveServer<>(Service.SHIPPING.name(), telemetry,
                 Main::handleNewSession);
 
         server.listen(ServiceResources.shared.shipping);
