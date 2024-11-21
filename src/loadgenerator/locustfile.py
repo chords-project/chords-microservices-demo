@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import random
-from locust import FastHttpUser, TaskSet, between, task
+from locust import FastHttpUser, TaskSet, between, constant_pacing, task
 from faker import Faker
 import datetime
 fake = Faker()
@@ -31,29 +31,36 @@ products = [
     'LS4PSXUNUM',
     'OLJCESPC7Z']
 
+
 def index(l):
     l.client.get("/")
+
 
 def setCurrency(l):
     currencies = ['EUR', 'USD', 'JPY', 'CAD', 'GBP', 'TRY']
     l.client.post("/setCurrency",
-        {'currency_code': random.choice(currencies)})
+                  {'currency_code': random.choice(currencies)})
+
 
 def browseProduct(l):
     l.client.get("/product/" + random.choice(products))
 
+
 def viewCart(l):
     l.client.get("/cart")
+
 
 def addToCart(l):
     product = random.choice(products)
     l.client.get("/product/" + product)
     l.client.post("/cart", {
         'product_id': product,
-        'quantity': random.randint(1,10)})
+        'quantity': random.randint(1, 10)})
+
 
 def empty_cart(l):
     l.client.post('/cart/empty')
+
 
 def checkout(l):
     addToCart(l)
@@ -70,6 +77,7 @@ def checkout(l):
         'credit_card_expiration_year': random.randint(current_year, current_year + 70),
         'credit_card_cvv': f"{random.randint(100, 999)}",
     })
+
 
 def logout(l):
     l.client.get('/logout')
@@ -88,6 +96,7 @@ def logout(l):
 #         checkout: 1
 #     }
 
+
 class CheckoutBehaviour(TaskSet):
 
     def on_start(self):
@@ -103,7 +112,7 @@ class CheckoutBehaviour(TaskSet):
         for product in buy_products:
             self.client.post("/cart", {
                 'product_id': product,
-                'quantity': random.randint(1,10)})
+                'quantity': random.randint(1, 10)})
 
         # Checkout
         current_year = datetime.datetime.now().year+1
@@ -120,9 +129,12 @@ class CheckoutBehaviour(TaskSet):
             'credit_card_cvv': f"{random.randint(100, 999)}",
         })
 
+
 class WebsiteUser(FastHttpUser):
     tasks = [
         # UserBehavior
         CheckoutBehaviour
     ]
-    wait_time = between(1, 5)
+
+    wait_time = constant_pacing(5)
+    # wait_time = between(1, 5)

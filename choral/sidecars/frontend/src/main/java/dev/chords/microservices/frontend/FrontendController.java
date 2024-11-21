@@ -1,8 +1,8 @@
 package dev.chords.microservices.frontend;
 
 import choral.reactive.ReactiveSymChannel;
-import choral.reactive.TCPReactiveClient;
-import choral.reactive.TCPReactiveClientConnection;
+import choral.reactive.ClientConnectionManager;
+import choral.reactive.ReactiveClient;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
@@ -18,7 +18,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
-import java.io.IOException;
 import java.net.URISyntaxException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,10 +30,10 @@ public class FrontendController {
     TCPReactiveServer<WebshopSession> server;
     OpenTelemetrySdk telemetry = null;
 
-    TCPReactiveClientConnection cartConn;
-    TCPReactiveClientConnection currencyConn;
-    TCPReactiveClientConnection shippingConn;
-    TCPReactiveClientConnection paymentConn;
+    ClientConnectionManager cartConn;
+    ClientConnectionManager currencyConn;
+    ClientConnectionManager shippingConn;
+    ClientConnectionManager paymentConn;
 
     public FrontendController() {
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
@@ -44,28 +43,29 @@ public class FrontendController {
         }
 
         try {
-            cartConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.cart);
-            currencyConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.currency);
-            shippingConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.shipping);
-            paymentConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.payment);
+            cartConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.cart, telemetry);
+            currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
+            shippingConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.shipping, telemetry);
+            paymentConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.payment, telemetry);
         } catch (URISyntaxException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
 
         server = new TCPReactiveServer<>(Service.FRONTEND.name(), this.telemetry, ctx -> {
-            System.out.println("[FRONTEND] Received new session from " + ctx.session.senderName() + " service: " + ctx.session);
+            System.out.println(
+                    "[FRONTEND] Received new session from " + ctx.session.senderName() + " service: " + ctx.session);
         });
 
         Thread.ofPlatform()
-            .name("FRONTEND_CHORAL_SERVERS")
-            .start(() -> {
-                try {
-                    server.listen(ServiceResources.shared.frontend);
-                } catch (URISyntaxException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+                .name("FRONTEND_CHORAL_SERVERS")
+                .start(() -> {
+                    try {
+                        server.listen(ServiceResources.shared.frontend);
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
 
         System.out.println("[FRONTEND] Done configuring frontend controller");
     }
@@ -82,42 +82,49 @@ public class FrontendController {
         WebshopSession session = WebshopSession.makeSession(Choreography.PLACE_ORDER, Service.FRONTEND);
 
         Span span = telemetry
-            .getTracer(JaegerConfiguration.TRACER_NAME)
-            .spanBuilder("Frontend: Checkout request")
-            .setSpanKind(SpanKind.CLIENT)
-            .setAttribute("choreography.session", session.toString())
-            .startSpan();
+                .getTracer(JaegerConfiguration.TRACER_NAME)
+                .spanBuilder("Frontend: Checkout request")
+                .setSpanKind(SpanKind.CLIENT)
+                .setAttribute("choreography.session", session.toString())
+                .startSpan();
 
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
-        try (Scope scope = span.makeCurrent();) {
-            TCPReactiveClient<WebshopSession> cartClient = new TCPReactiveClient<>(cartConn, Service.FRONTEND.name(), telemetrySession);
-            TCPReactiveClient<WebshopSession> currencyClient = new TCPReactiveClient<>(currencyConn, Service.FRONTEND.name(), telemetrySession);
-            TCPReactiveClient<WebshopSession> shippingClient = new TCPReactiveClient<>(shippingConn, Service.FRONTEND.name(), telemetrySession);
-            TCPReactiveClient<WebshopSession> paymentClient = new TCPReactiveClient<>(paymentConn, Service.FRONTEND.name(), telemetrySession);
+        try (Scope scope = span.makeCurrent();
+                ReactiveClient<WebshopSession> cartClient = new ReactiveClient<>(
+                        cartConn, Service.FRONTEND.name(), telemetrySession);
+                ReactiveClient<WebshopSession> currencyClient = new ReactiveClient<>(
+                        currencyConn, Service.FRONTEND.name(), telemetrySession);
+                ReactiveClient<WebshopSession> shippingClient = new ReactiveClient<>(
+                        shippingConn, Service.FRONTEND.name(), telemetrySession);
+                ReactiveClient<WebshopSession> paymentClient = new ReactiveClient<>(
+                        paymentConn, Service.FRONTEND.name(), telemetrySession);) {
 
             // Get items
             server.registerSession(session);
 
             telemetrySession.log("[FRONTEND] Initiating PLACE_ORDER choreography");
 
-            var currencyChan = new ReactiveSymChannel<>(currencyClient.chanA(session), server.chanB(session, Service.CURRENCY.name()));
+            var currencyChan = new ReactiveSymChannel<>(currencyClient.chanA(session),
+                    server.chanB(session, Service.CURRENCY.name()));
 
-            var shippingChan = new ReactiveSymChannel<>(shippingClient.chanA(session), server.chanB(session, Service.SHIPPING.name()));
+            var shippingChan = new ReactiveSymChannel<>(shippingClient.chanA(session),
+                    server.chanB(session, Service.SHIPPING.name()));
 
-            var paymentChan = new ReactiveSymChannel<>(paymentClient.chanA(session), server.chanB(session, Service.PAYMENT.name()));
+            var paymentChan = new ReactiveSymChannel<>(paymentClient.chanA(session),
+                    server.chanB(session, Service.PAYMENT.name()));
 
             ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
-                new ClientService(telemetrySession.tracer),
-                currencyChan,
-                shippingChan,
-                paymentChan,
-                cartClient.chanA(session)
-            );
+                    new ClientService(telemetrySession.tracer),
+                    currencyChan,
+                    shippingChan,
+                    paymentChan,
+                    cartClient.chanA(session));
 
             OrderResult result = placeOrderChor.placeOrder(request);
 
-            telemetrySession.log("[FRONTEND] Finished PLACE_ORDER choreography", Attributes.builder().put("order.result", result.toString()).build());
+            telemetrySession.log("[FRONTEND] Finished PLACE_ORDER choreography",
+                    Attributes.builder().put("order.result", result.toString()).build());
 
             return new PlaceOrderResponse(result);
         } catch (Exception e) {
@@ -125,7 +132,8 @@ public class FrontendController {
 
             throw new RuntimeException(e);
         } finally {
-            if (span != null) span.end();
+            if (span != null)
+                span.end();
         }
     }
 }

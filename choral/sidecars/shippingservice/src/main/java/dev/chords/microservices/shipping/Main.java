@@ -1,6 +1,6 @@
 package dev.chords.microservices.shipping;
 
-import choral.reactive.TCPReactiveClientConnection;
+import choral.reactive.ClientConnectionManager;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -17,8 +17,8 @@ public class Main {
 
     public static OpenTelemetrySdk telemetry;
 
-    public static TCPReactiveClientConnection frontendConn;
-    public static TCPReactiveClientConnection currencyConn;
+    public static ClientConnectionManager frontendConn;
+    public static ClientConnectionManager currencyConn;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral shipping service");
@@ -33,11 +33,12 @@ public class Main {
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
         shippingService = new ShippingService(new InetSocketAddress("localhost", rpcPort), telemetry);
 
-        frontendConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.frontend);
+        frontendConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.frontend, telemetry);
 
-        currencyConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.currency);
+        currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
 
-        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.SHIPPING.name(), telemetry, Main::handleNewSession);
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.SHIPPING.name(), telemetry,
+                Main::handleNewSession);
 
         server.listen(ServiceResources.shared.shipping);
     }
@@ -48,11 +49,10 @@ public class Main {
                 ctx.log("[SHIPPING] New PLACE_ORDER request");
 
                 ChorPlaceOrder_Shipping placeOrderChor = new ChorPlaceOrder_Shipping(
-                    shippingService,
-                    ctx.symChan(WebshopSession.Service.FRONTEND.name(), frontendConn),
-                    ctx.chanB(WebshopSession.Service.CART.name()),
-                    ctx.chanA(currencyConn)
-                );
+                        shippingService,
+                        ctx.symChan(WebshopSession.Service.FRONTEND.name(), frontendConn),
+                        ctx.chanB(WebshopSession.Service.CART.name()),
+                        ctx.chanA(currencyConn));
 
                 placeOrderChor.placeOrder();
                 ctx.log("[SHIPPING] PLACE_ORDER choreography completed");

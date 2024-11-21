@@ -76,7 +76,7 @@ spec:
               drop:
                 - ALL
             privileged: false
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false
           image: loadgenerator
           env:
             - name: FRONTEND_ADDR

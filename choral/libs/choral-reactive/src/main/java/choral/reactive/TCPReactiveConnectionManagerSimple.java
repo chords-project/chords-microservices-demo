@@ -41,7 +41,8 @@ public class TCPReactiveConnectionManagerSimple implements ClientConnectionManag
         protected ClientConnection() throws IOException {
             this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
 
-            Span span = tracer.spanBuilder("ClientConnection connect").startSpan();
+            Span span = tracer.spanBuilder("ClientConnection connect").setAttribute("connection.address", address)
+                    .startSpan();
 
             this.connection = new Socket(socketAddr.getHostName(), socketAddr.getPort());
             this.stream = new ObjectOutputStream(connection.getOutputStream());

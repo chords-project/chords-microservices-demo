@@ -1,6 +1,6 @@
 package dev.chords.microservices.productcatalog;
 
-import choral.reactive.TCPReactiveClientConnection;
+import choral.reactive.ClientConnectionManager;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_ProductCatalog;
@@ -14,7 +14,7 @@ public class Main {
 
     public static OpenTelemetrySdk telemetry;
 
-    public static TCPReactiveClientConnection currencyConn;
+    public static ClientConnectionManager currencyConn;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral product catalog service");
@@ -27,30 +27,31 @@ public class Main {
         }
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "3550"));
-        ProductCatalogService catalogService = new ProductCatalogService(new InetSocketAddress("localhost", rpcPort), telemetry);
+        ProductCatalogService catalogService = new ProductCatalogService(new InetSocketAddress("localhost", rpcPort),
+                telemetry);
 
-        currencyConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.currency);
+        currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
 
-        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.PRODUCT_CATALOG.name(), telemetry, ctx -> {
-            switch (ctx.session.choreography) {
-                case PLACE_ORDER:
-                    ctx.log("[PRODUCT_CATALOG] New PLACE_ORDER request");
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.PRODUCT_CATALOG.name(), telemetry,
+                ctx -> {
+                    switch (ctx.session.choreography) {
+                        case PLACE_ORDER:
+                            ctx.log("[PRODUCT_CATALOG] New PLACE_ORDER request");
 
-                    ChorPlaceOrder_ProductCatalog placeOrderChor = new ChorPlaceOrder_ProductCatalog(
-                        catalogService,
-                        ctx.chanB(WebshopSession.Service.CART.name()),
-                        ctx.chanA(currencyConn)
-                    );
+                            ChorPlaceOrder_ProductCatalog placeOrderChor = new ChorPlaceOrder_ProductCatalog(
+                                    catalogService,
+                                    ctx.chanB(WebshopSession.Service.CART.name()),
+                                    ctx.chanA(currencyConn));
 
-                    placeOrderChor.placeOrder();
-                    ctx.log("[PRODUCT_CATALOG] PLACE_ORDER choreography completed");
+                            placeOrderChor.placeOrder();
+                            ctx.log("[PRODUCT_CATALOG] PLACE_ORDER choreography completed");
 
-                    break;
-                default:
-                    ctx.log("[PRODUCT_CATALOG] Invalid choreography ID " + ctx.session.choreography.name());
-                    break;
-            }
-        });
+                            break;
+                        default:
+                            ctx.log("[PRODUCT_CATALOG] Invalid choreography ID " + ctx.session.choreography.name());
+                            break;
+                    }
+                });
 
         server.listen(ServiceResources.shared.productCatalog);
     }

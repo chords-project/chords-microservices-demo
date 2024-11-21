@@ -1,6 +1,6 @@
 package dev.chords.microservices.currency;
 
-import choral.reactive.TCPReactiveClientConnection;
+import choral.reactive.ClientConnectionManager;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -16,7 +16,7 @@ public class Main {
     private static CurrencyService currencyService;
     private static OpenTelemetrySdk telemetry;
 
-    private static TCPReactiveClientConnection frontendConn;
+    private static ClientConnectionManager frontendConn;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral currency service");
@@ -31,9 +31,10 @@ public class Main {
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "7000"));
         currencyService = new CurrencyService(new InetSocketAddress("localhost", rpcPort), telemetry);
 
-        frontendConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.frontend);
+        frontendConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.frontend, telemetry);
 
-        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.CURRENCY.name(), telemetry, Main::handleNewSession);
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.CURRENCY.name(), telemetry,
+                Main::handleNewSession);
 
         server.listen(ServiceResources.shared.currency);
     }
@@ -44,11 +45,10 @@ public class Main {
                 ctx.log("[CURRENCY] New PLACE_ORDER request");
 
                 ChorPlaceOrder_Currency placeOrderChor = new ChorPlaceOrder_Currency(
-                    currencyService,
-                    ctx.symChan(Service.FRONTEND.name(), frontendConn),
-                    ctx.chanB(Service.PRODUCT_CATALOG.name()),
-                    ctx.chanB(Service.SHIPPING.name())
-                );
+                        currencyService,
+                        ctx.symChan(Service.FRONTEND.name(), frontendConn),
+                        ctx.chanB(Service.PRODUCT_CATALOG.name()),
+                        ctx.chanB(Service.SHIPPING.name()));
 
                 placeOrderChor.placeOrder();
                 ctx.log("[CURRENCY] PLACE_ORDER choreography completed");

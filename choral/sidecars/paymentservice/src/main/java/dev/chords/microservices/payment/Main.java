@@ -1,6 +1,6 @@
 package dev.chords.microservices.payment;
 
-import choral.reactive.TCPReactiveClientConnection;
+import choral.reactive.ClientConnectionManager;
 import choral.reactive.TCPReactiveServer;
 import choral.reactive.TCPReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -17,7 +17,7 @@ public class Main {
 
     public static OpenTelemetrySdk telemetry;
 
-    public static TCPReactiveClientConnection frontendConn;
+    public static ClientConnectionManager frontendConn;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral payment service");
@@ -32,9 +32,10 @@ public class Main {
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
         paymentService = new PaymentService(new InetSocketAddress("localhost", rpcPort), telemetry);
 
-        frontendConn = TCPReactiveClientConnection.makeConnection(ServiceResources.shared.frontend);
+        frontendConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.frontend, telemetry);
 
-        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.PAYMENT.name(), telemetry, Main::handleNewSession);
+        TCPReactiveServer<WebshopSession> server = new TCPReactiveServer<>(Service.PAYMENT.name(), telemetry,
+                Main::handleNewSession);
 
         server.listen(ServiceResources.shared.payment);
     }
@@ -45,9 +46,8 @@ public class Main {
                 ctx.log("[PAYMENT] New PLACE_ORDER request");
 
                 ChorPlaceOrder_Payment placeOrderChor = new ChorPlaceOrder_Payment(
-                    paymentService,
-                    ctx.symChan(WebshopSession.Service.FRONTEND.name(), frontendConn)
-                );
+                        paymentService,
+                        ctx.symChan(WebshopSession.Service.FRONTEND.name(), frontendConn));
 
                 placeOrderChor.placeOrder();
                 ctx.log("[PAYMENT] PLACE_ORDER choreography completed");
