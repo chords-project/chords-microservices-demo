@@ -56,7 +56,7 @@ public class TCPConnectionTest {
                 chan.com("world");
 
                 // Wait for server to handle messages before closing
-                boolean finished = done.await(5, TimeUnit.HOURS);
+                boolean finished = done.await(5, TimeUnit.SECONDS);
                 client.close();
                 assertTrue(finished);
             } finally {

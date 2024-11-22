@@ -108,6 +108,11 @@ public class TCPServerManagerNio implements ServerConnectionManager {
                     iter.remove();
                 }
             }
+        } catch (Exception e) {
+            serverSpan.setAttribute("error", true);
+            serverSpan.recordException(e);
+            this.close();
+            throw e;
         }
     }
 
@@ -192,6 +197,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
 
                 try {
                     Object message = objectInputStream.readObject();
+                    System.out.println("TCPServerManagerNio received message: " + message.toString());
                     serverEvents.messageReceived(message);
                 } catch (ClassNotFoundException e) {
                     connectionSpan.setAttribute("error", true);

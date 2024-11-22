@@ -18,7 +18,9 @@ public interface ClientConnectionManager extends AutoCloseable {
         void close() throws IOException;
     }
 
-    public static ClientConnectionManager makeConnectionManager(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
-        return new TCPConnectionManagerSimple(address, telemetry);
+    public static ClientConnectionManager makeConnectionManager(String address, OpenTelemetrySdk telemetry)
+            throws URISyntaxException, IOException {
+        // return new TCPClientManagerSimple(address, telemetry);
+        return new TCPClientManagerPool(address, telemetry);
     }
 }

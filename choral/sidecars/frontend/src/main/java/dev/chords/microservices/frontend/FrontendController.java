@@ -49,7 +49,7 @@ public class FrontendController {
             currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
             shippingConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.shipping, telemetry);
             paymentConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.payment, telemetry);
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | IOException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }

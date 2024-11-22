@@ -15,13 +15,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 
-public class TCPConnectionManagerSimple implements ClientConnectionManager {
+public class TCPClientManagerSimple implements ClientConnectionManager {
 
     public final String address;
     private final InetSocketAddress socketAddr;
     private final OpenTelemetrySdk telemetry;
 
-    public TCPConnectionManagerSimple(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
+    public TCPClientManagerSimple(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
         this.address = address;
         this.telemetry = telemetry;
 
@@ -37,7 +37,7 @@ public class TCPConnectionManagerSimple implements ClientConnectionManager {
     private class ClientConnection implements ClientConnectionManager.Connection {
 
         private Socket connection = null;
-        private ByteArrayOutputStream objectBuffer;
+        private ByteArrayOutputStream objectBuffer = new ByteArrayOutputStream(4096);
         private Tracer tracer;
 
         protected ClientConnection() throws IOException {
@@ -47,8 +47,6 @@ public class TCPConnectionManagerSimple implements ClientConnectionManager {
                     .startSpan();
 
             this.connection = new Socket(socketAddr.getHostName(), socketAddr.getPort());
-
-            this.objectBuffer = new ByteArrayOutputStream(1024);
 
             span.end();
         }
