@@ -3,6 +3,8 @@
  */
 package dev.chords.microservices.benchmark;
 
+import java.util.Scanner;
+
 import choral.reactive.tracing.JaegerConfiguration;
 
 public class Benchmark {
@@ -54,11 +56,6 @@ public class Benchmark {
         benchmarkChoreography(serviceA -> {
             serviceA.startPingPong();
             serviceA.startGreeting();
-
-            // Scanner input = new Scanner(System.in);
-            // System.out.print("Press Enter to perform benchmark...");
-            // input.nextLine();
-            // input.close();
 
             // serviceA.startGreeting();
 

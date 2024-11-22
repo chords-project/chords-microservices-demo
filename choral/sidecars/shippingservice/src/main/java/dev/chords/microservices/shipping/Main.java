@@ -1,6 +1,6 @@
 package dev.chords.microservices.shipping;
 
-import choral.reactive.ClientConnectionManager;
+import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.ReactiveServer;
 import choral.reactive.ReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;

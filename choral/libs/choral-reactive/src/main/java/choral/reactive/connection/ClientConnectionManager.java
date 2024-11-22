@@ -1,10 +1,9 @@
-package choral.reactive;
+package choral.reactive.connection;
 
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URISyntaxException;
-
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public interface ClientConnectionManager extends AutoCloseable {
     Connection makeConnection() throws IOException, InterruptedException;
@@ -19,9 +18,7 @@ public interface ClientConnectionManager extends AutoCloseable {
         void close() throws IOException;
     }
 
-    public static ClientConnectionManager makeConnectionManager(String address, OpenTelemetrySdk telemetry)
-            throws URISyntaxException {
-
-        return new TCPReactiveConnectionManagerSimple(address, telemetry);
+    public static ClientConnectionManager makeConnectionManager(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
+        return new TCPConnectionManagerSimple(address, telemetry);
     }
 }

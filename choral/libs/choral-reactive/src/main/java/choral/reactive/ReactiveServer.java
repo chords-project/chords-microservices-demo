@@ -1,5 +1,7 @@
 package choral.reactive;
 
+import choral.reactive.connection.ClientConnectionManager;
+import choral.reactive.connection.ServerConnectionManager;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
@@ -40,7 +42,15 @@ public class ReactiveServer<S extends Session>
         this(serviceName, OpenTelemetrySdk.builder().build(), newSessionEvent);
     }
 
-    public void listen(String address) throws URISyntaxException {
+    public void listen(String address) throws URISyntaxException, IOException {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                this.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }, "ReactiveServer_SHUTDOWN_HOOK"));
+
         connectionManager.listen(address);
     }
 
@@ -145,7 +155,6 @@ public class ReactiveServer<S extends Session>
                             try (Scope scope = span.makeCurrent();
                                     SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session,
                                             telemetrySession);) {
-
                                 newSessionEvent.onNewSession(sessionCtx);
                             } catch (Exception e) {
                                 telemetrySession.recordException(

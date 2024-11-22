@@ -1,5 +1,11 @@
-package choral.reactive;
+package choral.reactive.connection;
 
+import choral.reactive.tracing.JaegerConfiguration;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -7,19 +13,15 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 
-import choral.reactive.tracing.JaegerConfiguration;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-
-public class TCPReactiveConnectionManagerSimple implements ClientConnectionManager {
+public class TCPConnectionManagerSimple implements ClientConnectionManager {
 
     public final String address;
     private final InetSocketAddress socketAddr;
     private final OpenTelemetrySdk telemetry;
 
-    public TCPReactiveConnectionManagerSimple(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
+    public TCPConnectionManagerSimple(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
         this.address = address;
         this.telemetry = telemetry;
 
@@ -35,7 +37,7 @@ public class TCPReactiveConnectionManagerSimple implements ClientConnectionManag
     private class ClientConnection implements ClientConnectionManager.Connection {
 
         private Socket connection = null;
-        private ObjectOutputStream stream = null;
+        private ByteArrayOutputStream objectBuffer;
         private Tracer tracer;
 
         protected ClientConnection() throws IOException {
@@ -45,20 +47,35 @@ public class TCPReactiveConnectionManagerSimple implements ClientConnectionManag
                     .startSpan();
 
             this.connection = new Socket(socketAddr.getHostName(), socketAddr.getPort());
-            this.stream = new ObjectOutputStream(connection.getOutputStream());
+
+            this.objectBuffer = new ByteArrayOutputStream(1024);
 
             span.end();
         }
 
         @Override
         public void sendMessage(Serializable msg) throws IOException {
-            stream.writeObject(msg);
-            stream.flush();
+            objectBuffer.reset();
+            ObjectOutputStream objectStream = new ObjectOutputStream(objectBuffer);
+            objectStream.writeObject(msg);
+            objectStream.close();
+
+            ByteBuffer sendBuffer = ByteBuffer.allocate(objectBuffer.size() + 4)
+                    .putInt(objectBuffer.size())
+                    .put(objectBuffer.toByteArray());
+
+            System.out.println("Sending object of size: " + objectBuffer.size());
+
+            this.connection.getOutputStream().write(sendBuffer.array());
         }
 
         @Override
         public void close() throws IOException {
-            stream.close();
+            System.out.println("Closing client connection");
+
+            // Send quit event
+            connection.getOutputStream().write(ByteBuffer.allocate(4).putInt(-1).array());
+
             connection.close();
         }
 

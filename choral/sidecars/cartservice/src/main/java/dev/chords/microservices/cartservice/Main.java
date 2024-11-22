@@ -1,6 +1,6 @@
 package dev.chords.microservices.cartservice;
 
-import choral.reactive.ClientConnectionManager;
+import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.ReactiveServer;
 import choral.reactive.ReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -9,9 +9,7 @@ import dev.chords.choreographies.ServiceResources;
 import dev.chords.choreographies.WebshopSession;
 import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 
 public class Main {
 

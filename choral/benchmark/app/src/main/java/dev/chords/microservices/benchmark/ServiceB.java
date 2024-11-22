@@ -1,10 +1,12 @@
 package dev.chords.microservices.benchmark;
 
-import choral.reactive.ClientConnectionManager;
+import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.SimpleSession;
 import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+
+import java.io.IOException;
 import java.net.URISyntaxException;
 
 public class ServiceB {
@@ -47,7 +49,7 @@ public class ServiceB {
                 .start(() -> {
                     try {
                         serverB.listen(address);
-                    } catch (URISyntaxException e) {
+                    } catch (URISyntaxException | IOException e) {
                         throw new RuntimeException(e);
                     }
                 });

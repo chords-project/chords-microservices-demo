@@ -1,6 +1,6 @@
 package dev.chords.microservices.benchmark;
 
-import choral.reactive.ClientConnectionManager;
+import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.ReactiveClient;
 import choral.reactive.ReactiveSymChannel;
 import choral.reactive.SimpleSession;

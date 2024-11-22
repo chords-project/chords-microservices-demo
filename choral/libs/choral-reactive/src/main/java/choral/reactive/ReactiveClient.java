@@ -1,10 +1,11 @@
 package choral.reactive;
 
+import choral.reactive.connection.ClientConnectionManager;
+import choral.reactive.connection.ClientConnectionManager.Connection;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
 import java.io.IOException;
 import java.io.Serializable;
-import choral.reactive.ClientConnectionManager.Connection;
 
 public class ReactiveClient<S extends Session> implements ReactiveSender<S, Serializable>, AutoCloseable {
 
@@ -13,8 +14,8 @@ public class ReactiveClient<S extends Session> implements ReactiveSender<S, Seri
 
     private final TelemetrySession telemetrySession;
 
-    public ReactiveClient(ClientConnectionManager connectionManager, String serviceName,
-            TelemetrySession telemetrySession) throws IOException, InterruptedException {
+    public ReactiveClient(ClientConnectionManager connectionManager, String serviceName, TelemetrySession telemetrySession)
+        throws IOException, InterruptedException {
         this.connection = connectionManager.makeConnection();
         this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
@@ -34,16 +35,12 @@ public class ReactiveClient<S extends Session> implements ReactiveSender<S, Seri
             connection.sendMessage(message);
         } catch (IOException | InterruptedException e) {
             telemetrySession.recordException(
-                    "Failed to send message",
-                    e,
-                    true,
-                    Attributes.builder().put("service", serviceName).put("connection", connection.toString()).build());
+                "Failed to send message",
+                e,
+                true,
+                Attributes.builder().put("service", serviceName).put("connection", connection.toString()).build()
+            );
         }
-    }
-
-    private void log(String message) {
-        telemetrySession.log(message,
-                Attributes.builder().put("connection", connection.toString()).put("service", serviceName).build());
     }
 
     @Override

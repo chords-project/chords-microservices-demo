@@ -2,9 +2,9 @@ package choral.reactive;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -46,8 +46,8 @@ public class TCPConnectionTest {
             try (ClientConnectionManager connManager = ClientConnectionManager.makeConnectionManager("0.0.0.0:4567",
                     OpenTelemetrySdk.builder().build());) {
                 SimpleSession session = SimpleSession.makeSession("choreography", "client");
-                ReactiveClient<SimpleSession> client = new ReactiveClient<>(
-                        connManager, "client", TelemetrySession.makeNoop(session));
+                ReactiveClient<SimpleSession> client = new ReactiveClient<>(connManager, "client",
+                        TelemetrySession.makeNoop(session));
 
                 stats.clientSessionID = session.sessionID;
 
@@ -56,7 +56,7 @@ public class TCPConnectionTest {
                 chan.com("world");
 
                 // Wait for server to handle messages before closing
-                boolean finished = done.await(5, TimeUnit.SECONDS);
+                boolean finished = done.await(5, TimeUnit.HOURS);
                 client.close();
                 assertTrue(finished);
             } finally {

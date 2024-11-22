@@ -1,7 +1,7 @@
 package dev.chords.microservices.frontend;
 
 import choral.reactive.ReactiveSymChannel;
-import choral.reactive.ClientConnectionManager;
+import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.ReactiveClient;
 import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
@@ -18,6 +18,8 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+
+import java.io.IOException;
 import java.net.URISyntaxException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -62,7 +64,7 @@ public class FrontendController {
                 .start(() -> {
                     try {
                         server.listen(ServiceResources.shared.frontend);
-                    } catch (URISyntaxException e) {
+                    } catch (URISyntaxException | IOException e) {
                         throw new RuntimeException(e);
                     }
                 });

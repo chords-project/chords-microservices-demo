@@ -1,5 +1,6 @@
-package choral.reactive;
+package choral.reactive.connection;
 
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -10,16 +11,13 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import choral.reactive.tracing.TelemetrySession;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-
-public class TCPReactiveServerManagerSimple implements ServerConnectionManager {
+public class TCPServerManagerSimple implements ServerConnectionManager {
 
     private ServerSocket serverSocket = null;
     private OpenTelemetrySdk telemetry;
     private ServerEvents events;
 
-    public TCPReactiveServerManagerSimple(ServerEvents events, OpenTelemetrySdk telemetry) {
+    public TCPServerManagerSimple(ServerEvents events, OpenTelemetrySdk telemetry) {
         this.events = events;
         this.telemetry = telemetry;
     }
@@ -46,10 +44,10 @@ public class TCPReactiveServerManagerSimple implements ServerConnectionManager {
             while (true) {
                 Socket connection = serverSocket.accept();
                 Thread.ofPlatform()
-                        .name("CLIENT_CONNECTION_" + connection)
-                        .start(() -> {
-                            clientListen(connection);
-                        });
+                    .name("CLIENT_CONNECTION_" + connection)
+                    .start(() -> {
+                        clientListen(connection);
+                    });
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -65,33 +63,25 @@ public class TCPReactiveServerManagerSimple implements ServerConnectionManager {
                         try {
                             Object msg = stream.readObject();
 
-                            System.out.println(
-                                    "TCPReactiveServer received message: address="
-                                            + connection.getInetAddress()
-                                            + " message=" + msg.toString());
+                            System.out.println("TCPReactiveServer received message: address=" + connection.getInetAddress() + " message=" + msg.toString());
 
                             events.messageReceived(msg);
                         } catch (StreamCorruptedException | ClassNotFoundException e) {
-                            System.out.println("TCPReactiveServer failed to deserialize class: address="
-                                    + connection.getInetAddress());
+                            System.out.println("TCPReactiveServer failed to deserialize class: address=" + connection.getInetAddress());
                         }
                     }
                 }
             }
         } catch (EOFException e) {
-            System.out.println("TCPReactiveServer client disconnected: address="
-                    + connection.getInetAddress());
+            System.out.println("TCPReactiveServer client disconnected: address=" + connection.getInetAddress());
         } catch (IOException e) {
-            System.out.println("TCPReactiveServer client exception: address="
-                    + connection.getInetAddress());
+            System.out.println("TCPReactiveServer client exception: address=" + connection.getInetAddress());
             e.printStackTrace();
         }
     }
 
     @Override
     public void close() throws IOException {
-        if (serverSocket != null)
-            serverSocket.close();
+        if (serverSocket != null) serverSocket.close();
     }
-
 }
