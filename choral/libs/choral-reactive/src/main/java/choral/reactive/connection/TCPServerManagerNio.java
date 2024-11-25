@@ -3,6 +3,7 @@ package choral.reactive.connection;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.io.ByteArrayInputStream;
@@ -25,27 +26,29 @@ import choral.reactive.tracing.JaegerConfiguration;
 
 public class TCPServerManagerNio implements ServerConnectionManager {
 
-    private final OpenTelemetrySdk telemetry;
+    private final Tracer tracer;
     private final ServerEvents serverEvents;
     private ServerSocketChannel serverSocket = null;
     private Selector selector = null;
     private final HashSet<ConnectionHandler> connections = new HashSet<>();
     private Span serverSpan = null;
+    private Scope serverSpanScope = null;
+    private long lastSpanReset = 0;
 
     public TCPServerManagerNio(ServerEvents serverEvents, OpenTelemetrySdk telemetry) {
-        this.telemetry = telemetry;
+        this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
         this.serverEvents = serverEvents;
     }
 
     @Override
     public void listen(String address) throws URISyntaxException, IOException {
 
-        this.serverSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
-                .spanBuilder("TCPServerManagerNio server listen")
+        Span startupSpan = tracer
+                .spanBuilder("TCPServerManagerNio server start up")
                 .setAttribute("server.address", address)
                 .startSpan();
 
-        try (Scope scope = serverSpan.makeCurrent();) {
+        try (Scope scope = startupSpan.makeCurrent();) {
 
             URI uri = new URI(null, address, null, null, null).parseServerAuthority();
             InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
@@ -56,9 +59,41 @@ public class TCPServerManagerNio implements ServerConnectionManager {
             serverSocket.configureBlocking(false);
             serverSocket.register(selector, SelectionKey.OP_ACCEPT);
 
-            serverSpan.addEvent("TCPServerManagerNio: listening on " + address);
+            startupSpan.addEvent("TCPServerManagerNio: listening on " + address);
 
+        } catch (Exception e) {
+            startupSpan.setAttribute("error", true);
+            startupSpan.recordException(e);
+            this.close();
+            throw e;
+        } finally {
+            startupSpan.end();
+        }
+
+        try {
             while (true) {
+                long now = System.currentTimeMillis();
+                if (serverSpan == null || lastSpanReset + 60 * 1000 < now) {
+                    lastSpanReset = now;
+
+                    // End previous span
+                    if (serverSpanScope != null)
+                        serverSpanScope.close();
+                    if (serverSpan != null)
+                        serverSpan.end();
+
+                    serverSpan = tracer
+                            .spanBuilder("TCPServerManagerNio server listen")
+                            .setAttribute("server.address", address)
+                            .startSpan();
+                    serverSpanScope = serverSpan.makeCurrent();
+
+                    // Reset all connection spans
+                    for (ConnectionHandler conn : connections) {
+                        conn.resetSpan();
+                    }
+                }
+
                 selector.select();
 
                 if (!serverSocket.isOpen()) {
@@ -77,7 +112,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
                                 String.format("Incoming Connection from %s", client.socket().getInetAddress()));
                         client.configureBlocking(false);
                         SelectionKey newKey = client.register(selector, SelectionKey.OP_READ);
-                        ConnectionHandler connection = new ConnectionHandler(client, telemetry);
+                        ConnectionHandler connection = new ConnectionHandler(client);
                         connections.add(connection);
                         newKey.attach(connection);
                     }
@@ -113,7 +148,13 @@ public class TCPServerManagerNio implements ServerConnectionManager {
             serverSpan.recordException(e);
             this.close();
             throw e;
+        } finally {
+            if (serverSpanScope != null)
+                serverSpanScope.close();
+            if (serverSpan != null)
+                serverSpan.end();
         }
+
     }
 
     @Override
@@ -141,75 +182,86 @@ public class TCPServerManagerNio implements ServerConnectionManager {
         private final SocketChannel client;
         private int objectSize = 0;
         private ByteBuffer buffer = ByteBuffer.allocate(1024).limit(4);
-        public final Span connectionSpan;
+        public Span connectionSpan = null;
 
-        public ConnectionHandler(SocketChannel client, OpenTelemetrySdk telemetry) {
+        public ConnectionHandler(SocketChannel client) {
             this.client = client;
-            Tracer tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+            resetSpan();
+        }
+
+        public void resetSpan() {
+            if (connectionSpan != null)
+                connectionSpan.end();
+
             connectionSpan = tracer.spanBuilder("TCPServerManagerNio client connection")
                     .setAttribute("client.address", client.socket().getInetAddress().toString())
                     .startSpan();
         }
 
         public void read(SocketChannel client) throws IOException {
+            try {
 
-            if (objectSize == 0) {
-                client.read(buffer);
+                if (objectSize == 0) {
+                    client.read(buffer);
 
-                // Read object size
-                if (buffer.remaining() > 0) {
-                    return;
+                    // Read object size
+                    if (buffer.remaining() > 0) {
+                        return;
+                    }
+
+                    // Prepare for reading size
+                    buffer.flip();
+
+                    objectSize = buffer.getInt();
+
+                    if (objectSize < 0) {
+                        // Close connection
+                        System.out.println("Client closed connection");
+                        connections.remove(this);
+                        this.close();
+                        client.close();
+                        return;
+                    }
+
+                    if (buffer.capacity() >= objectSize) {
+                        buffer.clear().limit(objectSize);
+                    } else {
+                        buffer = ByteBuffer.allocate(objectSize);
+                    }
                 }
 
-                // Prepare for reading size
-                buffer.flip();
+                int n = client.read(buffer);
+                connectionSpan.addEvent("Read " + n + " bytes, remaining=" + buffer.remaining());
 
-                objectSize = buffer.getInt();
+                if (buffer.remaining() == 0) {
+                    buffer.flip();
 
-                connectionSpan.addEvent("Reading object of size: " + objectSize);
+                    ByteArrayInputStream inputStream = new ByteArrayInputStream(
+                            buffer.array(), buffer.position(), buffer.limit());
 
-                if (objectSize < 0) {
-                    // Close connection
-                    System.out.println("Client closed connection");
-                    connections.remove(this);
-                    this.close();
-                    client.close();
-                    return;
+                    ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+
+                    try {
+                        Object message = objectInputStream.readObject();
+                        System.out.println("TCPServerManagerNio received message: " + message.toString());
+                        serverEvents.messageReceived(message);
+                    } catch (ClassNotFoundException e) {
+                        connectionSpan.setAttribute("error", true);
+                        connectionSpan.recordException(e,
+                                Attributes.builder().put("exception.context", "Reading object from client").build());
+                    } finally {
+                        objectInputStream.close();
+                    }
+
+                    // Prepare for next object
+                    objectSize = 0;
+                    buffer.clear().limit(4);
                 }
 
-                if (buffer.capacity() >= objectSize) {
-                    buffer.clear().limit(objectSize);
-                } else {
-                    buffer = ByteBuffer.allocate(objectSize);
-                }
-            }
-
-            int n = client.read(buffer);
-            connectionSpan.addEvent("Read " + n + " bytes, remaining=" + buffer.remaining());
-
-            if (buffer.remaining() == 0) {
-                buffer.flip();
-
-                ByteArrayInputStream inputStream = new ByteArrayInputStream(
-                        buffer.array(), buffer.position(), buffer.limit());
-
-                ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-
-                try {
-                    Object message = objectInputStream.readObject();
-                    System.out.println("TCPServerManagerNio received message: " + message.toString());
-                    serverEvents.messageReceived(message);
-                } catch (ClassNotFoundException e) {
-                    connectionSpan.setAttribute("error", true);
-                    connectionSpan.recordException(e,
-                            Attributes.builder().put("exception.context", "Reading object from client").build());
-                } finally {
-                    objectInputStream.close();
-                }
-
-                // Prepare for next object
-                objectSize = 0;
-                buffer.clear().limit(4);
+            } catch (Exception e) {
+                connectionSpan.setAttribute("error", true);
+                connectionSpan.recordException(e);
+                throw e;
             }
         }
 

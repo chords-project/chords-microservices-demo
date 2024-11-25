@@ -38,7 +38,7 @@ public class JaegerConfiguration {
                                 .build();
 
                 // it's always a good idea to shut down the SDK cleanly at JVM exit.
-                Runtime.getRuntime().addShutdownHook(new Thread(tracerProvider::close));
+                Runtime.getRuntime().addShutdownHook(new Thread(openTelemetry::close));
 
                 return openTelemetry;
         }
