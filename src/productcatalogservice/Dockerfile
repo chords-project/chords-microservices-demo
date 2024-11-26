@@ -12,37 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.23.1-alpine@sha256:ac67716dd016429be8d4c2c53a248d7bcdf06d34127d3dc451bda6aa5a87bc06 AS builder
+FROM golang:1.23.2-alpine@sha256:9dd2625a1ff2859b8d8b01d8f7822c0f528942fe56cfe7a1e7c38d3b8d72d679 AS builder
 
 WORKDIR /src
 # restore dependencies
-COPY service/go.mod service/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
-COPY service/ .
+COPY . .
 
 # Skaffold passes in debug-oriented compiler flags
 ARG SKAFFOLD_GO_GCFLAGS
 RUN CGO_ENABLED=0 GOOS=linux go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /productcatalogservice .
 
-# FROM scratch
-FROM openjdk:24-slim-bullseye@sha256:d3d89f0ff751bd92d856f11a0b3223744fbe55ee95ba8990bcfe016223762079
+FROM scratch
 
 WORKDIR /src
 COPY --from=builder /productcatalogservice ./server
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY service/products.json .
+COPY products.json .
 
 # Definition of this variable is used by 'skaffold debug' to identify a golang binary.
 # Default behavior - a failure prints a stack trace for the current goroutine.
 # See https://golang.org/pkg/runtime/
 ENV GOTRACEBACK=single
 
-COPY ./entrypoint.sh .
-RUN chmod 755 ./entrypoint.sh
-
-COPY ./choral-build/productcatalog.tar /choral/productcatalog.tar
-RUN tar -xvaf /choral/productcatalog.tar -C /choral/ \
-    && rm /choral/productcatalog.tar
-
 EXPOSE 3550
-ENTRYPOINT ["/src/entrypoint.sh"]
+ENTRYPOINT ["/src/server"]

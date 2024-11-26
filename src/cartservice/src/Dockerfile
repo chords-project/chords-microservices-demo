@@ -13,14 +13,15 @@
 # limitations under the License.
 
 # https://mcr.microsoft.com/product/dotnet/sdk
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:9.0.100-noble@sha256:bd0365368f46274500ebb086f491703052b8ce23e3d52d3233a23b2020730057 AS builder
 WORKDIR /app
-COPY service/src/cartservice.csproj .
-RUN dotnet restore cartservice.csproj
-
-COPY service/src/ .
+COPY cartservice.csproj .
+RUN dotnet restore cartservice.csproj \
+    -r linux-x64
+COPY . .
 RUN dotnet publish cartservice.csproj \
     -p:PublishSingleFile=true \
+    -r linux-x64 \
     --self-contained true \
     -p:PublishTrimmed=true \
     -p:TrimMode=full \
@@ -28,27 +29,12 @@ RUN dotnet publish cartservice.csproj \
     -o /cartservice
 
 # https://mcr.microsoft.com/product/dotnet/runtime-deps
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-noble
-
-# RUN apt update && apt install -y default-jre
-RUN apt update && apt install -y openjdk-21-jre
-# RUN apk add --no-cache openjdk21
+FROM mcr.microsoft.com/dotnet/runtime-deps:9.0.0-noble-chiseled@sha256:5cc893809e2d2869e1a98c1eecc4c6ff6978d53bc3e5342014eff28a058867a4
 
 WORKDIR /app
-
-COPY ./entrypoint.sh .
-RUN chmod 755 ./entrypoint.sh
-
 COPY --from=builder /cartservice .
-
-COPY ./choral-build/cartservice.tar /choral/cartservice.tar
-RUN tar -xvaf /choral/cartservice.tar -C /choral/ \
-    && rm /choral/cartservice.tar
-
 EXPOSE 7070
 ENV DOTNET_EnableDiagnostics=0 \
     ASPNETCORE_HTTP_PORTS=7070
-
 USER 1000
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/cartservice"]

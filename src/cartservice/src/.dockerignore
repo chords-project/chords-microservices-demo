@@ -4,5 +4,3 @@
 **/obj/
 **/out/
 Dockerfile*
-
-!entrypoint.sh
