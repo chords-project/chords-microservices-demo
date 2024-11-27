@@ -35,7 +35,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-      - name: server
+      - name: sidecar
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -43,17 +43,8 @@ spec:
               - ALL
           privileged: false
           readOnlyRootFilesystem: true
-        image: cartservice
-        ports:
-        - containerPort: 7070
+        image: cartservice-sidecar
         env:
-        - name: REDIS_ADDR
-          value: "redis-cart:6379"
-        - name: ENABLE_TRACING
-          value: "1"
-        - name: COLLECTOR_SERVICE_ADDR
-          value: "jaeger-collector:4317"
-
         # Ingoing choral channels
         - name: CHORAL_CART
           value: "0.0.0.0:5401"
@@ -77,6 +68,40 @@ spec:
           limits:
             cpu: 800m
             memory: 512Mi
+        # readinessProbe:
+        #   initialDelaySeconds: 15
+        #   grpc:
+        #     port: 7070
+        # livenessProbe:
+        #   initialDelaySeconds: 15
+        #   periodSeconds: 10
+        #   grpc:
+        #     port: 7070
+      - name: server
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+        image: cartservice
+        ports:
+        - containerPort: 7070
+        env:
+        - name: REDIS_ADDR
+          value: "redis-cart:6379"
+        - name: ENABLE_TRACING
+          value: "1"
+        - name: COLLECTOR_SERVICE_ADDR
+          value: "jaeger-collector:4317"
+        resources:
+          requests:
+            cpu: 200m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 128Mi
         readinessProbe:
           initialDelaySeconds: 15
           grpc:

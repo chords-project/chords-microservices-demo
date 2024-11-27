@@ -46,6 +46,24 @@ build:
       context: src/frontend
     - image: adservice
       context: src/adservice
+    - image: cartservice-sidecar
+      context: choral/sidecars/cartservice
+      runtimeType: jvm
+    - image: currencyservice-sidecar
+      context: choral/sidecars/currencyservice
+      runtimeType: jvm
+    - image: frontend-sidecar
+      context: choral/sidecars/frontend
+      runtimeType: jvm
+    - image: paymentservice-sidecar
+      context: choral/sidecars/paymentservice
+      runtimeType: jvm
+    - image: productcatalog-sidecar
+      context: choral/sidecars/productcatalog
+      runtimeType: jvm
+    - image: shippingservice-sidecar
+      context: choral/sidecars/shippingservice
+      runtimeType: jvm
   tagPolicy:
     gitCommit: {}
   # local:

@@ -15,15 +15,17 @@ RUN mkdir choral-lib && cd choral-lib \
 ARG CHORAL_LAUNCHER=/usr/local/bin
 ARG CHORAL_HOME=/usr/local/lib/choral
 
-# RUN ls /choral/choral-lib/choral-0.1.3/dist/target/choral-standalone.jar && exit 1
+RUN mkdir /usr/local/lib/choral
+
+# RUN ls -lah /choral/choral-lib/choral-0.1.3/dist/target/choral/launchers && exit 1
 
 RUN cp /choral/choral-lib/choral-0.1.3/dist/target/choral-standalone.jar $CHORAL_HOME \
-    && cp /choral/choral-lib/choral-0.1.3/dist/target/choral/dist/ $CHORAL_HOME \
-    && cp /choral/choral-lib/choral-0.1.3/dist/target/choral/launchers/ $CHORAL_LAUNCHER \
+    && cp -r /choral/choral-lib/choral-0.1.3/dist/target/choral/dist $CHORAL_HOME \
+    && cp -r /choral/choral-lib/choral-0.1.3/dist/target/choral/launchers/* $CHORAL_LAUNCHER \
     && chmod +x $CHORAL_LAUNCHER/choral
 
 # Clean up Choral build
-# RUN rm -rf choral-lib/
+RUN rm -rf choral-lib/
 
 # Copy microservice Choral code
 COPY . .

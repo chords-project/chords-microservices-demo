@@ -35,6 +35,34 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
+      - name: sidecar
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+        image: productcatalog-sidecar
+        env:
+        # Ingoing choral channels
+        - name: CHORAL_PRODUCT_CATALOG
+          value: "0.0.0.0:5401"
+
+        # Outgoing choral channels
+        - name: CHORAL_CURRENCY
+          value: "currencyservice:5401"
+
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 800Mi
       - name: server
         securityContext:
           allowPrivilegeEscalation: false
@@ -55,19 +83,6 @@ spec:
           value: "1"
         - name: COLLECTOR_SERVICE_ADDR
           value: "jaeger-collector:4317"
-
-        # Ingoing choral channels
-        - name: CHORAL_PRODUCT_CATALOG
-          value: "0.0.0.0:5401"
-
-        # Outgoing choral channels
-        - name: CHORAL_CURRENCY
-          value: "currencyservice:5401"
-
-        # Tracing
-        - name: JAEGER_ENDPOINT
-          value: "http://jaeger-collector:4317"
-
         readinessProbe:
           grpc:
             port: 3550
@@ -76,11 +91,11 @@ spec:
             port: 3550
         resources:
           requests:
-            cpu: 500m
-            memory: 512Mi
+            cpu: 100m
+            memory: 64Mi
           limits:
-            cpu: 1000m
-            memory: 800Mi
+            cpu: 200m
+            memory: 128Mi
 ---
 apiVersion: v1
 kind: Service

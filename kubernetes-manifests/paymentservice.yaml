@@ -35,6 +35,41 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
+      - name: sidecar
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+        image: paymentservice-sidecar
+        env:
+        # Ingoing choral channels
+        - name: CHORAL_PAYMENT
+          value: "0.0.0.0:5401"
+
+        # Outgoing choral channels
+        - name: CHORAL_FRONTEND
+          value: "frontend:5401"
+
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+
+        # readinessProbe:
+        #   grpc:
+        #     port: 50051
+        # livenessProbe:
+        #   grpc:
+        #     port: 50051
+        resources:
+          requests:
+            cpu: 400m
+            memory: 256Mi
+          limits:
+            cpu: 800m
+            memory: 512Mi
       - name: server
         securityContext:
           allowPrivilegeEscalation: false
@@ -55,19 +90,6 @@ spec:
           value: "1"
         - name: COLLECTOR_SERVICE_ADDR
           value: "jaeger-collector:4317"
-
-        # Ingoing choral channels
-        - name: CHORAL_PAYMENT
-          value: "0.0.0.0:5401"
-
-        # Outgoing choral channels
-        - name: CHORAL_FRONTEND
-          value: "frontend:5401"
-
-        # Tracing
-        - name: JAEGER_ENDPOINT
-          value: "http://jaeger-collector:4317"
-
         readinessProbe:
           grpc:
             port: 50051
@@ -76,11 +98,11 @@ spec:
             port: 50051
         resources:
           requests:
-            cpu: 400m
-            memory: 256Mi
+            cpu: 100m
+            memory: 64Mi
           limits:
-            cpu: 800m
-            memory: 512Mi
+            cpu: 200m
+            memory: 128Mi
 ---
 apiVersion: v1
 kind: Service
