@@ -18,7 +18,12 @@ $ skaffold dev
 ```
 
 This will start up all the containers.
-Afterwards, the web shop is accessible from http://localhost:80 and the Jaeger dashboard on http://localhost:16686.
+Depending on your Kubernetes configuration, the web shop might already be accessible from http://localhost:80 and the Jaeger dashboard on http://localhost:16686. If they aren't accessible already, you need to set up port forwarding manually. The following commands expose the web shop and Jaeger on ports 8080 and 8081, respectively.
+
+```sh
+$ kubectl port-forward svc/frontend 8080:80
+$ kubectl port-forward svc/jaeger-query 8081:16686
+```
 
 # Original Readme
 
