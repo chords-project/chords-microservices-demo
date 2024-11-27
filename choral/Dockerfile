@@ -1,0 +1,31 @@
+FROM alpine:3.20.3@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a as builder
+
+RUN apk add gradle maven unzip
+
+WORKDIR /choral
+
+# Install Choral
+RUN mkdir choral-lib && cd choral-lib \
+    && wget https://github.com/choral-lang/choral/archive/refs/tags/v0.1.3.zip \
+    && unzip v0.1.3.zip \
+    && cd choral-0.1.3 \
+    && mvn clean install \
+    && unzip dist/target/choral-0.1.3.zip -d dist/target/
+
+ARG CHORAL_LAUNCHER=/usr/local/bin
+ARG CHORAL_HOME=/usr/local/lib/choral
+
+# RUN ls /choral/choral-lib/choral-0.1.3/dist/target/choral-standalone.jar && exit 1
+
+RUN cp /choral/choral-lib/choral-0.1.3/dist/target/choral-standalone.jar $CHORAL_HOME \
+    && cp /choral/choral-lib/choral-0.1.3/dist/target/choral/dist/ $CHORAL_HOME \
+    && cp /choral/choral-lib/choral-0.1.3/dist/target/choral/launchers/ $CHORAL_LAUNCHER \
+    && chmod +x $CHORAL_LAUNCHER/choral
+
+# Clean up Choral build
+# RUN rm -rf choral-lib/
+
+# Copy microservice Choral code
+COPY . .
+
+RUN cd sidecars && gradle build

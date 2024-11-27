@@ -28,6 +28,8 @@ spec:
         app: loadgenerator
       annotations:
         sidecar.istio.io/rewriteAppHTTPProbers: "true"
+        # disable skaffold debug
+        debug.cloud.google.com/config: "{}"
     spec:
       serviceAccountName: loadgenerator
       terminationGracePeriodSeconds: 5
