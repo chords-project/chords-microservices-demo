@@ -46,7 +46,8 @@ spec:
             # readOnlyRootFilesystem: true
           image: frontend-sidecar
           readinessProbe:
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
+            periodSeconds: 2
             httpGet:
               path: "/ping"
               port: 8081
@@ -92,7 +93,8 @@ spec:
           ports:
           - containerPort: 8080
           readinessProbe:
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
+            periodSeconds: 2
             httpGet:
               path: "/_healthz"
               port: 8080

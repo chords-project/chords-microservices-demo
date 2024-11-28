@@ -81,7 +81,8 @@ public class FrontendController {
     PlaceOrderResponse checkout(@RequestBody ReqPlaceOrder request) {
         System.out.println("[FRONTEND] Placing order: " + request);
 
-        WebshopSession session = WebshopSession.makeSession(Choreography.PLACE_ORDER, Service.FRONTEND);
+        WebshopSession session = WebshopSession.makeSession(Choreography.PLACE_ORDER,
+                Service.FRONTEND);
 
         Span span = telemetry
                 .getTracer(JaegerConfiguration.TRACER_NAME)
@@ -90,7 +91,8 @@ public class FrontendController {
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
 
-        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session,
+                span);
 
         try (Scope scope = span.makeCurrent();
                 ReactiveClient<WebshopSession> cartClient = new ReactiveClient<>(
@@ -130,7 +132,8 @@ public class FrontendController {
 
             return new PlaceOrderResponse(result);
         } catch (Exception e) {
-            telemetrySession.recordException("Frontend PLACE_ORDER choreography failed", e, true);
+            telemetrySession.recordException("Frontend PLACE_ORDER choreography failed",
+                    e, true);
 
             throw new RuntimeException(e);
         } finally {

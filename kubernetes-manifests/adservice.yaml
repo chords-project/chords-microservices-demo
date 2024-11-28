@@ -61,8 +61,8 @@ spec:
             cpu: 300m
             memory: 300Mi
         readinessProbe:
-          initialDelaySeconds: 20
-          periodSeconds: 15
+          initialDelaySeconds: 5
+          periodSeconds: 2
           grpc:
             port: 9555
         livenessProbe:

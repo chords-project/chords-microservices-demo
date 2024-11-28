@@ -87,6 +87,8 @@ spec:
           value: "jaeger-collector:4317"
 
         readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 2
           grpc:
             port: 7000
         livenessProbe:
