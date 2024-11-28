@@ -36,7 +36,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-        - name: sidecar
+        - name: frontend-sidecar
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -80,7 +80,7 @@ spec:
             limits:
               cpu: 800m
               memory: 512Mi
-        - name: server
+        - name: frontend-server
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

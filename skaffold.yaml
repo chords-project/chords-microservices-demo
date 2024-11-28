@@ -16,6 +16,9 @@ apiVersion: skaffold/v4beta11
 kind: Config
 metadata:
   name: app
+requires:
+  - configs:
+      - jaeger
 build:
   artifacts:
     # image tags are relative; to specify an image repo (e.g. GCR), you
@@ -40,30 +43,22 @@ build:
       context: src/currencyservice
     - image: cartservice
       context: src/cartservice/src
-      docker:
-        dockerfile: Dockerfile
     - image: frontend
       context: src/frontend
     - image: adservice
       context: src/adservice
     - image: cartservice-sidecar
       context: choral/sidecars/cartservice
-      runtimeType: jvm
     - image: currencyservice-sidecar
       context: choral/sidecars/currencyservice
-      runtimeType: jvm
     - image: frontend-sidecar
       context: choral/sidecars/frontend
-      runtimeType: jvm
     - image: paymentservice-sidecar
       context: choral/sidecars/paymentservice
-      runtimeType: jvm
     - image: productcatalog-sidecar
       context: choral/sidecars/productcatalog
-      runtimeType: jvm
     - image: shippingservice-sidecar
       context: choral/sidecars/shippingservice
-      runtimeType: jvm
   tagPolicy:
     gitCommit: {}
   # local:
@@ -99,10 +94,95 @@ profiles:
   - name: debug
     activation:
       - command: debug
-    patches:
-      - op: replace
-        path: /build/artifacts/8/docker/dockerfile
-        value: Dockerfile.debug
+      - command: dev
+    build:
+      artifacts:
+        - image: emailservice
+          context: src/emailservice
+        - image: productcatalogservice
+          context: src/productcatalogservice
+        - image: recommendationservice
+          context: src/recommendationservice
+        - image: shoppingassistantservice
+          context: src/shoppingassistantservice
+        - image: shippingservice
+          context: src/shippingservice
+        - image: checkoutservice
+          context: src/checkoutservice
+        - image: paymentservice
+          context: src/paymentservice
+        - image: currencyservice
+          context: src/currencyservice
+        - image: cartservice
+          context: src/cartservice/src
+          docker:
+            dockerfile: Dockerfile.debug
+        - image: frontend
+          context: src/frontend
+          runtimeType: go
+        - image: adservice
+          context: src/adservice
+        - image: cartservice-sidecar
+          context: choral/sidecars/cartservice
+          runtimeType: jvm
+          docker:
+            dockerfile: Dockerfile.debug
+          sync:
+            infer:
+              - build/distributions/cartservice.tar
+        - image: currencyservice-sidecar
+          context: choral/sidecars/currencyservice
+          runtimeType: jvm
+          docker:
+            dockerfile: Dockerfile.debug
+          sync:
+            infer:
+              - build/distributions/currencyservice.tar
+        - image: frontend-sidecar
+          context: choral/sidecars/frontend
+          runtimeType: jvm
+          # docker:
+          #   dockerfile: Dockerfile.debug
+          sync:
+            infer:
+              - build/libs/frontend-0.1.0.jar
+        - image: paymentservice-sidecar
+          context: choral/sidecars/paymentservice
+          runtimeType: jvm
+          docker:
+            dockerfile: Dockerfile.debug
+          sync:
+            infer:
+              - build/distributions/paymentservice.tar
+        - image: productcatalog-sidecar
+          context: choral/sidecars/productcatalog
+          runtimeType: jvm
+          docker:
+            dockerfile: Dockerfile.debug
+          sync:
+            infer:
+              - build/distributions/productcatalog.tar
+        - image: shippingservice-sidecar
+          context: choral/sidecars/shippingservice
+          runtimeType: jvm
+          docker:
+            dockerfile: Dockerfile.debug
+          sync:
+            infer:
+              - build/distributions/shippingservice.tar
+
+    # patches:
+    #   - op: replace # cartservice
+    #     path: /build/artifacts/8/docker/dockerfile
+    #     value: Dockerfile.debug
+    #   - op: add # cartservice-sidecar
+    #     path: /build/artifacts/12
+    #     value:
+    #       sync:
+    #         infer:
+    #           - 'build/distributions/cartservice.tar'
+    #       docker:
+    #         dockerfile: Dockerfile.debug
   # The "network-policies" profile is not used by default.
   # You can use it in isolation or in combination with other profiles:
   #     skaffold run -p network-policies, debug

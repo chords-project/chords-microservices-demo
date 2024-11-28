@@ -35,14 +35,14 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-      - name: sidecar
+      - name: productcatalog-sidecar
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
               - ALL
           privileged: false
-          readOnlyRootFilesystem: true
+          # readOnlyRootFilesystem: true
         image: productcatalog-sidecar
         env:
         # Ingoing choral channels
@@ -63,7 +63,7 @@ spec:
           limits:
             cpu: 1000m
             memory: 800Mi
-      - name: server
+      - name: productcatalog-server
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
