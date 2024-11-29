@@ -43,6 +43,8 @@ spec:
           privileged: false
           # readOnlyRootFilesystem: true
         image: shippingservice-sidecar
+        ports:
+          - containerPort: 5401
         env:
         # Ingoing choral channels
         - name: CHORAL_SHIPPING
@@ -59,7 +61,7 @@ spec:
           value: "http://jaeger-collector:4317"
 
         startupProbe:
-          periodSeconds: 2
+          periodSeconds: 5
           grpc:
             port: 5401
         livenessProbe:
@@ -94,8 +96,7 @@ spec:
           value: "jaeger-collector:4317"
 
         startupProbe:
-          initialDelaySeconds: 5
-          periodSeconds: 2
+          periodSeconds: 5
           grpc:
             port: 50051
         livenessProbe:

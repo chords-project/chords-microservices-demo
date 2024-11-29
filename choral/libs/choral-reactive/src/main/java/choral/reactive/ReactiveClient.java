@@ -5,6 +5,9 @@ import choral.reactive.connection.ClientConnectionManager.Connection;
 import choral.reactive.connection.Message;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
+
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -25,22 +28,31 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
 
     @Override
     public void send(Session session, Serializable msg) {
-        try {
-            // Unchecked cast is safe since it's a precondition of the method.
-            @SuppressWarnings("unchecked")
-            Session newSession = (Session) session.replacingSender(serviceName);
+        Session newSession = session.replacingSender(serviceName);
 
+        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel send message")
+                .setAttribute("channel.session", newSession.toString())
+                .setAttribute("channel.message", msg.toString())
+                .setAttribute("channel.connection", connection.toString())
+                .startSpan();
+
+        try (Scope scope = span.makeCurrent()) {
             Message message = new Message(newSession, msg);
 
             telemetrySession.injectSessionContext(message);
 
             connection.sendMessage(message);
         } catch (IOException | InterruptedException e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+
             telemetrySession.recordException(
                     "Failed to send message",
                     e,
                     true,
                     Attributes.builder().put("service", serviceName).put("connection", connection.toString()).build());
+        } finally {
+            span.end();
         }
     }
 
@@ -51,7 +63,7 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
 
     @Override
     public String toString() {
-        return "TCPReactiveClient [connection=" + connection.toString() + ", serviceName=" + serviceName + "]";
+        return "ReactiveClient [connection=" + connection.toString() + ", serviceName=" + serviceName + "]";
     }
 
     @Override

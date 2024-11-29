@@ -41,7 +41,6 @@ public class ServiceA {
 
     public void startPingPong() throws Exception {
         Session session = Session.makeSession("ping-pong", "serviceA");
-        serverA.registerSession(session);
 
         Span span = telemetry
                 .getTracer(JaegerConfiguration.TRACER_NAME)
@@ -51,6 +50,8 @@ public class ServiceA {
                 .startSpan();
 
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
+
+        serverA.registerSession(session, telemetrySession);
 
         try (Scope scope = span.makeCurrent();
                 ReactiveClient client = new ReactiveClient(
@@ -70,7 +71,6 @@ public class ServiceA {
 
     public void startGreeting() throws Exception {
         Session session = Session.makeSession("greeting", "serviceA");
-        serverA.registerSession(session);
 
         Span span = telemetry
                 .getTracer(JaegerConfiguration.TRACER_NAME)
@@ -80,6 +80,8 @@ public class ServiceA {
                 .startSpan();
 
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
+
+        serverA.registerSession(session, telemetrySession);
 
         try (Scope scope = span.makeCurrent();
                 ReactiveClient client = new ReactiveClient(connectionServiceB,

@@ -20,20 +20,9 @@ public class ReactiveChannel_A<M> implements DiChannel_A<M> {
 
     @Override
     public <T extends M> Unit com(T msg) {
-        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel send message")
-                .setAttribute("channel.session", session.toString())
-                .setAttribute("channel.message", msg.toString())
-                .setAttribute("channel.sender", sender.toString())
-                .startSpan();
 
-        try (Scope scope = span.makeCurrent()) {
-
-            // Associates each message with the key
-            sender.send(session, msg);
-
-        }
-
-        span.end();
+        // Associates each message with the session
+        sender.send(session, msg);
 
         return Unit.id;
     }

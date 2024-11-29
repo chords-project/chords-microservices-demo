@@ -19,18 +19,14 @@ public class GRPCClientManager implements ClientConnectionManager {
 
     private final ManagedChannel channel;
     private final OpenTelemetrySdk telemetry;
-    private final Span clientSpan;
+    private final String address;
 
     public GRPCClientManager(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
-        URI uri = new URI(null, address, null, null, null).parseServerAuthority();
-        InetSocketAddress socketAddr = new InetSocketAddress(uri.getHost(), uri.getPort());
-
+        this.address = address;
         this.telemetry = telemetry;
 
-        this.clientSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
-                .spanBuilder("GRPCClientManager connection 123")
-                .setAttribute("channel.address", address)
-                .startSpan();
+        URI uri = new URI(null, address, null, null, null).parseServerAuthority();
+        InetSocketAddress socketAddr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
         this.channel = ManagedChannelBuilder
                 .forAddress(socketAddr.getHostString(), socketAddr.getPort())
@@ -44,30 +40,23 @@ public class GRPCClientManager implements ClientConnectionManager {
                 .newBlockingStub(channel)
                 .withDeadlineAfter(10, TimeUnit.SECONDS);
 
-        return new ClientConnection(blockingStub, telemetry);
+        return new ClientConnection(blockingStub);
     }
 
     @Override
     public void close() throws IOException, InterruptedException {
-        try {
-            channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            clientSpan.setAttribute("error", true);
-            clientSpan.recordException(e);
-            throw e;
-        } finally {
-            clientSpan.end();
-        }
+        channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    public static class ClientConnection implements Connection {
+    public class ClientConnection implements Connection {
 
         ChannelBlockingStub blockingStub;
         Span connectionSpan;
 
-        private ClientConnection(ChannelBlockingStub blockingStub, OpenTelemetrySdk telemetry) {
+        private ClientConnection(ChannelBlockingStub blockingStub) {
             this.connectionSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
-                    .spanBuilder("GRPCClientManager connection")
+                    .spanBuilder("GRPCConnection: " + address)
+                    .setAttribute("address", address)
                     .startSpan();
 
             this.blockingStub = blockingStub;
@@ -75,7 +64,11 @@ public class GRPCClientManager implements ClientConnectionManager {
 
         @Override
         public void sendMessage(Message msg) throws IOException, InterruptedException {
-            connectionSpan.addEvent("Send message", Attributes.builder().put("message", msg.toString()).build());
+            connectionSpan.addEvent("Send message",
+                    Attributes.builder()
+                            .put("message", msg.toString())
+                            .put("address", address)
+                            .build());
 
             try {
                 blockingStub.sendMessage(msg.toGrpcMessage());
@@ -89,6 +82,11 @@ public class GRPCClientManager implements ClientConnectionManager {
         @Override
         public void close() throws IOException {
             connectionSpan.end();
+        }
+
+        @Override
+        public String toString() {
+            return "GRPCConnection [ address=" + address + " ]";
         }
     }
 }

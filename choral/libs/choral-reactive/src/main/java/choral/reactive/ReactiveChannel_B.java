@@ -29,6 +29,10 @@ public class ReactiveChannel_B<M> implements DiChannel_B<M> {
             T msg = receiver.<T>recv(session);
             span.setAttribute("channel.message", msg.toString());
             return msg;
+        } catch (Exception e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+            throw e;
         } finally {
             span.end();
         }

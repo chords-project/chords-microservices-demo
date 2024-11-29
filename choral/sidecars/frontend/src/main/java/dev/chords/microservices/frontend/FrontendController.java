@@ -99,6 +99,8 @@ public class FrontendController {
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session,
                 span);
 
+        server.registerSession(session, telemetrySession);
+
         try (Scope scope = span.makeCurrent();
                 ReactiveClient cartClient = new ReactiveClient(
                         cartConn, Service.FRONTEND.name(), telemetrySession);
@@ -108,9 +110,6 @@ public class FrontendController {
                         shippingConn, Service.FRONTEND.name(), telemetrySession);
                 ReactiveClient paymentClient = new ReactiveClient(
                         paymentConn, Service.FRONTEND.name(), telemetrySession);) {
-
-            // Get items
-            server.registerSession(session);
 
             telemetrySession.log("[FRONTEND] Initiating PLACE_ORDER choreography");
 

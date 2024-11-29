@@ -45,8 +45,11 @@ spec:
             privileged: false
             # readOnlyRootFilesystem: true
           image: frontend-sidecar
+          ports:
+          - containerPort: 5401
           startupProbe:
-            periodSeconds: 2
+            initialDelaySeconds: 10
+            periodSeconds: 5
             httpGet:
               path: "/ping"
               port: 8081
@@ -91,8 +94,7 @@ spec:
           ports:
           - containerPort: 8080
           startupProbe:
-            initialDelaySeconds: 5
-            periodSeconds: 2
+            periodSeconds: 5
             httpGet:
               path: "/_healthz"
               port: 8080

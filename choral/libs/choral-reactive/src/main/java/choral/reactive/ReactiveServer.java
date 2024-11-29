@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class ReactiveServer
         implements ServerConnectionManager.ServerEvents, ReactiveReceiver<Serializable>, AutoCloseable {
@@ -24,7 +25,7 @@ public class ReactiveServer
 
     private final HashMap<Session, LinkedList<Serializable>> sendQueue = new HashMap<>();
     private final HashMap<Session, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
-    private final HashMap<Session, TelemetrySession> telemetrySessionMap = new HashMap<>();
+    private final HashMap<Integer, TelemetrySession> telemetrySessionMap = new HashMap<>();
 
     private final String serviceName;
     private final NewSessionEvent newSessionEvent;
@@ -46,7 +47,7 @@ public class ReactiveServer
     public void listen(String address) throws URISyntaxException, IOException {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                this.close();
+                ReactiveServer.this.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -62,10 +63,11 @@ public class ReactiveServer
                 .put("channel.sender", session.senderName()).build();
 
         TelemetrySession telemetrySession;
-        CompletableFuture<Serializable> future = new CompletableFuture<>();
+        CompletableFuture<Serializable> future = new CompletableFuture<Serializable>()
+                .orTimeout(10, TimeUnit.SECONDS);
 
         synchronized (this) {
-            telemetrySession = telemetrySessionMap.getOrDefault(session, TelemetrySession.makeNoop(session));
+            telemetrySession = telemetrySessionMap.get(session.sessionID());
 
             if (this.sendQueue.containsKey(session)) {
                 // Flow already exists, receive message from send...
@@ -99,8 +101,11 @@ public class ReactiveServer
         }
     }
 
-    public void registerSession(Session session) {
-        knownSessionIDs.add(session.sessionID());
+    public void registerSession(Session session, TelemetrySession telemetrySession) {
+        synchronized (this) {
+            knownSessionIDs.add(session.sessionID());
+            telemetrySessionMap.put(session.sessionID(), telemetrySession);
+        }
     }
 
     public ReactiveChannel_B<Serializable> chanB(Session session, String clientName) {
@@ -108,7 +113,10 @@ public class ReactiveServer
 
         TelemetrySession telemetrySession;
         synchronized (this) {
-            telemetrySession = telemetrySessionMap.getOrDefault(senderSession, TelemetrySession.makeNoop(session));
+            if (!telemetrySessionMap.containsKey(senderSession.sessionID()))
+                throw new IllegalStateException("Expected telemetrySessionMap to contain session: " + senderSession);
+
+            telemetrySession = telemetrySessionMap.get(senderSession.sessionID());
         }
 
         return new ReactiveChannel_B<Serializable>(senderSession, this, telemetrySession);
@@ -116,22 +124,35 @@ public class ReactiveServer
 
     @Override
     public void messageReceived(Message msg) {
-        final TelemetrySession telemetrySession = new TelemetrySession(telemetry, msg);
 
         synchronized (this) {
             boolean isNewSession = knownSessionIDs.add(msg.session.sessionID);
+
+            TelemetrySession telemetrySession;
+            if (isNewSession) {
+                telemetrySession = new TelemetrySession(telemetry, msg);
+            } else {
+                if (!telemetrySessionMap.containsKey(msg.session.sessionID()))
+                    throw new IllegalStateException(
+                            "Expected telemetrySessionMap to contain session: " + msg.session);
+
+                telemetrySession = telemetrySessionMap.get(msg.session.sessionID());
+            }
 
             if (this.recvQueue.containsKey(msg.session)) {
                 // the flow already exists, pass the message to recv...
 
                 if (this.recvQueue.get(msg.session).isEmpty()) {
+                    telemetrySession.log("ReactiveServer message received: existing session, enqueue send");
                     enqueueSend(msg.session, msg.message);
                 } else {
+                    telemetrySession.log("ReactiveServer message received: complete receive future");
                     CompletableFuture<Serializable> future = this.recvQueue.get(msg.session).removeFirst();
                     future.complete(msg.message);
                 }
             } else {
                 // this is a new flow, enqueue the message
+                telemetrySession.log("ReactiveServer message received: new session, enqueue send");
                 enqueueSend(msg.session, msg.message);
             }
 
@@ -142,7 +163,7 @@ public class ReactiveServer
                         .start(() -> {
                             Span span = telemetrySession.makeChoreographySpan();
 
-                            this.telemetrySessionMap.put(msg.session, telemetrySession);
+                            this.telemetrySessionMap.put(msg.session.sessionID(), telemetrySession);
 
                             telemetrySession.log(
                                     "ReactiveServer handle new session",
@@ -194,7 +215,8 @@ public class ReactiveServer
         synchronized (this) {
             this.sendQueue.remove(session);
             this.recvQueue.remove(session);
-            this.telemetrySessionMap.remove(session);
+            this.telemetrySessionMap.remove(session.sessionID());
+            this.knownSessionIDs.remove(session.sessionID());
         }
     }
 

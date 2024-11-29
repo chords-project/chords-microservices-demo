@@ -44,6 +44,8 @@ spec:
           privileged: false
           # readOnlyRootFilesystem: true
         image: paymentservice-sidecar
+        ports:
+          - containerPort: 5401
         env:
         # Ingoing choral channels
         - name: CHORAL_PAYMENT
@@ -58,7 +60,7 @@ spec:
           value: "http://jaeger-collector:4317"
 
         startupProbe:
-          periodSeconds: 2
+          periodSeconds: 5
           grpc:
             port: 5401
         livenessProbe:

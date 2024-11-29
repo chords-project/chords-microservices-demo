@@ -10,4 +10,8 @@ class SerializableString@A implements Serializable@A {
     public SerializableString(String@A string) {
         this.string = string;
     }
+
+    public String@A toString() {
+        return "\""@A + string + "\""@A;
+    }
 }

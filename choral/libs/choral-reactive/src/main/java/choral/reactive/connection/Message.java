@@ -66,7 +66,7 @@ public class Message implements Serializable {
     }
 
     public Message(ChannelOuterClass.Message grpcMessage) throws Exception {
-        this.session = new Session(grpcMessage.getChoreography(), grpcMessage.getSender(), grpcMessage.getSessionID());
+        this.session = new Session(grpcMessage.getChoreography(), grpcMessage.getSender(), grpcMessage.getSessionId());
         this.headers = new HashMap<>(grpcMessage.getHeadersMap());
 
         ByteArrayInputStream stream = new ByteArrayInputStream(grpcMessage.getPayload().toByteArray());
@@ -88,7 +88,7 @@ public class Message implements Serializable {
         return ChannelOuterClass.Message.newBuilder()
                 .setChoreography(this.session.choreographyName())
                 .setSender(this.session.senderName())
-                .setSessionID(this.session.sessionID())
+                .setSessionId(this.session.sessionID())
                 .setPayload(ByteString.copyFrom(buf.toByteArray()))
                 .putAllHeaders(this.headers)
                 .setSpanContext(ChannelOuterClass.SpanContext.newBuilder()
