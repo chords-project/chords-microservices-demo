@@ -56,6 +56,14 @@ spec:
         # Tracing
         - name: JAEGER_ENDPOINT
           value: "http://jaeger-collector:4317"
+
+        startupProbe:
+          periodSeconds: 2
+          grpc:
+            port: 5401
+        livenessProbe:
+          grpc:
+            port: 5401
         resources:
           requests:
             cpu: 500m

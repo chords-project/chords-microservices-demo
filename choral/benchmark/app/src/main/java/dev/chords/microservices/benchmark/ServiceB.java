@@ -1,7 +1,7 @@
 package dev.chords.microservices.benchmark;
 
 import choral.reactive.connection.ClientConnectionManager;
-import choral.reactive.SimpleSession;
+import choral.reactive.Session;
 import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -12,7 +12,7 @@ import java.net.URISyntaxException;
 public class ServiceB {
 
     private OpenTelemetrySdk telemetry;
-    private ReactiveServer<SimpleSession> serverB;
+    private ReactiveServer serverB;
     private ClientConnectionManager connectionServiceA;
     private GrpcClient grpcClient;
 
@@ -21,8 +21,8 @@ public class ServiceB {
         this.grpcClient = new GrpcClient(5430, telemetry);
         this.connectionServiceA = ClientConnectionManager.makeConnectionManager(addressServiceA, telemetry);
 
-        this.serverB = new ReactiveServer<>("serviceB", telemetry, ctx -> {
-            switch (ctx.session.choreographyID) {
+        this.serverB = new ReactiveServer("serviceB", telemetry, ctx -> {
+            switch (ctx.session.choreographyName()) {
                 case "ping-pong":
                     SimpleChoreography_B pingPongChor = new SimpleChoreography_B(
                             ctx.symChan("serviceA", connectionServiceA));
@@ -38,7 +38,7 @@ public class ServiceB {
 
                     break;
                 default:
-                    throw new RuntimeException("unknown choreography: " + ctx.session.choreographyID);
+                    throw new RuntimeException("unknown choreography: " + ctx.session.choreographyName());
             }
         });
     }

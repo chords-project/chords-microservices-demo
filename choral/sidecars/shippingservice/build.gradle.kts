@@ -25,8 +25,8 @@ dependencies {
     // This dependency is used by the application.
     implementation(libs.guava)
 
-    implementation("dev.chords:choral-reactive")
-    implementation("dev.chords:webshop-choreographies")
+    implementation(project(":choral-reactive"))
+    implementation(project(":webshop-choreographies"))
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -47,16 +47,9 @@ tasks.named<Test>("test") {
 }
 
 tasks.register<Copy>("copyApp") {
-    dependsOn(gradle.includedBuild("webshop-choreographies").task(":build"))
-    dependsOn(gradle.includedBuild("choral-reactive").task(":build"))
     dependsOn("distTar")
 
     from(layout.buildDirectory.dir("distributions"))
     include("*.tar")
     into("../../../src/shippingservice/choral-build/")
-}
-
-tasks.build {
-    dependsOn(gradle.includedBuild("webshop-choreographies").task(":build"))
-    dependsOn(gradle.includedBuild("choral-reactive").task(":build"))
 }

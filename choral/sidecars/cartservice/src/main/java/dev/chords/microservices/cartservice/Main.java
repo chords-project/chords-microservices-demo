@@ -36,15 +36,17 @@ public class Main {
         productCatalogConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.productCatalog,
                 telemetry);
 
-        ReactiveServer<WebshopSession> server = new ReactiveServer<>(Service.CART.name(), telemetry,
+        ReactiveServer server = new ReactiveServer(Service.CART.name(), telemetry,
                 Main::handleNewSession);
 
         server.listen(ServiceResources.shared.cart);
     }
 
-    private static void handleNewSession(SessionContext<WebshopSession> ctx)
+    private static void handleNewSession(SessionContext ctx)
             throws Exception {
-        switch (ctx.session.choreography) {
+        WebshopSession session = new WebshopSession(ctx.session);
+
+        switch (session.choreography) {
             case PLACE_ORDER:
                 ctx.log("[CART] New PLACE_ORDER request");
 

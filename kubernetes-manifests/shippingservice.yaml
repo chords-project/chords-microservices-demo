@@ -58,6 +58,13 @@ spec:
         - name: JAEGER_ENDPOINT
           value: "http://jaeger-collector:4317"
 
+        startupProbe:
+          periodSeconds: 2
+          grpc:
+            port: 5401
+        livenessProbe:
+          grpc:
+            port: 5401
         resources:
           requests:
             cpu: 500m
@@ -86,7 +93,7 @@ spec:
         - name: COLLECTOR_SERVICE_ADDR
           value: "jaeger-collector:4317"
 
-        readinessProbe:
+        startupProbe:
           initialDelaySeconds: 5
           periodSeconds: 2
           grpc:

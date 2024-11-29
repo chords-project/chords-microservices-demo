@@ -11,6 +11,8 @@ version = "0.1.0"
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
+
+    id("com.google.protobuf") version "0.9.4"
 }
 
 repositories {
@@ -21,19 +23,13 @@ repositories {
 }
 
 var choralVersion = "0.1.3"
-var grpcVersion = "1.68.0"
+var grpcVersion = "1.68.1"
 
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation(libs.junit.jupiter)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-    // This dependency is exported to consumers, that is to say found on their compile classpath.
-    api(libs.commons.math3)
-
-    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation(libs.guava)
 
     // ## Choral ##
     api("org.choral-lang:choral:${choralVersion}")
@@ -54,6 +50,8 @@ dependencies {
     implementation("io.grpc:grpc-protobuf:${grpcVersion}")
     implementation("io.grpc:grpc-stub:${grpcVersion}")
     implementation("io.grpc:grpc-opentelemetry:${grpcVersion}")
+    implementation("io.grpc:grpc-services:${grpcVersion}")
+    compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -66,4 +64,23 @@ java {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+
+// Compile protobuf code
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.5"
+    }
+    plugins {
+        create("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.68.1"
+        }
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.plugins {
+                create("grpc") {}
+            }
+        }
+    }
 }

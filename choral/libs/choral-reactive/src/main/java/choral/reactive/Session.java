@@ -1,17 +1,62 @@
 package choral.reactive;
 
+import java.util.Random;
 import java.io.Serializable;
 
-public interface Session extends Serializable {
-    String choreographyName();
+public class Session implements Serializable {
 
-    String senderName();
+    protected final String choreographyID;
+    protected final String sender;
+    protected final Integer sessionID;
 
-    Integer sessionID();
+    public Session(String choreographyID, String sender, Integer sessionID) {
+        this.choreographyID = choreographyID;
+        this.sender = sender;
+        this.sessionID = sessionID;
+    }
 
-    /**
-     * replacingSender returns a new Session with the new senderName
-     * Precondition: the returned session should be of the same concrete type
-     */
-    Session replacingSender(String senderName);
+    public static Session makeSession(String choreographyID, String sender) {
+        Random rand = new Random();
+        return new Session(choreographyID, sender, Math.abs(rand.nextInt()));
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other)
+            return true;
+
+        if (!(other instanceof Session))
+            return false;
+
+        Session that = (Session) other;
+        return this.choreographyID.equals(that.choreographyID)
+                && this.sessionID.equals(that.sessionID)
+                && this.sender.equals(that.sender);
+    }
+
+    @Override
+    public int hashCode() {
+        return sessionID.hashCode() * 13 + sender.hashCode() * 3 * 13 + choreographyID.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "Session [ " + choreographyName() + ", " + senderName() + ", " + sessionID + " ]";
+    }
+
+    public String choreographyName() {
+        return choreographyID;
+    }
+
+    public String senderName() {
+        return sender;
+    }
+
+    public Integer sessionID() {
+        return sessionID;
+    }
+
+    public Session replacingSender(String senderName) {
+        return new Session(this.choreographyID, senderName, this.sessionID);
+    }
 }

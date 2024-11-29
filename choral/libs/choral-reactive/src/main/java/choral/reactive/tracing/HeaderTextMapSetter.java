@@ -1,13 +1,13 @@
 package choral.reactive.tracing;
 
-import choral.reactive.TCPMessage;
+import choral.reactive.connection.Message;
 import io.opentelemetry.context.propagation.TextMapSetter;
 
-public class HeaderTextMapSetter implements TextMapSetter<TCPMessage<?>> {
+public class HeaderTextMapSetter implements TextMapSetter<Message> {
 
     @SuppressWarnings("null")
     @Override
-    public void set(TCPMessage<?> carrier, String key, String value) {
+    public void set(Message carrier, String key, String value) {
         carrier.headers.put(key, value);
     }
 

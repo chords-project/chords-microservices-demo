@@ -10,4 +10,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
-includeBuild("../choral-reactive")
+rootProject.name = "webshop-choreographies"
+
+include("choral-reactive")
+project(":choral-reactive").projectDir = file("../choral-reactive")

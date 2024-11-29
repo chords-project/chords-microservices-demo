@@ -4,16 +4,22 @@ import java.util.Random;
 
 import choral.reactive.Session;
 
-public class WebshopSession implements Session {
+public class WebshopSession extends Session {
 
     public final Choreography choreography;
     public final Service service;
-    private final Integer sessionID;
+
+    public WebshopSession(Session session) throws IllegalArgumentException {
+        super(session.choreographyName(), session.senderName(), session.sessionID());
+
+        choreography = Choreography.valueOf(session.choreographyName());
+        service = Service.valueOf(session.senderName());
+    }
 
     public WebshopSession(Choreography choreography, Service service, Integer sessionID) {
+        super(choreography.name(), service.name(), sessionID);
         this.choreography = choreography;
         this.service = service;
-        this.sessionID = sessionID;
     }
 
     public static WebshopSession makeSession(Choreography choreography, Service service) {

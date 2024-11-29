@@ -68,15 +68,13 @@ spec:
           limits:
             cpu: 800m
             memory: 512Mi
-        # readinessProbe:
-        #   initialDelaySeconds: 15
-        #   grpc:
-        #     port: 7070
-        # livenessProbe:
-        #   initialDelaySeconds: 15
-        #   periodSeconds: 10
-        #   grpc:
-        #     port: 7070
+        startupProbe:
+          periodSeconds: 2
+          grpc:
+            port: 5401
+        livenessProbe:
+          grpc:
+            port: 5401
       - name: cart-server
         securityContext:
           allowPrivilegeEscalation: false
@@ -102,14 +100,11 @@ spec:
           limits:
             cpu: 300m
             memory: 128Mi
-        readinessProbe:
-          initialDelaySeconds: 5
+        startupProbe:
           periodSeconds: 2
           grpc:
             port: 7070
         livenessProbe:
-          initialDelaySeconds: 15
-          periodSeconds: 10
           grpc:
             port: 7070
 ---

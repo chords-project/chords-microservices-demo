@@ -52,7 +52,7 @@ public class TCPClientManagerSimple implements ClientConnectionManager {
         }
 
         @Override
-        public void sendMessage(Serializable msg) throws IOException {
+        public void sendMessage(Message msg) throws IOException {
             objectBuffer.reset();
             ObjectOutputStream objectStream = new ObjectOutputStream(objectBuffer);
             objectStream.writeObject(msg);

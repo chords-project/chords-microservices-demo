@@ -17,7 +17,7 @@ public class TCPConnectionTest {
 
             int newSessionCount = 0;
             int clientSessionID = -1;
-            SimpleSession receivedSession = null;
+            Session receivedSession = null;
             String firstMsg = null;
             String secondMsg = null;
         }
@@ -25,7 +25,7 @@ public class TCPConnectionTest {
         Stats stats = new Stats();
         CountDownLatch done = new CountDownLatch(1);
 
-        ReactiveServer<SimpleSession> server = new ReactiveServer<>("server", ctx -> {
+        ReactiveServer server = new ReactiveServer("server", ctx -> {
             System.out.println("New session: " + ctx.session);
             stats.receivedSession = ctx.session;
             stats.newSessionCount++;
@@ -45,8 +45,8 @@ public class TCPConnectionTest {
         assertDoesNotThrow(() -> {
             try (ClientConnectionManager connManager = ClientConnectionManager.makeConnectionManager("0.0.0.0:4567",
                     OpenTelemetrySdk.builder().build());) {
-                SimpleSession session = SimpleSession.makeSession("choreography", "client");
-                ReactiveClient<SimpleSession> client = new ReactiveClient<>(connManager, "client",
+                Session session = Session.makeSession("choreography", "client");
+                ReactiveClient client = new ReactiveClient(connManager, "client",
                         TelemetrySession.makeNoop(session));
 
                 stats.clientSessionID = session.sessionID;

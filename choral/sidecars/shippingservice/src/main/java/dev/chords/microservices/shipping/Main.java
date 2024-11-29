@@ -37,14 +37,15 @@ public class Main {
 
         currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
 
-        ReactiveServer<WebshopSession> server = new ReactiveServer<>(Service.SHIPPING.name(), telemetry,
+        ReactiveServer server = new ReactiveServer(Service.SHIPPING.name(), telemetry,
                 Main::handleNewSession);
 
         server.listen(ServiceResources.shared.shipping);
     }
 
-    private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
-        switch (ctx.session.choreography) {
+    private static void handleNewSession(SessionContext ctx) throws Exception {
+        WebshopSession session = new WebshopSession(ctx.session);
+        switch (session.choreography) {
             case PLACE_ORDER:
                 ctx.log("[SHIPPING] New PLACE_ORDER request");
 

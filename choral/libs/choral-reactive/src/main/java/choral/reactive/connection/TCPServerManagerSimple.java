@@ -44,10 +44,10 @@ public class TCPServerManagerSimple implements ServerConnectionManager {
             while (true) {
                 Socket connection = serverSocket.accept();
                 Thread.ofPlatform()
-                    .name("CLIENT_CONNECTION_" + connection)
-                    .start(() -> {
-                        clientListen(connection);
-                    });
+                        .name("CLIENT_CONNECTION_" + connection)
+                        .start(() -> {
+                            clientListen(connection);
+                        });
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -61,13 +61,15 @@ public class TCPServerManagerSimple implements ServerConnectionManager {
                 try (ObjectInputStream stream = new ObjectInputStream(connection.getInputStream())) {
                     while (true) {
                         try {
-                            Object msg = stream.readObject();
+                            Message msg = (Message) stream.readObject();
 
-                            System.out.println("TCPReactiveServer received message: address=" + connection.getInetAddress() + " message=" + msg.toString());
+                            System.out.println("TCPReactiveServer received message: address="
+                                    + connection.getInetAddress() + " message=" + msg.toString());
 
                             events.messageReceived(msg);
                         } catch (StreamCorruptedException | ClassNotFoundException e) {
-                            System.out.println("TCPReactiveServer failed to deserialize class: address=" + connection.getInetAddress());
+                            System.out.println("TCPReactiveServer failed to deserialize class: address="
+                                    + connection.getInetAddress());
                         }
                     }
                 }
@@ -82,6 +84,7 @@ public class TCPServerManagerSimple implements ServerConnectionManager {
 
     @Override
     public void close() throws IOException {
-        if (serverSocket != null) serverSocket.close();
+        if (serverSocket != null)
+            serverSocket.close();
     }
 }

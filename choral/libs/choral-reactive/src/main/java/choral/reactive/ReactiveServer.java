@@ -1,6 +1,7 @@
 package choral.reactive;
 
 import choral.reactive.connection.ClientConnectionManager;
+import choral.reactive.connection.Message;
 import choral.reactive.connection.ServerConnectionManager;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
@@ -16,28 +17,28 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class ReactiveServer<S extends Session>
-        implements ServerConnectionManager.ServerEvents, ReactiveReceiver<S, Serializable>, AutoCloseable {
+public class ReactiveServer
+        implements ServerConnectionManager.ServerEvents, ReactiveReceiver<Serializable>, AutoCloseable {
 
     private final HashSet<Integer> knownSessionIDs = new HashSet<>();
 
-    private final HashMap<S, LinkedList<Serializable>> sendQueue = new HashMap<>();
-    private final HashMap<S, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
-    private final HashMap<S, TelemetrySession> telemetrySessionMap = new HashMap<>();
+    private final HashMap<Session, LinkedList<Serializable>> sendQueue = new HashMap<>();
+    private final HashMap<Session, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
+    private final HashMap<Session, TelemetrySession> telemetrySessionMap = new HashMap<>();
 
     private final String serviceName;
-    private final NewSessionEvent<S> newSessionEvent;
+    private final NewSessionEvent newSessionEvent;
     private final OpenTelemetrySdk telemetry;
     private final ServerConnectionManager connectionManager;
 
-    public ReactiveServer(String serviceName, OpenTelemetrySdk telemetry, NewSessionEvent<S> newSessionEvent) {
+    public ReactiveServer(String serviceName, OpenTelemetrySdk telemetry, NewSessionEvent newSessionEvent) {
         this.serviceName = serviceName;
         this.telemetry = telemetry;
         this.newSessionEvent = newSessionEvent;
         this.connectionManager = ServerConnectionManager.makeConnectionManager(this, telemetry);
     }
 
-    public ReactiveServer(String serviceName, NewSessionEvent<S> newSessionEvent) {
+    public ReactiveServer(String serviceName, NewSessionEvent newSessionEvent) {
         // Pass NoOp telemetry sdk
         this(serviceName, OpenTelemetrySdk.builder().build(), newSessionEvent);
     }
@@ -56,7 +57,7 @@ public class ReactiveServer<S extends Session>
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends Serializable> T recv(S session) {
+    public <T extends Serializable> T recv(Session session) {
         Attributes attributes = Attributes.builder().put("channel.service", serviceName)
                 .put("channel.sender", session.senderName()).build();
 
@@ -71,17 +72,17 @@ public class ReactiveServer<S extends Session>
 
                 if (this.sendQueue.get(session).isEmpty()) {
                     telemetrySession.log(
-                            "TCPReactiveServer receive, session already exists, waiting for message to arrive",
+                            "ReactiveServer receive, session already exists, waiting for message to arrive",
                             attributes);
                     this.recvQueue.get(session).add(future);
                 } else {
-                    telemetrySession.log("TCPReactiveServer receive, message already arrived", attributes);
+                    telemetrySession.log("ReactiveServer receive, message already arrived", attributes);
                     future.complete(this.sendQueue.get(session).removeFirst());
                 }
             } else {
                 // Flow does not exist yet, wait for it to arrive...
                 telemetrySession.log(
-                        "TCPReactiveServer receive, session does not exist yet, waiting for message to arrive",
+                        "ReactiveServer receive, session does not exist yet, waiting for message to arrive",
                         attributes);
                 enqueueRecv(session, future);
             }
@@ -90,7 +91,7 @@ public class ReactiveServer<S extends Session>
         try {
             return (T) future.get();
         } catch (InterruptedException | ExecutionException e) {
-            telemetrySession.recordException("TCPReactiveServer exception when receiving message", e, true, attributes);
+            telemetrySession.recordException("ReactiveServer exception when receiving message", e, true, attributes);
 
             // It's the responsibility of the choreography to have the type cast match
             // Throw runtime exception if mismatch
@@ -98,31 +99,27 @@ public class ReactiveServer<S extends Session>
         }
     }
 
-    public void registerSession(S session) {
+    public void registerSession(Session session) {
         knownSessionIDs.add(session.sessionID());
     }
 
-    public ReactiveChannel_B<S, Serializable> chanB(S session, String clientName) {
-        // Safe since it is a precondition of the method
-        @SuppressWarnings("unchecked")
-        S senderSession = (S) session.replacingSender(clientName);
+    public ReactiveChannel_B<Serializable> chanB(Session session, String clientName) {
+        Session senderSession = session.replacingSender(clientName);
 
         TelemetrySession telemetrySession;
         synchronized (this) {
             telemetrySession = telemetrySessionMap.getOrDefault(senderSession, TelemetrySession.makeNoop(session));
         }
 
-        return new ReactiveChannel_B<S, Serializable>(senderSession, this, telemetrySession);
+        return new ReactiveChannel_B<Serializable>(senderSession, this, telemetrySession);
     }
 
     @Override
-    public void messageReceived(Object message) {
-        @SuppressWarnings("unchecked")
-        TCPMessage<S> msg = (TCPMessage<S>) message;
+    public void messageReceived(Message msg) {
         final TelemetrySession telemetrySession = new TelemetrySession(telemetry, msg);
 
         synchronized (this) {
-            boolean isNewSession = knownSessionIDs.add(msg.session.sessionID());
+            boolean isNewSession = knownSessionIDs.add(msg.session.sessionID);
 
             if (this.recvQueue.containsKey(msg.session)) {
                 // the flow already exists, pass the message to recv...
@@ -148,17 +145,17 @@ public class ReactiveServer<S extends Session>
                             this.telemetrySessionMap.put(msg.session, telemetrySession);
 
                             telemetrySession.log(
-                                    "TCPReactiveServer handle new session",
+                                    "ReactiveServer handle new session",
                                     Attributes.builder().put("service", serviceName)
                                             .put("session", msg.session.toString()).build());
 
                             try (Scope scope = span.makeCurrent();
-                                    SessionContext<S> sessionCtx = new SessionContext<>(this, msg.session,
+                                    SessionContext sessionCtx = new SessionContext(this, msg.session,
                                             telemetrySession);) {
                                 newSessionEvent.onNewSession(sessionCtx);
                             } catch (Exception e) {
                                 telemetrySession.recordException(
-                                        "TCPReactiveServer session exception",
+                                        "ReactiveServer session exception",
                                         e,
                                         true,
                                         Attributes.builder().put("service", serviceName)
@@ -174,7 +171,7 @@ public class ReactiveServer<S extends Session>
     }
 
     // should synchronize on 'this' before calling this method
-    private void enqueueSend(S session, Serializable msg) {
+    private void enqueueSend(Session session, Serializable msg) {
         if (!this.sendQueue.containsKey(session)) {
             this.sendQueue.put(session, new LinkedList<>());
             this.recvQueue.put(session, new LinkedList<>());
@@ -184,7 +181,7 @@ public class ReactiveServer<S extends Session>
     }
 
     // should synchronize on 'this' before calling this method
-    private void enqueueRecv(S session, CompletableFuture<Serializable> future) {
+    private void enqueueRecv(Session session, CompletableFuture<Serializable> future) {
         if (!this.recvQueue.containsKey(session)) {
             this.recvQueue.put(session, new LinkedList<>());
             this.sendQueue.put(session, new LinkedList<>());
@@ -193,7 +190,7 @@ public class ReactiveServer<S extends Session>
         this.recvQueue.get(session).add(future);
     }
 
-    private void cleanupKey(S session) {
+    private void cleanupKey(Session session) {
         synchronized (this) {
             this.sendQueue.remove(session);
             this.recvQueue.remove(session);
@@ -206,18 +203,18 @@ public class ReactiveServer<S extends Session>
         connectionManager.close();
     }
 
-    public interface NewSessionEvent<S extends Session> {
-        void onNewSession(SessionContext<S> ctx) throws Exception;
+    public interface NewSessionEvent {
+        void onNewSession(SessionContext ctx) throws Exception;
     }
 
-    public static class SessionContext<S extends Session> implements AutoCloseable {
+    public static class SessionContext implements AutoCloseable {
 
-        private final ReactiveServer<S> server;
-        public final S session;
+        private final ReactiveServer server;
+        public final Session session;
         private final TelemetrySession telemetrySession;
         private final HashSet<AutoCloseable> closeHandles = new HashSet<>();
 
-        private SessionContext(ReactiveServer<S> server, S session, TelemetrySession telemetrySession) {
+        private SessionContext(ReactiveServer server, Session session, TelemetrySession telemetrySession) {
             this.server = server;
             this.session = session;
             this.telemetrySession = telemetrySession;
@@ -227,12 +224,9 @@ public class ReactiveServer<S extends Session>
          * Creates a server channel on this server listening for messages,
          * coming from the given clientService on the same session.
          */
-        public ReactiveChannel_B<S, Serializable> chanB(String clientService) {
-            // Safe since it is a precondition of the method
-            @SuppressWarnings("unchecked")
-            S newSession = (S) session.replacingSender(clientService);
-
-            return new ReactiveChannel_B<S, Serializable>(newSession, server, telemetrySession);
+        public ReactiveChannel_B<Serializable> chanB(String clientService) {
+            Session newSession = session.replacingSender(clientService);
+            return new ReactiveChannel_B<Serializable>(newSession, server, telemetrySession);
         }
 
         /**
@@ -240,14 +234,14 @@ public class ReactiveServer<S extends Session>
          *
          * @param address the network address of the client to connect to.
          */
-        public ReactiveChannel_A<S, Serializable> chanA(ClientConnectionManager connectionManager)
+        public ReactiveChannel_A<Serializable> chanA(ClientConnectionManager connectionManager)
                 throws IOException, InterruptedException {
-            ReactiveClient<S> client = new ReactiveClient<>(connectionManager, server.serviceName, telemetrySession);
+            ReactiveClient client = new ReactiveClient(connectionManager, server.serviceName, telemetrySession);
             closeHandles.add(client);
             return client.chanA(session);
         }
 
-        public ReactiveSymChannel<S, Serializable> symChan(String clientService,
+        public ReactiveSymChannel<Serializable> symChan(String clientService,
                 ClientConnectionManager connectionManager)
                 throws IOException, InterruptedException {
             var a = chanA(connectionManager);
@@ -273,6 +267,6 @@ public class ReactiveServer<S extends Session>
 
     @Override
     public String toString() {
-        return "TCPReactiveServer [serviceName=" + serviceName + "]";
+        return "ReactiveServer [serviceName=" + serviceName + "]";
     }
 }

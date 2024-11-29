@@ -6,12 +6,13 @@ import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 
-public class ReactiveChannel_B<S extends Session, M> implements DiChannel_B<M> {
-    private final S session;
-    private final ReactiveReceiver<S, M> receiver;
+public class ReactiveChannel_B<M> implements DiChannel_B<M> {
+    private final Session session;
+    private final ReactiveReceiver<M> receiver;
     private final TelemetrySession telemetrySession;
 
-    public ReactiveChannel_B(S session, ReactiveReceiver<S, M> receiver, TelemetrySession telemetrySession) {
+    public ReactiveChannel_B(Session session, ReactiveReceiver<M> receiver,
+            TelemetrySession telemetrySession) {
         this.session = session;
         this.receiver = receiver;
         this.telemetrySession = telemetrySession;

@@ -124,7 +124,7 @@ public class TCPClientManagerPool implements ClientConnectionManager {
         }
 
         @Override
-        public void sendMessage(Serializable msg) throws IOException, InterruptedException {
+        public void sendMessage(Message msg) throws IOException, InterruptedException {
 
             Span sendMessageSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
                     .spanBuilder("TCPClientManagerPool send message")

@@ -32,9 +32,10 @@ public class Main {
 
         currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
 
-        ReactiveServer<WebshopSession> server = new ReactiveServer<>(Service.PRODUCT_CATALOG.name(), telemetry,
+        ReactiveServer server = new ReactiveServer(Service.PRODUCT_CATALOG.name(), telemetry,
                 ctx -> {
-                    switch (ctx.session.choreography) {
+                    WebshopSession session = new WebshopSession(ctx.session);
+                    switch (session.choreography) {
                         case PLACE_ORDER:
                             ctx.log("[PRODUCT_CATALOG] New PLACE_ORDER request");
 
@@ -48,7 +49,7 @@ public class Main {
 
                             break;
                         default:
-                            ctx.log("[PRODUCT_CATALOG] Invalid choreography ID " + ctx.session.choreography.name());
+                            ctx.log("[PRODUCT_CATALOG] Invalid choreography ID " + session.choreography.name());
                             break;
                     }
                 });
