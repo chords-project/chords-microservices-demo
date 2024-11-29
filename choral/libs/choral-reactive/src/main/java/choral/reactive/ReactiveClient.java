@@ -2,55 +2,68 @@ package choral.reactive;
 
 import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.connection.ClientConnectionManager.Connection;
+import choral.reactive.connection.Message;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
+
 import java.io.IOException;
 import java.io.Serializable;
 
-public class ReactiveClient<S extends Session> implements ReactiveSender<S, Serializable>, AutoCloseable {
+public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseable {
 
     private final Connection connection;
     private final String serviceName;
 
     private final TelemetrySession telemetrySession;
 
-    public ReactiveClient(ClientConnectionManager connectionManager, String serviceName, TelemetrySession telemetrySession)
-        throws IOException, InterruptedException {
+    public ReactiveClient(ClientConnectionManager connectionManager, String serviceName,
+            TelemetrySession telemetrySession)
+            throws IOException, InterruptedException {
         this.connection = connectionManager.makeConnection();
         this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
     }
 
     @Override
-    public void send(S session, Serializable msg) {
-        try {
-            // Unchecked cast is safe since it's a precondition of the method.
-            @SuppressWarnings("unchecked")
-            S newSession = (S) session.replacingSender(serviceName);
+    public void send(Session session, Serializable msg) {
+        Session newSession = session.replacingSender(serviceName);
 
-            TCPMessage<S> message = new TCPMessage<>(newSession, msg);
+        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel send message")
+                .setAttribute("channel.session", newSession.toString())
+                .setAttribute("channel.message", msg.toString())
+                .setAttribute("channel.connection", connection.toString())
+                .startSpan();
+
+        try (Scope scope = span.makeCurrent()) {
+            Message message = new Message(newSession, msg);
 
             telemetrySession.injectSessionContext(message);
 
             connection.sendMessage(message);
         } catch (IOException | InterruptedException e) {
+            span.setAttribute("error", true);
+            span.recordException(e);
+
             telemetrySession.recordException(
-                "Failed to send message",
-                e,
-                true,
-                Attributes.builder().put("service", serviceName).put("connection", connection.toString()).build()
-            );
+                    "Failed to send message",
+                    e,
+                    true,
+                    Attributes.builder().put("service", serviceName).put("connection", connection.toString()).build());
+        } finally {
+            span.end();
         }
     }
 
     @Override
-    public ReactiveChannel_A<S, Serializable> chanA(S session) {
+    public ReactiveChannel_A<Serializable> chanA(Session session) {
         return new ReactiveChannel_A<>(session, this, telemetrySession);
     }
 
     @Override
     public String toString() {
-        return "TCPReactiveClient [connection=" + connection.toString() + ", serviceName=" + serviceName + "]";
+        return "ReactiveClient [connection=" + connection.toString() + ", serviceName=" + serviceName + "]";
     }
 
     @Override

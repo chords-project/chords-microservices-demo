@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class FrontendController {
 
-    ReactiveServer<WebshopSession> server;
+    ReactiveServer server;
     OpenTelemetrySdk telemetry = null;
 
     ClientConnectionManager cartConn;
@@ -45,18 +45,23 @@ public class FrontendController {
         }
 
         try {
-            cartConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.cart, telemetry);
-            currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency, telemetry);
-            shippingConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.shipping, telemetry);
-            paymentConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.payment, telemetry);
+            cartConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.cart,
+                    telemetry);
+            currencyConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.currency,
+                    telemetry);
+            shippingConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.shipping,
+                    telemetry);
+            paymentConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.payment,
+                    telemetry);
         } catch (URISyntaxException | IOException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
 
-        server = new ReactiveServer<>(Service.FRONTEND.name(), this.telemetry, ctx -> {
+        server = new ReactiveServer(Service.FRONTEND.name(), this.telemetry, ctx -> {
             System.out.println(
-                    "[FRONTEND] Received new session from " + ctx.session.senderName() + " service: " + ctx.session);
+                    "[FRONTEND] Received new session from " + ctx.session.senderName()
+                            + " service: " + ctx.session);
         });
 
         Thread.ofPlatform()
@@ -81,7 +86,8 @@ public class FrontendController {
     PlaceOrderResponse checkout(@RequestBody ReqPlaceOrder request) {
         System.out.println("[FRONTEND] Placing order: " + request);
 
-        WebshopSession session = WebshopSession.makeSession(Choreography.PLACE_ORDER, Service.FRONTEND);
+        WebshopSession session = WebshopSession.makeSession(Choreography.PLACE_ORDER,
+                Service.FRONTEND);
 
         Span span = telemetry
                 .getTracer(JaegerConfiguration.TRACER_NAME)
@@ -90,20 +96,20 @@ public class FrontendController {
                 .setAttribute("choreography.session", session.toString())
                 .startSpan();
 
-        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
+        TelemetrySession telemetrySession = new TelemetrySession(telemetry, session,
+                span);
+
+        server.registerSession(session, telemetrySession);
 
         try (Scope scope = span.makeCurrent();
-                ReactiveClient<WebshopSession> cartClient = new ReactiveClient<>(
+                ReactiveClient cartClient = new ReactiveClient(
                         cartConn, Service.FRONTEND.name(), telemetrySession);
-                ReactiveClient<WebshopSession> currencyClient = new ReactiveClient<>(
+                ReactiveClient currencyClient = new ReactiveClient(
                         currencyConn, Service.FRONTEND.name(), telemetrySession);
-                ReactiveClient<WebshopSession> shippingClient = new ReactiveClient<>(
+                ReactiveClient shippingClient = new ReactiveClient(
                         shippingConn, Service.FRONTEND.name(), telemetrySession);
-                ReactiveClient<WebshopSession> paymentClient = new ReactiveClient<>(
+                ReactiveClient paymentClient = new ReactiveClient(
                         paymentConn, Service.FRONTEND.name(), telemetrySession);) {
-
-            // Get items
-            server.registerSession(session);
 
             telemetrySession.log("[FRONTEND] Initiating PLACE_ORDER choreography");
 
@@ -130,7 +136,8 @@ public class FrontendController {
 
             return new PlaceOrderResponse(result);
         } catch (Exception e) {
-            telemetrySession.recordException("Frontend PLACE_ORDER choreography failed", e, true);
+            telemetrySession.recordException("Frontend PLACE_ORDER choreography failed",
+                    e, true);
 
             throw new RuntimeException(e);
         } finally {

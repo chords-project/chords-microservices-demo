@@ -33,14 +33,15 @@ public class Main {
 
         frontendConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.frontend, telemetry);
 
-        ReactiveServer<WebshopSession> server = new ReactiveServer<>(Service.CURRENCY.name(), telemetry,
+        ReactiveServer server = new ReactiveServer(Service.CURRENCY.name(), telemetry,
                 Main::handleNewSession);
 
         server.listen(ServiceResources.shared.currency);
     }
 
-    private static void handleNewSession(SessionContext<WebshopSession> ctx) throws Exception {
-        switch (ctx.session.choreography) {
+    private static void handleNewSession(SessionContext ctx) throws Exception {
+        WebshopSession session = new WebshopSession(ctx.session);
+        switch (session.choreography) {
             case PLACE_ORDER:
                 ctx.log("[CURRENCY] New PLACE_ORDER request");
 

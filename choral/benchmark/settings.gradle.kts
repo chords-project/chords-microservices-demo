@@ -10,7 +10,9 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
-includeBuild("../libs/choral-reactive")
-
 rootProject.name = "benchmark"
+
+include("choral-reactive")
+project(":choral-reactive").projectDir = file("../libs/choral-reactive")
+
 include("app")

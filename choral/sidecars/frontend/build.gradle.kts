@@ -29,8 +29,8 @@ dependencies {
     // This dependency is used by the application.
     implementation(libs.guava)
 
-    implementation("dev.chords:choral-reactive")
-    implementation("dev.chords:webshop-choreographies")
+    implementation(project(":choral-reactive"))
+    implementation(project(":webshop-choreographies"))
 
     // Spring
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -51,16 +51,9 @@ tasks.named<Test>("test") {
 }
 
 tasks.register<Copy>("copyApp") {
-    dependsOn(gradle.includedBuild("webshop-choreographies").task(":build"))
-    dependsOn(gradle.includedBuild("choral-reactive").task(":build"))
     dependsOn("bootJar")
 
     from(layout.buildDirectory.dir("libs"))
     include("frontend-0.1.0.jar")
     into("../../../src/frontend/choral-build/")
-}
-
-tasks.build {
-    dependsOn(gradle.includedBuild("webshop-choreographies").task(":build"))
-    dependsOn(gradle.includedBuild("choral-reactive").task(":build"))
 }

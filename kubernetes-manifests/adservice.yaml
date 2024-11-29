@@ -60,14 +60,12 @@ spec:
           limits:
             cpu: 300m
             memory: 300Mi
-        readinessProbe:
-          initialDelaySeconds: 20
-          periodSeconds: 15
+        startupProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
           grpc:
             port: 9555
         livenessProbe:
-          initialDelaySeconds: 20
-          periodSeconds: 15
           grpc:
             port: 9555
 ---

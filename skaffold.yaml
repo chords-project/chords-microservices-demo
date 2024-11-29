@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: skaffold/v3
+apiVersion: skaffold/v4beta11
 kind: Config
 metadata:
   name: app
+requires:
+  - configs:
+      - jaeger
 build:
   artifacts:
     # image tags are relative; to specify an image repo (e.g. GCR), you
@@ -39,14 +42,41 @@ build:
     - image: currencyservice
       context: src/currencyservice
     - image: cartservice
-      context: src/cartservice
+      context: src/cartservice/src
+      docker:
+        dockerfile: Dockerfile
     - image: frontend
       context: src/frontend
     - image: adservice
       context: src/adservice
+    - image: cartservice-sidecar
+      context: choral/sidecars/cartservice
+      jib:
+        project: cartservice
+    - image: currencyservice-sidecar
+      context: choral/sidecars/currencyservice
+      jib:
+        project: currencyservice
+    - image: frontend-sidecar
+      context: choral/sidecars/frontend
+      jib:
+        project: frontend
+    - image: paymentservice-sidecar
+      context: choral/sidecars/paymentservice
+      jib:
+        project: paymentservice
+    - image: productcatalog-sidecar
+      context: choral/sidecars/productcatalog
+      jib:
+        project: productcatalog
+    - image: shippingservice-sidecar
+      context: choral/sidecars/shippingservice
+      jib:
+        project: shippingservice
   tagPolicy:
     gitCommit: {}
-  # local:
+  local:
+    concurrency: 4
   #   useBuildkit: false
 manifests:
   rawYaml:
@@ -56,14 +86,6 @@ manifests:
       - kubernetes-manifests
 deploy:
   kubectl: {}
-
-# portForward:
-#   - resourceType: service
-#     resourceName: jaeger-query
-#     namespace: default
-#     port: 16686
-#     localPort: 16686
-#     address: 127.0.0.1
 
 # "gcb" profile allows building and pushing the images
 # on Google Container Builder without requiring docker
@@ -87,10 +109,24 @@ profiles:
   - name: debug
     activation:
       - command: debug
+      - command: dev
     patches:
       - op: replace
-        path: /build/artifacts/7/docker/dockerfile
+        path: /build/artifacts/8/docker/dockerfile
         value: Dockerfile.debug
+
+    # patches:
+    #   - op: replace # cartservice
+    #     path: /build/artifacts/8/docker/dockerfile
+    #     value: Dockerfile.debug
+    #   - op: add # cartservice-sidecar
+    #     path: /build/artifacts/12
+    #     value:
+    #       sync:
+    #         infer:
+    #           - 'build/distributions/cartservice.tar'
+    #       docker:
+    #         dockerfile: Dockerfile.debug
   # The "network-policies" profile is not used by default.
   # You can use it in isolation or in combination with other profiles:
   #     skaffold run -p network-policies, debug
@@ -100,7 +136,7 @@ profiles:
         path: /manifests/kustomize/paths/1
         value: kustomize/components/network-policies
 ---
-apiVersion: skaffold/v3
+apiVersion: skaffold/v4beta11
 kind: Config
 metadata:
   name: loadgenerator
@@ -123,3 +159,23 @@ profiles:
         diskSizeGb: 300
         machineType: N1_HIGHCPU_32
         timeout: 4000s
+---
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: jaeger
+manifests:
+  rawYaml:
+    - kubernetes-manifests/jaeger.yaml
+  kustomize:
+    paths:
+      - kubernetes-manifests
+deploy:
+  kubectl: {}
+# portForward:
+#   - resourceType: service
+#     resourceName: jaeger-query
+#     namespace: default
+#     port: 16686
+#     localPort: 16686
+#     address: 127.0.0.1

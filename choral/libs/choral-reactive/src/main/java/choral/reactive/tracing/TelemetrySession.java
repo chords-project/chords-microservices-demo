@@ -1,7 +1,7 @@
 package choral.reactive.tracing;
 
 import choral.reactive.Session;
-import choral.reactive.TCPMessage;
+import choral.reactive.connection.Message;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
@@ -26,7 +26,7 @@ public class TelemetrySession {
         return new TelemetrySession(OpenTelemetrySdk.builder().build(), session, Span.getInvalid());
     }
 
-    public TelemetrySession(OpenTelemetrySdk telemetry, TCPMessage<?> msg) {
+    public TelemetrySession(OpenTelemetrySdk telemetry, Message msg) {
         this.telemetry = telemetry;
         this.session = msg.session;
         this.tracer = this.telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
@@ -93,12 +93,12 @@ public class TelemetrySession {
         this.recordException(message, e, error, Attributes.empty());
     }
 
-    public void injectSessionContext(TCPMessage<?> msg) {
+    public void injectSessionContext(Message msg) {
         telemetry.getPropagators()
                 .getTextMapPropagator()
                 .inject(choreographyContext, msg, new HeaderTextMapSetter());
 
-        msg.senderSpanContext = new TCPMessage.SerializedSpanContext(choreographySpan.getSpanContext());
+        msg.senderSpanContext = new Message.SerializedSpanContext(choreographySpan.getSpanContext());
     }
 
     private String attributesToString(Attributes attributes) {

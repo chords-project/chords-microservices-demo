@@ -3,7 +3,7 @@ package dev.chords.microservices.benchmark;
 import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.ReactiveClient;
 import choral.reactive.ReactiveSymChannel;
-import choral.reactive.SimpleSession;
+import choral.reactive.Session;
 import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
@@ -16,13 +16,13 @@ import java.io.Serializable;
 public class ServiceA {
 
     private OpenTelemetrySdk telemetry;
-    private ReactiveServer<SimpleSession> serverA;
+    private ReactiveServer serverA;
     private ClientConnectionManager connectionServiceB;
 
     public ServiceA(OpenTelemetrySdk telemetry, String addressServiceB) throws Exception {
         this.telemetry = telemetry;
         this.connectionServiceB = ClientConnectionManager.makeConnectionManager(addressServiceB, telemetry);
-        this.serverA = new ReactiveServer<>("serviceA", telemetry, ctx -> {
+        this.serverA = new ReactiveServer("serviceA", telemetry, ctx -> {
             System.out.println("ServiceA received new session");
         });
     }
@@ -40,8 +40,7 @@ public class ServiceA {
     }
 
     public void startPingPong() throws Exception {
-        SimpleSession session = SimpleSession.makeSession("ping-pong", "serviceA");
-        serverA.registerSession(session);
+        Session session = Session.makeSession("ping-pong", "serviceA");
 
         Span span = telemetry
                 .getTracer(JaegerConfiguration.TRACER_NAME)
@@ -52,13 +51,15 @@ public class ServiceA {
 
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
+        serverA.registerSession(session, telemetrySession);
+
         try (Scope scope = span.makeCurrent();
-                ReactiveClient<SimpleSession> client = new ReactiveClient<>(
+                ReactiveClient client = new ReactiveClient(
                         connectionServiceB,
                         "serviceA",
                         telemetrySession);) {
 
-            ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(client.chanA(session),
+            ReactiveSymChannel<Serializable> ch = new ReactiveSymChannel<>(client.chanA(session),
                     serverA.chanB(session, "serviceB"));
 
             SimpleChoreography_A chor = new SimpleChoreography_A(ch);
@@ -69,8 +70,7 @@ public class ServiceA {
     }
 
     public void startGreeting() throws Exception {
-        SimpleSession session = SimpleSession.makeSession("greeting", "serviceA");
-        serverA.registerSession(session);
+        Session session = Session.makeSession("greeting", "serviceA");
 
         Span span = telemetry
                 .getTracer(JaegerConfiguration.TRACER_NAME)
@@ -81,12 +81,14 @@ public class ServiceA {
 
         TelemetrySession telemetrySession = new TelemetrySession(telemetry, session, span);
 
+        serverA.registerSession(session, telemetrySession);
+
         try (Scope scope = span.makeCurrent();
-                ReactiveClient<SimpleSession> client = new ReactiveClient<>(connectionServiceB,
+                ReactiveClient client = new ReactiveClient(connectionServiceB,
                         "serviceA",
                         telemetrySession);) {
 
-            ReactiveSymChannel<SimpleSession, Serializable> ch = new ReactiveSymChannel<>(client.chanA(session),
+            ReactiveSymChannel<Serializable> ch = new ReactiveSymChannel<>(client.chanA(session),
                     serverA.chanB(session, "serviceB"));
 
             GreeterChoreography_A chor = new GreeterChoreography_A(ch);

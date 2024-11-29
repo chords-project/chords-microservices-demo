@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package choral_reactive;
+
+service Channel {
+  rpc SendMessage (Message) returns (google.protobuf.Empty);
+}
+
+message Message {
+  string choreography = 1;
+  string sender = 2;
+  int32 session_id = 3;
+  bytes payload = 4;
+  map<string, string> headers = 5;
+  SpanContext span_context = 6;
+}
+
+message SpanContext {
+  string trace_id_hex = 1;
+  string span_id_hex = 2;
+  bytes trace_flags = 3;
+  map<string, string> trace_state = 4;
+}

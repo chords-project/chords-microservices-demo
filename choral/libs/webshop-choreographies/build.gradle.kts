@@ -37,13 +37,7 @@ dependencies {
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // This dependency is exported to consumers, that is to say found on their compile classpath.
-    api(libs.commons.math3)
-
-    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation(libs.guava)
-
-    implementation("dev.chords:choral-reactive")
+    implementation(project(":choral-reactive"))
 
     // ## gRPC ##
     runtimeOnly ("io.grpc:grpc-netty-shaded:${grpcVersion}")
@@ -96,9 +90,9 @@ tasks.register("compileChoral") {
             val process = ProcessBuilder()
                 .command(listOf(
                     "choral", "epp",
-                    "--sources=./src/main/choral",
-                    "--headers=./src/main/choral",
-                    "--target=${buildDir}/generated/choral",
+                    "--sources=${layout.projectDirectory.dir("src/main/choral")}",
+                    "--headers=${layout.projectDirectory.dir("src/main/choral")}",
+                    "--target=${layout.buildDirectory.dir("generated/choral").get()}",
                     name
                 ))
                 .redirectOutput(ProcessBuilder.Redirect.PIPE)
@@ -116,14 +110,14 @@ tasks.register("compileChoral") {
     }
 }
 
-tasks.build {
+tasks.compileJava {
     dependsOn("compileChoral")
 }
 
 sourceSets {
    main {
       java {
-         srcDir("${buildDir}/generated/choral")
+         srcDir(layout.buildDirectory.dir("generated/choral").get())
       }
    }
 }

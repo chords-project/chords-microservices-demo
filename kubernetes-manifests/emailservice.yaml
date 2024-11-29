@@ -26,6 +26,9 @@ spec:
     metadata:
       labels:
         app: emailservice
+      annotations:
+        # disable skaffold debug
+        debug.cloud.google.com/config: "{}"
     spec:
       serviceAccountName: emailservice
       terminationGracePeriodSeconds: 5

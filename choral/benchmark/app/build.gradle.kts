@@ -22,21 +22,20 @@ repositories {
     mavenLocal()
 }
 
+var grpcVersion = "1.68.1"
+
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation(libs.junit.jupiter)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // This dependency is used by the application.
-    implementation(libs.guava)
-
-    implementation("dev.chords:choral-reactive")
+    implementation(project(":choral-reactive"))
 
     // gRPC
-    runtimeOnly("io.grpc:grpc-netty-shaded:1.68.1")
-    implementation("io.grpc:grpc-protobuf:1.68.1")
-    implementation("io.grpc:grpc-stub:1.68.1")
+    runtimeOnly("io.grpc:grpc-netty-shaded:${grpcVersion}")
+    implementation("io.grpc:grpc-protobuf:${grpcVersion}")
+    implementation("io.grpc:grpc-stub:${grpcVersion}")
     compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 }
 
@@ -81,9 +80,9 @@ tasks.register("compileChoral") {
             val process = ProcessBuilder()
                 .command(listOf(
                     "choral", "epp",
-                    "--sources=./app/src/main/choral",
-                    "--headers=./app/src/main/choral",
-                    "--target=${buildDir}/generated/choral",
+                    "--sources=${layout.projectDirectory.dir("src/main/choral")}",
+                    "--headers=${layout.projectDirectory.dir("src/main/choral")}",
+                    "--target=${layout.buildDirectory.dir("generated/choral").get()}",
                     name
                 ))
                 .redirectOutput(ProcessBuilder.Redirect.PIPE)
@@ -101,14 +100,14 @@ tasks.register("compileChoral") {
     }
 }
 
-tasks.build {
+tasks.compileJava {
     dependsOn("compileChoral")
 }
 
 sourceSets {
    main {
       java {
-         srcDir("${buildDir}/generated/choral")
+         srcDir(layout.buildDirectory.dir("generated/choral").get())
       }
    }
 }

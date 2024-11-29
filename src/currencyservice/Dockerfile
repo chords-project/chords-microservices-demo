@@ -23,27 +23,20 @@ RUN apk add --update --no-cache \
 
 WORKDIR /usr/src/app
 
-COPY service/package*.json ./
+COPY package*.json ./
 
 RUN npm install --only=production
 
-FROM alpine:3.20.3@sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d
+FROM alpine:3.20.3@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a
 
-RUN apk add --no-cache nodejs openjdk21
+RUN apk add --no-cache nodejs
 
 WORKDIR /usr/src/app
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 
-COPY service/ .
-
-COPY ./entrypoint.sh .
-RUN chmod 755 ./entrypoint.sh
-
-COPY ./choral-build/currencyservice.tar /choral/currencyservice.tar
-RUN tar -xvaf /choral/currencyservice.tar -C /choral/ \
-    && rm /choral/currencyservice.tar
+COPY . .
 
 EXPOSE 7000
 
-ENTRYPOINT [ "./entrypoint.sh" ]
+ENTRYPOINT [ "node", "server.js" ]

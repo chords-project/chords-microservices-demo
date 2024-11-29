@@ -7,25 +7,25 @@ import java.util.concurrent.ExecutionException;
 
 import choral.reactive.tracing.TelemetrySession;
 
-public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, Object>, ReactiveReceiver<S, Object> {
+public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveReceiver<Object> {
 
-    public interface NewSessionEvent<S extends Session> {
-        void onNewSession(S session);
+    public interface NewSessionEvent {
+        void onNewSession(Session session);
     }
 
-    private final HashMap<S, LinkedList<Object>> sendQueue = new HashMap<>();
-    private final HashMap<S, LinkedList<CompletableFuture<Object>>> recvQueue = new HashMap<>();
-    private NewSessionEvent<S> newSessionEvent = null;
+    private final HashMap<Session, LinkedList<Object>> sendQueue = new HashMap<>();
+    private final HashMap<Session, LinkedList<CompletableFuture<Object>>> recvQueue = new HashMap<>();
+    private NewSessionEvent newSessionEvent = null;
 
     public LocalReactiveQueue() {
     }
 
-    public void onNewSession(NewSessionEvent<S> event) {
+    public void onNewSession(NewSessionEvent event) {
         this.newSessionEvent = event;
     }
 
     @Override
-    public void send(S session, Object msg) {
+    public void send(Session session, Object msg) {
         synchronized (this) {
             if (this.recvQueue.containsKey(session)) {
                 // the flow already exists, pass the message to recv...
@@ -52,7 +52,7 @@ public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, 
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T recv(S session) {
+    public <T> T recv(Session session) {
         CompletableFuture<Object> future = new CompletableFuture<>();
 
         synchronized (this) {
@@ -80,7 +80,7 @@ public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, 
     }
 
     // should synchronize on 'this' before calling this method
-    private void enqueueSend(S session, Object msg) {
+    private void enqueueSend(Session session, Object msg) {
         if (!this.sendQueue.containsKey(session)) {
             this.sendQueue.put(session, new LinkedList<>());
             this.recvQueue.put(session, new LinkedList<>());
@@ -90,7 +90,7 @@ public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, 
     }
 
     // should synchronize on 'this' before calling this method
-    private void enqueueRecv(S session, CompletableFuture<Object> future) {
+    private void enqueueRecv(Session session, CompletableFuture<Object> future) {
         if (!this.recvQueue.containsKey(session)) {
             this.recvQueue.put(session, new LinkedList<>());
             this.sendQueue.put(session, new LinkedList<>());
@@ -99,7 +99,7 @@ public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, 
         this.recvQueue.get(session).add(future);
     }
 
-    private void cleanupKey(S session) {
+    private void cleanupKey(Session session) {
         synchronized (this) {
             this.sendQueue.remove(session);
             this.recvQueue.remove(session);
@@ -107,11 +107,11 @@ public class LocalReactiveQueue<S extends Session> implements ReactiveSender<S, 
     }
 
     @Override
-    public ReactiveChannel_A<S, Object> chanA(S session) {
+    public ReactiveChannel_A<Object> chanA(Session session) {
         return new ReactiveChannel_A<>(session, this, TelemetrySession.makeNoop(session));
     }
 
-    public ReactiveChannel_B<S, Object> chanB(S session) {
+    public ReactiveChannel_B<Object> chanB(Session session) {
         return new ReactiveChannel_B<>(session, this, TelemetrySession.makeNoop(session));
     }
 }

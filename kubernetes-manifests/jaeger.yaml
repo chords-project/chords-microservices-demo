@@ -95,11 +95,11 @@ kind: Service
 metadata:
   name: jaeger-query-external
   labels:
-    app: jaeger-query
+    app: jaeger
 spec:
   type: LoadBalancer
   selector:
-    app: jaeger-query
+    app: jaeger
   ports:
     - name: http
       port: 16686

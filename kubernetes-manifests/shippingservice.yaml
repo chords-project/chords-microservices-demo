@@ -34,7 +34,47 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-      - name: server
+      - name: shipping-sidecar
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          # readOnlyRootFilesystem: true
+        image: shippingservice-sidecar
+        ports:
+          - containerPort: 5401
+        env:
+        # Ingoing choral channels
+        - name: CHORAL_SHIPPING
+          value: "0.0.0.0:5401"
+
+        # Outgoing choral channels
+        - name: CHORAL_FRONTEND
+          value: "frontend:5401"
+        - name: CHORAL_CURRENCY
+          value: "currencyservice:5401"
+
+        # Tracing
+        - name: JAEGER_ENDPOINT
+          value: "http://jaeger-collector:4317"
+
+        startupProbe:
+          periodSeconds: 5
+          grpc:
+            port: 5401
+        livenessProbe:
+          grpc:
+            port: 5401
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 800Mi
+      - name: shipping-server
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -55,21 +95,7 @@ spec:
         - name: COLLECTOR_SERVICE_ADDR
           value: "jaeger-collector:4317"
 
-        # Ingoing choral channels
-        - name: CHORAL_SHIPPING
-          value: "0.0.0.0:5401"
-
-        # Outgoing choral channels
-        - name: CHORAL_FRONTEND
-          value: "frontend:5401"
-        - name: CHORAL_CURRENCY
-          value: "currencyservice:5401"
-
-        # Tracing
-        - name: JAEGER_ENDPOINT
-          value: "http://jaeger-collector:4317"
-
-        readinessProbe:
+        startupProbe:
           periodSeconds: 5
           grpc:
             port: 50051

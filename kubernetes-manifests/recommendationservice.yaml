@@ -26,6 +26,9 @@ spec:
     metadata:
       labels:
         app: recommendationservice
+      annotations:
+        # disable skaffold debug
+        debug.cloud.google.com/config: "{}"
     spec:
       serviceAccountName: recommendationservice
       terminationGracePeriodSeconds: 5

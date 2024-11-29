@@ -4,12 +4,12 @@ import choral.channels.SymChannel_A;
 import choral.channels.SymChannel_B;
 import choral.lang.Unit;
 
-public class ReactiveSymChannel<S extends Session, M> implements SymChannel_A<M>, SymChannel_B<M> {
+public class ReactiveSymChannel<M> implements SymChannel_A<M>, SymChannel_B<M> {
 
-    private ReactiveChannel_A<S, M> chanA;
-    private ReactiveChannel_B<S, M> chanB;
+    private ReactiveChannel_A<M> chanA;
+    private ReactiveChannel_B<M> chanB;
 
-    public ReactiveSymChannel(ReactiveChannel_A<S, M> chanA, ReactiveChannel_B<S, M> chanB) {
+    public ReactiveSymChannel(ReactiveChannel_A<M> chanA, ReactiveChannel_B<M> chanB) {
         this.chanA = chanA;
         this.chanB = chanB;
     }

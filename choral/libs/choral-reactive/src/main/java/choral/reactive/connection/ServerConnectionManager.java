@@ -12,10 +12,11 @@ public interface ServerConnectionManager extends AutoCloseable {
 
     public static ServerConnectionManager makeConnectionManager(ServerEvents events, OpenTelemetrySdk telemetry) {
         // return new TCPServerManagerSimple(events, telemetry);
-        return new TCPServerManagerNio(events, telemetry);
+        // return new TCPServerManagerNio(events, telemetry);
+        return new GRPCServerManager(events, telemetry);
     }
 
     public interface ServerEvents {
-        public void messageReceived(Object message);
+        public void messageReceived(Message message);
     }
 }

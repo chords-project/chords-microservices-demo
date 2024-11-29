@@ -1,5 +1,7 @@
 package dev.chords.microservices.benchmark;
 
+import java.util.concurrent.TimeUnit;
+
 import choral.reactive.tracing.JaegerConfiguration;
 import greeting.GreeterGrpc;
 import greeting.GreeterGrpc.GreeterBlockingStub;
@@ -23,7 +25,6 @@ public class GrpcClient implements GreeterService {
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
 
         this.channel = ManagedChannelBuilder.forAddress("localhost", port).usePlaintext().build();
-
         this.blockingStub = GreeterGrpc.newBlockingStub(channel);
         // this.futureStub = GreeterGrpc.newFutureStub(channel);
     }
@@ -46,7 +47,7 @@ public class GrpcClient implements GreeterService {
         return reply.getMessage();
     }
 
-    public void shutdown() {
-        channel.shutdown();
+    public void shutdown() throws InterruptedException {
+        channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 }
