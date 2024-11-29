@@ -27,27 +27,12 @@ public class WebshopSession extends Session {
         return new WebshopSession(choreography, service, Math.abs(rand.nextInt()));
     }
 
-    public static enum Choreography {
+    public enum Choreography {
         ADD_CART_ITEM, GET_CART_ITEMS, PLACE_ORDER;
     }
 
-    public static enum Service {
+    public enum Service {
         CART, CURRENCY, FRONTEND, PAYMENT, PRODUCT_CATALOG, SHIPPING;
-    }
-
-    @Override
-    public String choreographyName() {
-        return choreography.name();
-    }
-
-    @Override
-    public String senderName() {
-        return service.name();
-    }
-
-    @Override
-    public Integer sessionID() {
-        return sessionID;
     }
 
     @Override
@@ -58,30 +43,6 @@ public class WebshopSession extends Session {
     @Override
     public Session replacingSender(String senderName) {
         return new WebshopSession(choreography, Service.valueOf(senderName), sessionID);
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + choreography.hashCode();
-        result = prime * result + service.hashCode();
-        result = prime * result + sessionID.hashCode();
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null || getClass() != obj.getClass())
-            return false;
-
-        WebshopSession other = (WebshopSession) obj;
-
-        return choreography == other.choreography &&
-                service == other.service &&
-                sessionID.equals(other.sessionID);
     }
 
 }

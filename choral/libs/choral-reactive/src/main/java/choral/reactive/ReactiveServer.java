@@ -129,8 +129,11 @@ public class ReactiveServer
             boolean isNewSession = knownSessionIDs.add(msg.session.sessionID);
 
             TelemetrySession telemetrySession;
+            Span sessionSpan = null;
             if (isNewSession) {
                 telemetrySession = new TelemetrySession(telemetry, msg);
+                sessionSpan = telemetrySession.makeChoreographySpan();
+                this.telemetrySessionMap.put(msg.session.sessionID(), telemetrySession);
             } else {
                 if (!telemetrySessionMap.containsKey(msg.session.sessionID()))
                     throw new IllegalStateException(
@@ -157,12 +160,11 @@ public class ReactiveServer
             }
 
             if (isNewSession) {
+                final Span span = sessionSpan;
                 // Handle new session in another thread
                 Thread.ofPlatform()
                         .name("NEW_SESSION_HANDLER_" + msg.session)
                         .start(() -> {
-                            Span span = telemetrySession.makeChoreographySpan();
-
                             this.telemetrySessionMap.put(msg.session.sessionID(), telemetrySession);
 
                             telemetrySession.log(
