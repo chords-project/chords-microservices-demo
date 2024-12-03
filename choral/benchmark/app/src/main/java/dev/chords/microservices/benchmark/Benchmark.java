@@ -3,9 +3,13 @@
  */
 package dev.chords.microservices.benchmark;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Scanner;
+import java.util.concurrent.Callable;
 
 import choral.reactive.tracing.JaegerConfiguration;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class Benchmark {
 
@@ -24,8 +28,11 @@ public class Benchmark {
         GrpcServer grpcServer = new GrpcServer();
         grpcServer.start(GRPC_PORT);
 
-        ServiceA serviceA = new ServiceA(JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ServiceA"), SERVICE_B);
-        ServiceB serviceB = new ServiceB(JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ServiceB"), SERVICE_A);
+        ServiceA serviceA = new ServiceA(OpenTelemetrySdk.builder().build(), SERVICE_B);
+        ServiceB serviceB = new ServiceB(OpenTelemetrySdk.builder().build(), SERVICE_A);
+
+//        ServiceA serviceA = new ServiceA(JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ServiceA"), SERVICE_B);
+//        ServiceB serviceB = new ServiceB(JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ServiceB"), SERVICE_A);
 
         serviceA.listen(SERVICE_A);
         serviceB.listen(SERVICE_B);
@@ -51,46 +58,55 @@ public class Benchmark {
         server.stop();
     }
 
+    public static void measure(int n, Callable<Void> action) throws Exception {
+        long startTime = System.nanoTime();
+        action.call();
+        long endTime = System.nanoTime();
+        System.out.println("Warmup took " + (endTime - startTime) + " ms");
+
+        var latencies = new ArrayList<Long>(n);
+
+        for (int i = 0; i < n; i++) {
+            startTime = System.nanoTime();
+            action.call();
+            endTime = System.nanoTime();
+
+            latencies.add(endTime - startTime);
+        }
+
+        Collections.sort(latencies);
+
+        long median = latencies.get(n / 2);
+        long lowAvg = latencies.stream().limit(n / 2).reduce(0L, Long::sum) / (n / 2);
+
+        System.out.println("Median: " + median / 1_000_000.0 + ", Low avg: " + lowAvg / 1_000_000.0);
+    }
+
     public static void main(String[] args) throws Exception {
 
+//        Scanner input = new Scanner(System.in);
+//        System.out.print("Press Enter to perform benchmark...");
+//        input.nextLine();
+//        input.close();
+
         benchmarkChoreography(serviceA -> {
-            serviceA.startPingPong();
-            serviceA.startGreeting();
+//            measure(10_000, () -> {
+//                serviceA.startPingPong();
+//                return null;
+//            });
 
-            // serviceA.startGreeting();
-
-            for (int i = 0; i < 5; i++) {
-                serviceA.startPingPong();
-                Thread.sleep(100);
-            }
-
-            for (int i = 0; i < 5; i++) {
+            measure(10_000, () -> {
                 serviceA.startGreeting();
-                Thread.sleep(100);
-            }
+                return null;
+            });
         });
 
-        benchmarkGrpc(client -> {
-            long startTime = System.currentTimeMillis();
-            client.greet("Warmup");
-            long endTime = System.currentTimeMillis();
-            System.out.println("Warmup took " + (endTime - startTime) + " ms");
-
-            // Scanner input = new Scanner(System.in);
-            // System.out.print("Press Enter to perform benchmark...");
-            // input.nextLine();
-            // input.close();
-
-            for (int i = 0; i < 20; i++) {
-                startTime = System.currentTimeMillis();
-                String greeting = client.greet("Name" + i);
-                endTime = System.currentTimeMillis();
-
-                System.out.println("Got back greeting: " + greeting + "(" + (endTime -
-                        startTime) + " ms)");
-                Thread.sleep(100);
-            }
-        });
+//        benchmarkGrpc(client -> {
+//            measure(10_000, () -> {
+//                client.greet("Name");
+//                return null;
+//            });
+//        });
 
     }
 }

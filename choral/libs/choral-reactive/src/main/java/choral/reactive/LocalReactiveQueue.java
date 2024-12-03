@@ -42,7 +42,7 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
 
                 // Handle new session in the background
 
-                Thread.ofPlatform().start(() -> {
+                Thread.ofVirtual().start(() -> {
                     newSessionEvent.onNewSession(session);
                     cleanupKey(session);
                 });

@@ -35,7 +35,7 @@ public class ConnectionTest {
             done.countDown();
         });
 
-        Thread.ofPlatform()
+        Thread.ofVirtual()
                 .start(() -> {
                     assertDoesNotThrow(() -> {
                         server.listen("0.0.0.0:4567");

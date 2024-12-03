@@ -43,7 +43,7 @@ public class TCPServerManagerSimple implements ServerConnectionManager {
 
             while (true) {
                 Socket connection = serverSocket.accept();
-                Thread.ofPlatform()
+                Thread.ofVirtual()
                         .name("CLIENT_CONNECTION_" + connection)
                         .start(() -> {
                             clientListen(connection);

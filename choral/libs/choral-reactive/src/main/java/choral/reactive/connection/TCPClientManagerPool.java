@@ -46,7 +46,7 @@ public class TCPClientManagerPool implements ClientConnectionManager {
     }
 
     public void connect() {
-        Thread.ofPlatform()
+        Thread.ofVirtual()
                 .start(() -> {
                     for (int i = 0; i < 10; i++) {
                         try {

@@ -64,7 +64,7 @@ public class FrontendController {
                             + " service: " + ctx.session);
         });
 
-        Thread.ofPlatform()
+        Thread.ofVirtual()
                 .name("FRONTEND_CHORAL_SERVERS")
                 .start(() -> {
                     try {

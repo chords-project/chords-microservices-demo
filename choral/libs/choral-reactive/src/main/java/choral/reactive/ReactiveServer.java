@@ -162,7 +162,7 @@ public class ReactiveServer
             if (isNewSession) {
                 final Span span = sessionSpan;
                 // Handle new session in another thread
-                Thread.ofPlatform()
+                Thread.ofVirtual()
                         .name("NEW_SESSION_HANDLER_" + msg.session)
                         .start(() -> {
                             this.telemetrySessionMap.put(msg.session.sessionID(), telemetrySession);

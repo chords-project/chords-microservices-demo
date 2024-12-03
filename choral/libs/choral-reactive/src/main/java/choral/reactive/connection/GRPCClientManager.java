@@ -18,6 +18,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 public class GRPCClientManager implements ClientConnectionManager {
 
     private final ManagedChannel channel;
+    private final ChannelBlockingStub blockingStub;
     private final OpenTelemetrySdk telemetry;
     private final String address;
 
@@ -32,15 +33,15 @@ public class GRPCClientManager implements ClientConnectionManager {
                 .forAddress(socketAddr.getHostString(), socketAddr.getPort())
                 .usePlaintext()
                 .build();
+
+        this.blockingStub = ChannelGrpc
+            .newBlockingStub(channel);
+            //.withDeadlineAfter(10, TimeUnit.SECONDS);
     }
 
     @Override
-    public Connection makeConnection() throws IOException, InterruptedException {
-        ChannelBlockingStub blockingStub = ChannelGrpc
-                .newBlockingStub(channel)
-                .withDeadlineAfter(10, TimeUnit.SECONDS);
-
-        return new ClientConnection(blockingStub);
+    public Connection makeConnection() {
+        return new ClientConnection();
     }
 
     @Override
@@ -50,16 +51,13 @@ public class GRPCClientManager implements ClientConnectionManager {
 
     public class ClientConnection implements Connection {
 
-        ChannelBlockingStub blockingStub;
         Span connectionSpan;
 
-        private ClientConnection(ChannelBlockingStub blockingStub) {
+        private ClientConnection() {
             this.connectionSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
                     .spanBuilder("GRPCConnection: " + address)
                     .setAttribute("address", address)
                     .startSpan();
-
-            this.blockingStub = blockingStub;
         }
 
         @Override

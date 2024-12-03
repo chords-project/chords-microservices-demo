@@ -28,7 +28,7 @@ public class ServiceA {
     }
 
     public void listen(String address) {
-        Thread.ofPlatform()
+        Thread.ofVirtual()
                 .name("serviceA")
                 .start(() -> {
                     try {
