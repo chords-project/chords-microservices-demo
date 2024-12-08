@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import choral.reactive.tracing.JaegerConfiguration;
 import choral_reactive.ChannelGrpc;
-import choral_reactive.ChannelGrpc.ChannelBlockingStub;
+import choral_reactive.ChannelGrpc.ChannelStub;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.common.Attributes;
@@ -18,7 +18,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 public class GRPCClientManager implements ClientConnectionManager {
 
     private final ManagedChannel channel;
-    private final ChannelBlockingStub blockingStub;
+    private final ChannelStub blockingStub;
     private final OpenTelemetrySdk telemetry;
     private final String address;
 
@@ -35,7 +35,7 @@ public class GRPCClientManager implements ClientConnectionManager {
                 .build();
 
         this.blockingStub = ChannelGrpc
-            .newBlockingStub(channel);
+            .newStub(channel);
             //.withDeadlineAfter(10, TimeUnit.SECONDS);
     }
 
@@ -69,7 +69,7 @@ public class GRPCClientManager implements ClientConnectionManager {
                             .build());
 
             try {
-                blockingStub.sendMessage(msg.toGrpcMessage());
+                blockingStub.sendMessage(msg.toGrpcMessage(), new MyNoopStreamObserver<>());
             } catch (Exception e) {
                 connectionSpan.setAttribute("error", true);
                 connectionSpan.recordException(e);
