@@ -15,6 +15,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 
+/**
+ * This object contains logic for connecting to a remote server using TCP. Not thread-safe.
+ *
+ * @see TCPClientManagerPool
+ */
 public class TCPClientManagerSimple implements ClientConnectionManager {
 
     public final String address;
