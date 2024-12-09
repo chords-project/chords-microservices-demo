@@ -73,7 +73,7 @@ public class TelemetrySession {
     public void log(String message, Attributes attributes) {
         Attributes extraAttributes = Attributes.builder().put("session", session.toString()).putAll(attributes).build();
 
-        System.out.println(message + ": " + attributesToString(extraAttributes));
+        //System.out.println(message + ": " + attributesToString(extraAttributes));
         choreographySpan.addEvent(message, extraAttributes);
     }
 

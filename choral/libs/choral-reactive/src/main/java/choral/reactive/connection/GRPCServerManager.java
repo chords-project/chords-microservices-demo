@@ -63,7 +63,6 @@ public class GRPCServerManager implements ServerConnectionManager {
         public void sendMessage(Message request, StreamObserver<Empty> responseObserver) {
             try {
                 var message = new choral.reactive.connection.Message(request);
-                System.out.println("GRPCServerManager received message: " + message.toString());
                 serverEvents.messageReceived(message);
             } catch (Exception e) {
                 throw new RuntimeException(e);

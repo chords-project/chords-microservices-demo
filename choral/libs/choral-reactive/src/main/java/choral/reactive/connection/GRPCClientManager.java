@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import choral.reactive.tracing.JaegerConfiguration;
 import choral_reactive.ChannelGrpc;
-import choral_reactive.ChannelGrpc.ChannelBlockingStub;
+import choral_reactive.ChannelGrpc.ChannelFutureStub;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.protobuf.Empty;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.common.Attributes;
@@ -18,7 +20,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk;
 public class GRPCClientManager implements ClientConnectionManager {
 
     private final ManagedChannel channel;
-    private final ChannelBlockingStub blockingStub;
+    private final ChannelFutureStub futureStub;
     private final OpenTelemetrySdk telemetry;
     private final String address;
 
@@ -34,8 +36,8 @@ public class GRPCClientManager implements ClientConnectionManager {
                 .usePlaintext()
                 .build();
 
-        this.blockingStub = ChannelGrpc
-            .newBlockingStub(channel);
+        this.futureStub = ChannelGrpc
+            .newFutureStub(channel);
             //.withDeadlineAfter(10, TimeUnit.SECONDS);
     }
 
@@ -61,7 +63,7 @@ public class GRPCClientManager implements ClientConnectionManager {
         }
 
         @Override
-        public void sendMessage(Message msg) throws IOException, InterruptedException {
+        public void sendMessage(Message msg) throws Exception {
             connectionSpan.addEvent("Send message",
                     Attributes.builder()
                             .put("message", msg.toString())
@@ -69,7 +71,7 @@ public class GRPCClientManager implements ClientConnectionManager {
                             .build());
 
             try {
-                blockingStub.sendMessage(msg.toGrpcMessage());
+                futureStub.sendMessage(msg.toGrpcMessage()).get(10, TimeUnit.SECONDS);
             } catch (Exception e) {
                 connectionSpan.setAttribute("error", true);
                 connectionSpan.recordException(e);

@@ -10,6 +10,7 @@ import io.opentelemetry.context.Scope;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.concurrent.TimeoutException;
 
 public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseable {
 
@@ -42,7 +43,7 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
             telemetrySession.injectSessionContext(message);
 
             connection.sendMessage(message);
-        } catch (IOException | InterruptedException e) {
+        } catch (Exception e) {
             span.setAttribute("error", true);
             span.recordException(e);
 

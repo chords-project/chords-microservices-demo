@@ -3,6 +3,7 @@ package choral.reactive.connection;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeoutException;
 
 public interface ClientConnectionManager extends AutoCloseable {
     Connection makeConnection() throws IOException, InterruptedException;
@@ -11,7 +12,7 @@ public interface ClientConnectionManager extends AutoCloseable {
     void close() throws IOException, InterruptedException;
 
     public interface Connection extends AutoCloseable {
-        void sendMessage(Message msg) throws IOException, InterruptedException;
+        void sendMessage(Message msg) throws Exception;
 
         @Override
         void close() throws IOException, InterruptedException;

@@ -5,7 +5,6 @@ package dev.chords.microservices.benchmark;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Scanner;
 import java.util.concurrent.Callable;
 
 import choral.reactive.tracing.JaegerConfiguration;
