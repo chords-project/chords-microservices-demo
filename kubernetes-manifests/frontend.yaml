@@ -50,6 +50,7 @@ spec:
           startupProbe:
             initialDelaySeconds: 10
             periodSeconds: 5
+            failureThreshold: 100
             httpGet:
               path: "/ping"
               port: 8081
@@ -77,11 +78,11 @@ spec:
             value: "http://jaeger-collector:4317"
           resources:
             requests:
-              cpu: 400m
-              memory: 256Mi
+              cpu: 100m
+              memory: 180Mi
             limits:
-              cpu: 800m
-              memory: 512Mi
+              cpu: 300m
+              memory: 300Mi
         - name: frontend-server
           securityContext:
             allowPrivilegeEscalation: false
@@ -94,7 +95,9 @@ spec:
           ports:
           - containerPort: 8080
           startupProbe:
+            initialDelaySeconds: 10
             periodSeconds: 5
+            failureThreshold: 100
             httpGet:
               path: "/_healthz"
               port: 8080
@@ -116,7 +119,7 @@ spec:
             value: "1"
           - name: COLLECTOR_SERVICE_ADDR
             value: "jaeger-collector:4317"
-            
+
           - name: PRODUCT_CATALOG_SERVICE_ADDR
             value: "productcatalogservice:3550"
           - name: CURRENCY_SERVICE_ADDR
@@ -133,7 +136,7 @@ spec:
             value: "adservice:9555"
           - name: SHOPPING_ASSISTANT_SERVICE_ADDR
             value: "shoppingassistantservice:80"
-          
+
           # # ENV_PLATFORM: One of: local, gcp, aws, azure, onprem, alibaba
           # # When not set, defaults to "local" unless running in GKE, otherwies auto-sets to gcp
           # - name: ENV_PLATFORM

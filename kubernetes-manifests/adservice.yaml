@@ -55,7 +55,7 @@ spec:
           value: "jaeger-collector:4317"
         resources:
           requests:
-            cpu: 200m
+            cpu: 100m
             memory: 180Mi
           limits:
             cpu: 300m
@@ -63,6 +63,7 @@ spec:
         startupProbe:
           initialDelaySeconds: 10
           periodSeconds: 5
+          failureThreshold: 100
           grpc:
             port: 9555
         livenessProbe:

@@ -58,17 +58,18 @@ spec:
           value: "1"
         - name: COLLECTOR_SERVICE_ADDR
           value: "jaeger-collector:4317"
-        readinessProbe:
+        startupProbe:
+          initialDelaySeconds: 10
           periodSeconds: 5
+          failureThreshold: 100
           grpc:
             port: 8080
         livenessProbe:
-          periodSeconds: 5
           grpc:
             port: 8080
         resources:
           requests:
-            cpu: 100m
+            cpu: 50m
             memory: 64Mi
           limits:
             cpu: 200m

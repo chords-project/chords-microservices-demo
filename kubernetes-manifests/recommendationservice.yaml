@@ -49,12 +49,13 @@ spec:
         image: recommendationservice
         ports:
         - containerPort: 8080
-        readinessProbe:
+        startupProbe:
+          initialDelaySeconds: 10
           periodSeconds: 5
+          failureThreshold: 100
           grpc:
             port: 8080
         livenessProbe:
-          periodSeconds: 5
           grpc:
             port: 8080
         env:
@@ -70,7 +71,7 @@ spec:
           value: "jaeger-collector:4317"
         resources:
           requests:
-            cpu: 100m
+            cpu: 50m
             memory: 220Mi
           limits:
             cpu: 200m

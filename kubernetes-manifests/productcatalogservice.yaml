@@ -60,7 +60,9 @@ spec:
           value: "http://jaeger-collector:4317"
 
         startupProbe:
+          initialDelaySeconds: 10
           periodSeconds: 5
+          failureThreshold: 100
           grpc:
             port: 5401
         livenessProbe:
@@ -68,11 +70,11 @@ spec:
             port: 5401
         resources:
           requests:
-            cpu: 500m
-            memory: 512Mi
+            cpu: 100m
+            memory: 180Mi
           limits:
-            cpu: 1000m
-            memory: 800Mi
+            cpu: 300m
+            memory: 300Mi
       - name: productcatalog-server
         securityContext:
           allowPrivilegeEscalation: false
@@ -93,9 +95,10 @@ spec:
           value: "1"
         - name: COLLECTOR_SERVICE_ADDR
           value: "jaeger-collector:4317"
-        readinessProbe:
-          initialDelaySeconds: 5
-          periodSeconds: 2
+        startupProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 100
           grpc:
             port: 3550
         livenessProbe:
@@ -103,7 +106,7 @@ spec:
             port: 3550
         resources:
           requests:
-            cpu: 100m
+            cpu: 50m
             memory: 64Mi
           limits:
             cpu: 200m
