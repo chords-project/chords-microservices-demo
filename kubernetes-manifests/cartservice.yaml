@@ -65,10 +65,10 @@ spec:
 
         resources:
           requests:
-            cpu: 100m
-            memory: 180Mi
+            cpu: 200m
+            memory: 250Mi
           limits:
-            cpu: 300m
+            cpu: 500m
             memory: 300Mi
         startupProbe:
           initialDelaySeconds: 10

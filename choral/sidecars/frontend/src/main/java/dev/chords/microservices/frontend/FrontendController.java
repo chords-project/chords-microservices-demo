@@ -36,6 +36,7 @@ public class FrontendController {
     ClientConnectionManager currencyConn;
     ClientConnectionManager shippingConn;
     ClientConnectionManager paymentConn;
+    ClientConnectionManager emailConn;
 
     public FrontendController() {
         final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
@@ -53,6 +54,8 @@ public class FrontendController {
                     telemetry);
             paymentConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.payment,
                     telemetry);
+            emailConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.email,
+                telemetry);
         } catch (URISyntaxException | IOException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
@@ -109,7 +112,9 @@ public class FrontendController {
                 ReactiveClient shippingClient = new ReactiveClient(
                         shippingConn, Service.FRONTEND.name(), telemetrySession);
                 ReactiveClient paymentClient = new ReactiveClient(
-                        paymentConn, Service.FRONTEND.name(), telemetrySession);) {
+                        paymentConn, Service.FRONTEND.name(), telemetrySession);
+             ReactiveClient emailClient = new ReactiveClient(
+                 emailConn, Service.FRONTEND.name(), telemetrySession);) {
 
             telemetrySession.log("[FRONTEND] Initiating PLACE_ORDER choreography");
 
@@ -122,12 +127,17 @@ public class FrontendController {
             var paymentChan = new ReactiveSymChannel<>(paymentClient.chanA(session),
                     server.chanB(session, Service.PAYMENT.name()));
 
+            var emailChan = new ReactiveSymChannel<>(emailClient.chanA(session),
+                    server.chanB(session, Service.EMAIL.name()));
+
             ChorPlaceOrder_Client placeOrderChor = new ChorPlaceOrder_Client(
                     new ClientService(telemetrySession.tracer),
                     currencyChan,
                     shippingChan,
                     paymentChan,
-                    cartClient.chanA(session));
+                    emailChan,
+                    cartClient.chanA(session)
+                );
 
             OrderResult result = placeOrderChor.placeOrder(request);
 

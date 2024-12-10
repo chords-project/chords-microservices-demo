@@ -21,6 +21,7 @@ project(":webshop-choreographies").projectDir = file("../libs/webshop-choreograp
 include(
     "cartservice",
     "currencyservice",
+    "emailservice",
     "frontend",
     "paymentservice",
     "productcatalog",

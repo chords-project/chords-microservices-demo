@@ -68,6 +68,8 @@ spec:
             value: "shippingservice:5401"
           - name: CHORAL_PAYMENT
             value: "paymentservice:5401"
+          - name: CHORAL_EMAIL
+            value: "emailservice:5401"
 
           # Choral ingoing channels
           - name: CHORAL_FRONTEND
@@ -78,10 +80,10 @@ spec:
             value: "http://jaeger-collector:4317"
           resources:
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
         - name: frontend-server
           securityContext:

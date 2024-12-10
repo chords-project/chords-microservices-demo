@@ -73,6 +73,10 @@ build:
       context: choral/sidecars/shippingservice
       jib:
         project: shippingservice
+    - image: emailservice-sidecar
+      context: choral/sidecars/emailservice
+      jib:
+          project: emailservice
   tagPolicy:
     gitCommit: {}
   local:

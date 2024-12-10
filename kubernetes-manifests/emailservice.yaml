@@ -38,7 +38,47 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-      - name: server
+      - name: email-sidecar
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          # readOnlyRootFilesystem: true
+        image: emailservice-sidecar
+        ports:
+          - containerPort: 5401
+        env:
+          # Ingoing choral channels
+          - name: CHORAL_EMAIL
+            value: "0.0.0.0:5401"
+
+          # Outgoing choral channels
+          - name: CHORAL_FRONTEND
+            value: "frontend:5401"
+
+          # Tracing
+          - name: JAEGER_ENDPOINT
+            value: "http://jaeger-collector:4317"
+
+        resources:
+          requests:
+            cpu: 200m
+            memory: 250Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
+        startupProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 100
+          grpc:
+            port: 5401
+        livenessProbe:
+          grpc:
+            port: 5401
+      - name: email-server
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -69,7 +109,7 @@ spec:
             port: 8080
         resources:
           requests:
-            cpu: 50m
+            cpu: 100m
             memory: 64Mi
           limits:
             cpu: 200m
@@ -89,6 +129,9 @@ spec:
   - name: grpc
     port: 5000
     targetPort: 8080
+  - name: choral-sidecar
+    port: 5401
+    targetPort: 5401
 ---
 apiVersion: v1
 kind: ServiceAccount

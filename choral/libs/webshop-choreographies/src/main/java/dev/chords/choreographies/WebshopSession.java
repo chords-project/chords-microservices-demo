@@ -32,7 +32,7 @@ public class WebshopSession extends Session {
     }
 
     public enum Service {
-        CART, CURRENCY, FRONTEND, PAYMENT, PRODUCT_CATALOG, SHIPPING;
+        CART, CURRENCY, FRONTEND, PAYMENT, PRODUCT_CATALOG, SHIPPING, EMAIL;
     }
 
     @Override
