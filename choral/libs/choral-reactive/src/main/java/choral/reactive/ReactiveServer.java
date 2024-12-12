@@ -42,7 +42,7 @@ public class ReactiveServer
 
     /**
      * Creates a ReactiveServer, using {@link ServerConnectionManager} for the connection.
-     * Invoke {@link ServerConnectionManager#listen(String)} to start listening.
+     * Invoke {@link #listen(String)} to start listening.
      */
     public ReactiveServer(String serviceName, OpenTelemetrySdk telemetry, NewSessionEvent newSessionEvent) {
         this.serviceName = serviceName;
