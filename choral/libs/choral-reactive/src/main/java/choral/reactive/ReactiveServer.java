@@ -23,8 +23,16 @@ public class ReactiveServer
 
     private final HashSet<Integer> knownSessionIDs = new HashSet<>();
 
+    // INVARIANTS:
+    // 1. sendQueue contains session if and only if recvQueue contains session.
+    // 2. if sendQueue is non-empty, then recvQueue is empty; and vice versa.
+    // 3. if a sessionID is in knownSessionIDs, then the session is in telemetrySessionMap.
+
+    /** Maps a sessionID and a sender name to a queue of messages. The next receive operation will consume the first message in the queue. */
     private final HashMap<Session, LinkedList<Serializable>> sendQueue = new HashMap<>();
+    /** Maps a sessionID and a sender name to a queue of futures. The next message will be fed to the first future in the list. */
     private final HashMap<Session, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
+    /** Maps a sessionID to a TelemetrySession. */
     private final HashMap<Integer, TelemetrySession> telemetrySessionMap = new HashMap<>();
 
     private final String serviceName;
@@ -32,6 +40,10 @@ public class ReactiveServer
     private final OpenTelemetrySdk telemetry;
     private final ServerConnectionManager connectionManager;
 
+    /**
+     * Creates a ReactiveServer, using {@link ServerConnectionManager} for the connection.
+     * Invoke {@link #listen(String)} to start listening.
+     */
     public ReactiveServer(String serviceName, OpenTelemetrySdk telemetry, NewSessionEvent newSessionEvent) {
         this.serviceName = serviceName;
         this.telemetry = telemetry;
@@ -39,11 +51,18 @@ public class ReactiveServer
         this.connectionManager = ServerConnectionManager.makeConnectionManager(this, telemetry);
     }
 
+    /**
+     * Creates a ReactiveServer with telemetry disabled. Uses {@link ServerConnectionManager} for
+     * the connection.
+     */
     public ReactiveServer(String serviceName, NewSessionEvent newSessionEvent) {
-        // Pass NoOp telemetry sdk
         this(serviceName, OpenTelemetrySdk.builder().build(), newSessionEvent);
     }
 
+    /**
+     * Begins listening at the given address and registers a shutdown hook that runs when the
+     * program exits.
+     */
     public void listen(String address) throws URISyntaxException, IOException {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
@@ -58,19 +77,21 @@ public class ReactiveServer
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends Serializable> T recv(Session session) {
+    public <T extends Serializable> T recv(Session session) { // TODO profile this
         Attributes attributes = Attributes.builder().put("channel.service", serviceName)
                 .put("channel.sender", session.senderName()).build();
 
         TelemetrySession telemetrySession;
         CompletableFuture<Serializable> future = new CompletableFuture<Serializable>()
                 .orTimeout(10, TimeUnit.SECONDS);
+                // TODO Do we want this timeout? What happens if the sender takes >10s to compute the message?
+                //  Maybe the timeout is a parameter we pass *for each session*?
 
         synchronized (this) {
             telemetrySession = telemetrySessionMap.get(session.sessionID());
 
             if (this.sendQueue.containsKey(session)) {
-                // Flow already exists, receive message from send...
+                // Session already exists, receive message from sender...
 
                 if (this.sendQueue.get(session).isEmpty()) {
                     telemetrySession.log(
@@ -82,7 +103,7 @@ public class ReactiveServer
                     future.complete(this.sendQueue.get(session).removeFirst());
                 }
             } else {
-                // Flow does not exist yet, wait for it to arrive...
+                // Session does not exist yet, wait for it to arrive...
                 telemetrySession.log(
                         "ReactiveServer receive, session does not exist yet, waiting for message to arrive",
                         attributes);
@@ -123,7 +144,7 @@ public class ReactiveServer
     }
 
     @Override
-    public void messageReceived(Message msg) {
+    public void messageReceived(Message msg) { // TODO profile this
 
         synchronized (this) {
             boolean isNewSession = knownSessionIDs.add(msg.session.sessionID);
@@ -143,7 +164,7 @@ public class ReactiveServer
             }
 
             if (this.recvQueue.containsKey(msg.session)) {
-                // the flow already exists, pass the message to recv...
+                // the session already exists, pass the message to recv...
 
                 if (this.recvQueue.get(msg.session).isEmpty()) {
                     telemetrySession.log("ReactiveServer message received: existing session, enqueue send");
@@ -154,7 +175,7 @@ public class ReactiveServer
                     future.complete(msg.message);
                 }
             } else {
-                // this is a new flow, enqueue the message
+                // this is a new session, enqueue the message
                 telemetrySession.log("ReactiveServer message received: new session, enqueue send");
                 enqueueSend(msg.session, msg.message);
             }
@@ -231,6 +252,9 @@ public class ReactiveServer
         void onNewSession(SessionContext ctx) throws Exception;
     }
 
+    /**
+     * A context object for creating channels and logging telemetry events in a particular session.
+     */
     public static class SessionContext implements AutoCloseable {
 
         private final ReactiveServer server;
@@ -245,8 +269,9 @@ public class ReactiveServer
         }
 
         /**
-         * Creates a server channel on this server listening for messages,
-         * coming from the given clientService on the same session.
+         * Creates a channel for receiving messages from the given client in this session.
+         *
+         * @param clientService the name of the client service
          */
         public ReactiveChannel_B<Serializable> chanB(String clientService) {
             Session newSession = session.replacingSender(clientService);
@@ -254,9 +279,9 @@ public class ReactiveServer
         }
 
         /**
-         * Creates a client channel pre-configured with the session and service.
+         * Creates a channel for sending messages to the given client in this session.
          *
-         * @param address the network address of the client to connect to.
+         * @param connectionManager an implementation of the communication middleware
          */
         public ReactiveChannel_A<Serializable> chanA(ClientConnectionManager connectionManager)
                 throws IOException, InterruptedException {
@@ -265,6 +290,12 @@ public class ReactiveServer
             return client.chanA(session);
         }
 
+        /**
+         * Creates a bidirectional channel between this service and the given client.
+         *
+         * @param clientService the name of the service to which we are connecting
+         * @param connectionManager an implementation of the communication middleware
+         */
         public ReactiveSymChannel<Serializable> symChan(String clientService,
                 ClientConnectionManager connectionManager)
                 throws IOException, InterruptedException {

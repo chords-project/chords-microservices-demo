@@ -57,7 +57,7 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
 
         synchronized (this) {
             if (this.sendQueue.containsKey(session)) {
-                // Flow already exists, receive message from send...
+                // Session already exists, receive message from send...
 
                 if (this.sendQueue.get(session).isEmpty()) {
                     this.recvQueue.get(session).add(future);
@@ -65,7 +65,7 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
                     future.complete(this.sendQueue.get(session).removeFirst());
                 }
             } else {
-                // Flow does not exist yet, wait for it to arrive...
+                // Session does not exist yet, wait for it to arrive...
                 enqueueRecv(session, future);
             }
         }

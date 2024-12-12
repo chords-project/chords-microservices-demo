@@ -3,10 +3,13 @@ package choral.reactive;
 import java.util.Random;
 import java.io.Serializable;
 
+/**
+ * A unique identifier for an instance of a choreography at runtime.
+ */
 public class Session implements Serializable {
 
     protected final String choreographyID;
-    protected final String sender;
+    protected final String sender; // TODO The sender should not be here, but some of the logic in ReactiveServer depends on it
     protected final Integer sessionID;
 
     public Session(String choreographyID, String sender, Integer sessionID) {

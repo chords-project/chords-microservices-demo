@@ -20,6 +20,10 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 
+/**
+ * This object contains logic for connecting to a remote server using TCP. Thread-safe. Does not
+ * reconnect if the connection is lost.
+ */
 public class TCPClientManagerPool implements ClientConnectionManager {
 
     public final String address;

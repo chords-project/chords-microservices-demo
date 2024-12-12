@@ -17,6 +17,7 @@ public interface ServerConnectionManager extends AutoCloseable {
     }
 
     public interface ServerEvents {
+        /** A callback executed whenever the server receives a message. */
         public void messageReceived(Message message);
     }
 }
