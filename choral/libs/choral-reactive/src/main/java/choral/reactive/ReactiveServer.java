@@ -1,5 +1,6 @@
 package choral.reactive;
 
+import choral.channels.Future;
 import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.connection.Message;
 import choral.reactive.connection.ServerConnectionManager;
@@ -77,7 +78,7 @@ public class ReactiveServer
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends Serializable> T recv(Session session) { // TODO profile this
+    public <T extends Serializable> Future<T> recv(Session session) {
         Attributes attributes = Attributes.builder().put("channel.service", serviceName)
                 .put("channel.sender", session.senderName()).build();
 
@@ -111,15 +112,17 @@ public class ReactiveServer
             }
         }
 
-        try {
-            return (T) future.get();
-        } catch (InterruptedException | ExecutionException e) {
-            telemetrySession.recordException("ReactiveServer exception when receiving message", e, true, attributes);
+        return () -> {
+            try {
+                return (T) future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                telemetrySession.recordException("ReactiveServer exception when receiving message", e, true, attributes);
 
-            // It's the responsibility of the choreography to have the type cast match
-            // Throw runtime exception if mismatch
-            throw new RuntimeException(e);
-        }
+                // It's the responsibility of the choreography to have the type cast match
+                // Throw runtime exception if mismatch
+                throw new RuntimeException(e);
+            }
+        };
     }
 
     public void registerSession(Session session, TelemetrySession telemetrySession) {
@@ -140,7 +143,7 @@ public class ReactiveServer
             telemetrySession = telemetrySessionMap.get(senderSession.sessionID());
         }
 
-        return new ReactiveChannel_B<Serializable>(senderSession, this, telemetrySession);
+        return new ReactiveChannel_B<>(senderSession, this, telemetrySession);
     }
 
     @Override

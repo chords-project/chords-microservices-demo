@@ -81,10 +81,10 @@ spec:
           resources:
             requests:
               cpu: 200m
-              memory: 250Mi
+              memory: 300Mi
             limits:
               cpu: 500m
-              memory: 300Mi
+              memory: 400Mi
         - name: frontend-server
           securityContext:
             allowPrivilegeEscalation: false

@@ -3,8 +3,8 @@ package choral.reactive;
 import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
+import choral.channels.Future;
 import choral.reactive.tracing.TelemetrySession;
 
 public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveReceiver<Object> {
@@ -52,7 +52,7 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T recv(Session session) {
+    public <T> Future<T> recv(Session session) {
         CompletableFuture<Object> future = new CompletableFuture<>();
 
         synchronized (this) {
@@ -70,13 +70,13 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
             }
         }
 
-        try {
-            return (T) future.get();
-        } catch (InterruptedException | ExecutionException e) {
-            // It's the responsibility of the choreography to have the type cast match
-            // Throw runtime exception if mismatch
-            throw new RuntimeException(e);
-        }
+        return () -> {
+            try {
+                return (T) future.get();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        };
     }
 
     // should synchronize on 'this' before calling this method

@@ -1,12 +1,13 @@
 package choral.reactive;
 
-import choral.channels.DiChannel_B;
+import choral.channels.AsyncDiChannel_B;
+import choral.channels.Future;
 import choral.lang.Unit;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 
-public class ReactiveChannel_B<M> implements DiChannel_B<M> {
+public class ReactiveChannel_B<M> implements AsyncDiChannel_B<M> {
     private final Session session;
     private final ReactiveReceiver<M> receiver;
     private final TelemetrySession telemetrySession;
@@ -19,14 +20,14 @@ public class ReactiveChannel_B<M> implements DiChannel_B<M> {
     }
 
     @Override
-    public <T extends M> T com() {
+    public <T extends M> Future<T> fcom() {
         Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel receive message")
                 .setAttribute("channel.session", session.toString())
                 .setAttribute("channel.receiver", receiver.toString())
                 .startSpan();
 
         try (Scope scope = span.makeCurrent()) {
-            T msg = receiver.<T>recv(session);
+            Future<T> msg = receiver.<T>recv(session);
             span.setAttribute("channel.message", msg.toString());
             return msg;
         } catch (Exception e) {
@@ -39,30 +40,30 @@ public class ReactiveChannel_B<M> implements DiChannel_B<M> {
     }
 
     @Override
-    public <T extends M> T com(Unit unit) {
-        return com();
+    public <T extends M> Future<T> fcom(Unit unit) {
+        return fcom();
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T extends Enum<T>> T select() {
-        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel receive select label")
-                .setAttribute("channel.session", session.toString())
-                .setAttribute("channel.receiver", receiver.toString())
-                .startSpan();
-
-        try (Scope scope = span.makeCurrent()) {
-            T msg = (T) receiver.<M>recv(session);
-            span.setAttribute("channel.label", msg.toString());
-            return msg;
-        } finally {
-            span.end();
-        }
-    }
-
-    @Override
-    public <T extends Enum<T>> T select(Unit unit) {
-        return select();
-    }
+//    @SuppressWarnings("unchecked")
+//    @Override
+//    public <T extends Enum<T>> T select() {
+//        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel receive select label")
+//                .setAttribute("channel.session", session.toString())
+//                .setAttribute("channel.receiver", receiver.toString())
+//                .startSpan();
+//
+//        try (Scope scope = span.makeCurrent()) {
+//            T msg = (T) receiver.<M>recv(session);
+//            span.setAttribute("channel.label", msg.toString());
+//            return msg;
+//        } finally {
+//            span.end();
+//        }
+//    }
+//
+//    @Override
+//    public <T extends Enum<T>> T select(Unit unit) {
+//        return select();
+//    }
 
 }

@@ -227,6 +227,9 @@ spec:
     - name: grpc
       port: 5000
       targetPort: 8080
+    - name: choral-sidecar
+      port: 5401
+      targetPort: 5401
   selector:
     app: emailservice
   type: ClusterIP
@@ -374,7 +377,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/adservice:sic-jss-268-g89174230@sha256:e2d2fb07f4f6b63997387c68da59595c280f467f8cd7b2da463370a78dcc4957
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/adservice:sic-jss-270-g90d1fe47@sha256:5ba0c34b4609648f40fa6d8bc12a5a843f4cf580f649e73e2eedbcfcce118ead
           livenessProbe:
             grpc:
               port: 9555
@@ -436,7 +439,7 @@ spec:
               value: shippingservice:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice-sidecar:sic-jss-268-g89174230@sha256:d923f71aeaefb941d180679ac34bcbf7d7e829effe8c7cbd0f7a54770ae0206e
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice-sidecar:sic-jss-270-g90d1fe47@sha256:6366119b64f0f319040be8906fc16c0e703b071130efa66e80ee9e2a227d7b3b
           livenessProbe:
             grpc:
               port: 5401
@@ -445,11 +448,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -469,7 +472,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice:sic-jss-268-g89174230@sha256:559d20308cecd435e3f680493a069337488829e671a096d353e0841051194a23
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice:sic-jss-270-g90d1fe47@sha256:1cac94116dc3e6c2b6ad1e1953c8ff54bc360cf62035d4220ef27a2c6af0f67d
           livenessProbe:
             grpc:
               port: 7070
@@ -539,7 +542,7 @@ spec:
               value: currencyservice:7000
             - name: CART_SERVICE_ADDR
               value: cartservice:7070
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/checkoutservice:sic-jss-268-g89174230@sha256:2e4fec56c86d279c3d0c096f3dfdd535a7dd1dcab7da7a619ca5e9a852403a04
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/checkoutservice:sic-jss-270-g90d1fe47@sha256:31ce7c84fbac62ca4cd5b5ab49851e7e98cd5dd2682833ade0245e561c7a5ae7
           livenessProbe:
             grpc:
               port: 5050
@@ -596,7 +599,7 @@ spec:
               value: frontend:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice-sidecar:sic-jss-268-g89174230@sha256:9872fd0d12a41ba9ddec54b818c00b937934394fd991c3d17a95e798babbf4d6
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice-sidecar:sic-jss-270-g90d1fe47@sha256:b3d74320da0d6aad84a2567a9b301f3b8597bf71ee0d4b6e159db7f5505d8e08
           livenessProbe:
             grpc:
               port: 5401
@@ -605,11 +608,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -631,7 +634,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice:sic-jss-268-g89174230@sha256:0cf854ad0b1452131c3d8e5b82229f4f83de1976696095671c5d7e1fbebd50ed
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice:sic-jss-270-g90d1fe47@sha256:f8b5b4409cdd4569cb901856f15a904e0dc2eadaf0a74578dd20bff6d3ac4fbc
           livenessProbe:
             grpc:
               port: 7000
@@ -641,10 +644,10 @@ spec:
               name: grpc
           resources:
             limits:
-              cpu: 200m
+              cpu: 300m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -686,6 +689,39 @@ spec:
     spec:
       containers:
         - env:
+            - name: CHORAL_EMAIL
+              value: 0.0.0.0:5401
+            - name: CHORAL_FRONTEND
+              value: frontend:5401
+            - name: JAEGER_ENDPOINT
+              value: http://jaeger-collector:4317
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice-sidecar:sic-jss-270-g90d1fe47@sha256:c4883259502a5f63fc0b0ced99962a7f15c9c659fe6563feeb93122c15fd0a45
+          livenessProbe:
+            grpc:
+              port: 5401
+          name: email-sidecar
+          ports:
+            - containerPort: 5401
+          resources:
+            limits:
+              cpu: 500m
+              memory: 300Mi
+            requests:
+              cpu: 200m
+              memory: 250Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+          startupProbe:
+            failureThreshold: 100
+            grpc:
+              port: 5401
+            initialDelaySeconds: 10
+            periodSeconds: 5
+        - env:
             - name: PORT
               value: "8080"
             - name: DISABLE_PROFILER
@@ -694,11 +730,11 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice:sic-jss-268-g89174230@sha256:836e63c64ce003cda0355afd2b8d24bee93a0f07de6e07475323e1eca99d6316
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice:sic-jss-270-g90d1fe47@sha256:8271654381fc2bab4f39c1cefff74948963336644057d7b8ae0df9c5e2ae0b29
           livenessProbe:
             grpc:
               port: 8080
-          name: server
+          name: email-server
           ports:
             - containerPort: 8080
           resources:
@@ -706,7 +742,7 @@ spec:
               cpu: 200m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -756,11 +792,13 @@ spec:
               value: shippingservice:5401
             - name: CHORAL_PAYMENT
               value: paymentservice:5401
+            - name: CHORAL_EMAIL
+              value: emailservice:5401
             - name: CHORAL_FRONTEND
               value: 0.0.0.0:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend-sidecar:sic-jss-268-g89174230@sha256:6abc0bbe85ea371618bcd83d463188f90ec847a581217b9619d298e73afccafe
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend-sidecar:sic-jss-270-g90d1fe47@sha256:fda58989b08d9f8b88961d8e1d4b069a17cb349b1580cc79dcf1a3ca455ae3d8
           livenessProbe:
             httpGet:
               path: /ping
@@ -770,11 +808,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -813,7 +851,7 @@ spec:
               value: shoppingassistantservice:80
             - name: ENABLE_PROFILER
               value: "0"
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend:sic-jss-268-g89174230@sha256:18cc3ae93978fcbd50821ce063ad88d9f2894b852e64b49188783cb2ea61730d
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend:sic-jss-270-g90d1fe47@sha256:08f82abb8f94133c07f04042ab716ba0e3b9ad76215ebbfa52edce37d9df44a3
           livenessProbe:
             httpGet:
               httpHeaders:
@@ -879,7 +917,7 @@ spec:
               value: frontend:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice-sidecar:sic-jss-268-g89174230@sha256:155390b79e8a6b546c7e8e2ab1aaa0e05c76729743906c33627f1f6c92c6d0e4
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice-sidecar:sic-jss-270-g90d1fe47@sha256:17041e5f4e63767921ecbfb0feeb562930e83e56192848f0fd54b61ab79388b6
           livenessProbe:
             grpc:
               port: 5401
@@ -888,11 +926,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -914,7 +952,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice:sic-jss-268-g89174230@sha256:0bd6364b358646be3e3b506be3125cfff9bbfe74e307f5f315f21af0396c9404
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice:sic-jss-270-g90d1fe47@sha256:e8b039f2535261589da47d996468d658508d8d6364d03c5d1e4cb07cda2b48c5
           livenessProbe:
             grpc:
               port: 50051
@@ -926,7 +964,7 @@ spec:
               cpu: 200m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -972,7 +1010,7 @@ spec:
               value: currencyservice:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalog-sidecar:sic-jss-268-g89174230@sha256:8289cef91866300569378cab6faec8afddefd20af00b51c949664048ef510bd5
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalog-sidecar:sic-jss-270-g90d1fe47@sha256:adef8fb57d62f31989d197a0161835c457703201413d52e3576a499b0df4c750
           livenessProbe:
             grpc:
               port: 5401
@@ -981,11 +1019,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -1007,7 +1045,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalogservice:sic-jss-268-g89174230@sha256:46ce8940084872889a8f09f020b41086db42205c01cef108855bdd5580730cd7
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalogservice:sic-jss-270-g90d1fe47@sha256:6501f15b39170622ab164a57b3e3d6449fbf4206d6bfab571c1d6026c7f821df
           livenessProbe:
             grpc:
               port: 3550
@@ -1071,7 +1109,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/recommendationservice:sic-jss-268-g89174230@sha256:2c60cd32c0e9892dedef836302216a2cf050c7e39c6da7a35d3b2402f2bd167f
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/recommendationservice:sic-jss-270-g90d1fe47@sha256:c39830a2117b01fa561a4298d2b6cf658d6bc62512be730171c552266b48e676
           livenessProbe:
             grpc:
               port: 8080
@@ -1185,7 +1223,7 @@ spec:
               value: currencyservice:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice-sidecar:sic-jss-268-g89174230@sha256:b1ed47c93662bf42b551da28569fa135dd2d5e112cc19efc5761c887790c9f79
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice-sidecar:sic-jss-270-g90d1fe47@sha256:aaa6ae538f5a5d5840ab7f4cc934883574c93ffd6979ea99166b6869268f0be7
           livenessProbe:
             grpc:
               port: 5401
@@ -1194,11 +1232,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -1220,7 +1258,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice:sic-jss-268-g89174230@sha256:a8db0a74b7346f37483a640ac9cec23b6f71fafd2fb734562567c2ef4ea02158
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice:sic-jss-270-g90d1fe47@sha256:94898c600e562f7140a6877eeb645a739cdcfd314b614c94f633c63dd10d5af0
           livenessProbe:
             grpc:
               port: 50051
@@ -1232,7 +1270,7 @@ spec:
               cpu: 200m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -1483,6 +1521,9 @@ spec:
     - name: grpc
       port: 5000
       targetPort: 8080
+    - name: choral-sidecar
+      port: 5401
+      targetPort: 5401
   selector:
     app: emailservice
   type: ClusterIP
@@ -1630,7 +1671,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/adservice:sic-jss-268-g89174230@sha256:e2d2fb07f4f6b63997387c68da59595c280f467f8cd7b2da463370a78dcc4957
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/adservice:sic-jss-270-g90d1fe47@sha256:5ba0c34b4609648f40fa6d8bc12a5a843f4cf580f649e73e2eedbcfcce118ead
           livenessProbe:
             grpc:
               port: 9555
@@ -1692,7 +1733,7 @@ spec:
               value: shippingservice:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice-sidecar:sic-jss-268-g89174230@sha256:d923f71aeaefb941d180679ac34bcbf7d7e829effe8c7cbd0f7a54770ae0206e
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice-sidecar:sic-jss-270-g90d1fe47@sha256:6366119b64f0f319040be8906fc16c0e703b071130efa66e80ee9e2a227d7b3b
           livenessProbe:
             grpc:
               port: 5401
@@ -1701,11 +1742,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -1725,7 +1766,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice:sic-jss-268-g89174230@sha256:559d20308cecd435e3f680493a069337488829e671a096d353e0841051194a23
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice:sic-jss-270-g90d1fe47@sha256:1cac94116dc3e6c2b6ad1e1953c8ff54bc360cf62035d4220ef27a2c6af0f67d
           livenessProbe:
             grpc:
               port: 7070
@@ -1795,7 +1836,7 @@ spec:
               value: currencyservice:7000
             - name: CART_SERVICE_ADDR
               value: cartservice:7070
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/checkoutservice:sic-jss-268-g89174230@sha256:2e4fec56c86d279c3d0c096f3dfdd535a7dd1dcab7da7a619ca5e9a852403a04
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/checkoutservice:sic-jss-270-g90d1fe47@sha256:31ce7c84fbac62ca4cd5b5ab49851e7e98cd5dd2682833ade0245e561c7a5ae7
           livenessProbe:
             grpc:
               port: 5050
@@ -1852,7 +1893,7 @@ spec:
               value: frontend:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice-sidecar:sic-jss-268-g89174230@sha256:9872fd0d12a41ba9ddec54b818c00b937934394fd991c3d17a95e798babbf4d6
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice-sidecar:sic-jss-270-g90d1fe47@sha256:b3d74320da0d6aad84a2567a9b301f3b8597bf71ee0d4b6e159db7f5505d8e08
           livenessProbe:
             grpc:
               port: 5401
@@ -1861,11 +1902,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -1887,7 +1928,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice:sic-jss-268-g89174230@sha256:0cf854ad0b1452131c3d8e5b82229f4f83de1976696095671c5d7e1fbebd50ed
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice:sic-jss-270-g90d1fe47@sha256:f8b5b4409cdd4569cb901856f15a904e0dc2eadaf0a74578dd20bff6d3ac4fbc
           livenessProbe:
             grpc:
               port: 7000
@@ -1897,10 +1938,10 @@ spec:
               name: grpc
           resources:
             limits:
-              cpu: 200m
+              cpu: 300m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -1942,6 +1983,39 @@ spec:
     spec:
       containers:
         - env:
+            - name: CHORAL_EMAIL
+              value: 0.0.0.0:5401
+            - name: CHORAL_FRONTEND
+              value: frontend:5401
+            - name: JAEGER_ENDPOINT
+              value: http://jaeger-collector:4317
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice-sidecar:sic-jss-270-g90d1fe47@sha256:c4883259502a5f63fc0b0ced99962a7f15c9c659fe6563feeb93122c15fd0a45
+          livenessProbe:
+            grpc:
+              port: 5401
+          name: email-sidecar
+          ports:
+            - containerPort: 5401
+          resources:
+            limits:
+              cpu: 500m
+              memory: 300Mi
+            requests:
+              cpu: 200m
+              memory: 250Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+          startupProbe:
+            failureThreshold: 100
+            grpc:
+              port: 5401
+            initialDelaySeconds: 10
+            periodSeconds: 5
+        - env:
             - name: PORT
               value: "8080"
             - name: DISABLE_PROFILER
@@ -1950,11 +2024,11 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice:sic-jss-268-g89174230@sha256:836e63c64ce003cda0355afd2b8d24bee93a0f07de6e07475323e1eca99d6316
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice:sic-jss-270-g90d1fe47@sha256:8271654381fc2bab4f39c1cefff74948963336644057d7b8ae0df9c5e2ae0b29
           livenessProbe:
             grpc:
               port: 8080
-          name: server
+          name: email-server
           ports:
             - containerPort: 8080
           resources:
@@ -1962,7 +2036,7 @@ spec:
               cpu: 200m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -2012,11 +2086,13 @@ spec:
               value: shippingservice:5401
             - name: CHORAL_PAYMENT
               value: paymentservice:5401
+            - name: CHORAL_EMAIL
+              value: emailservice:5401
             - name: CHORAL_FRONTEND
               value: 0.0.0.0:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend-sidecar:sic-jss-268-g89174230@sha256:6abc0bbe85ea371618bcd83d463188f90ec847a581217b9619d298e73afccafe
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend-sidecar:sic-jss-270-g90d1fe47@sha256:fda58989b08d9f8b88961d8e1d4b069a17cb349b1580cc79dcf1a3ca455ae3d8
           livenessProbe:
             httpGet:
               path: /ping
@@ -2026,11 +2102,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2069,7 +2145,7 @@ spec:
               value: shoppingassistantservice:80
             - name: ENABLE_PROFILER
               value: "0"
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend:sic-jss-268-g89174230@sha256:18cc3ae93978fcbd50821ce063ad88d9f2894b852e64b49188783cb2ea61730d
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend:sic-jss-270-g90d1fe47@sha256:08f82abb8f94133c07f04042ab716ba0e3b9ad76215ebbfa52edce37d9df44a3
           livenessProbe:
             httpGet:
               httpHeaders:
@@ -2135,7 +2211,7 @@ spec:
               value: frontend:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice-sidecar:sic-jss-268-g89174230@sha256:155390b79e8a6b546c7e8e2ab1aaa0e05c76729743906c33627f1f6c92c6d0e4
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice-sidecar:sic-jss-270-g90d1fe47@sha256:17041e5f4e63767921ecbfb0feeb562930e83e56192848f0fd54b61ab79388b6
           livenessProbe:
             grpc:
               port: 5401
@@ -2144,11 +2220,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2170,7 +2246,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice:sic-jss-268-g89174230@sha256:0bd6364b358646be3e3b506be3125cfff9bbfe74e307f5f315f21af0396c9404
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice:sic-jss-270-g90d1fe47@sha256:e8b039f2535261589da47d996468d658508d8d6364d03c5d1e4cb07cda2b48c5
           livenessProbe:
             grpc:
               port: 50051
@@ -2182,7 +2258,7 @@ spec:
               cpu: 200m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -2228,7 +2304,7 @@ spec:
               value: currencyservice:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalog-sidecar:sic-jss-268-g89174230@sha256:8289cef91866300569378cab6faec8afddefd20af00b51c949664048ef510bd5
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalog-sidecar:sic-jss-270-g90d1fe47@sha256:adef8fb57d62f31989d197a0161835c457703201413d52e3576a499b0df4c750
           livenessProbe:
             grpc:
               port: 5401
@@ -2237,11 +2313,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2263,7 +2339,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalogservice:sic-jss-268-g89174230@sha256:46ce8940084872889a8f09f020b41086db42205c01cef108855bdd5580730cd7
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalogservice:sic-jss-270-g90d1fe47@sha256:6501f15b39170622ab164a57b3e3d6449fbf4206d6bfab571c1d6026c7f821df
           livenessProbe:
             grpc:
               port: 3550
@@ -2327,7 +2403,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/recommendationservice:sic-jss-268-g89174230@sha256:2c60cd32c0e9892dedef836302216a2cf050c7e39c6da7a35d3b2402f2bd167f
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/recommendationservice:sic-jss-270-g90d1fe47@sha256:c39830a2117b01fa561a4298d2b6cf658d6bc62512be730171c552266b48e676
           livenessProbe:
             grpc:
               port: 8080
@@ -2441,7 +2517,7 @@ spec:
               value: currencyservice:5401
             - name: JAEGER_ENDPOINT
               value: http://jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice-sidecar:sic-jss-268-g89174230@sha256:b1ed47c93662bf42b551da28569fa135dd2d5e112cc19efc5761c887790c9f79
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice-sidecar:sic-jss-270-g90d1fe47@sha256:aaa6ae538f5a5d5840ab7f4cc934883574c93ffd6979ea99166b6869268f0be7
           livenessProbe:
             grpc:
               port: 5401
@@ -2450,11 +2526,11 @@ spec:
             - containerPort: 5401
           resources:
             limits:
-              cpu: 300m
+              cpu: 500m
               memory: 300Mi
             requests:
-              cpu: 100m
-              memory: 180Mi
+              cpu: 200m
+              memory: 250Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -2476,7 +2552,7 @@ spec:
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
               value: jaeger-collector:4317
-          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice:sic-jss-268-g89174230@sha256:a8db0a74b7346f37483a640ac9cec23b6f71fafd2fb734562567c2ef4ea02158
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice:sic-jss-270-g90d1fe47@sha256:94898c600e562f7140a6877eeb645a739cdcfd314b614c94f633c63dd10d5af0
           livenessProbe:
             grpc:
               port: 50051
@@ -2488,7 +2564,7 @@ spec:
               cpu: 200m
               memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -2535,7 +2611,7 @@ spec:
               value: frontend:80
             - name: USERS
               value: "10"
-          image: loadgenerator
+          image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/loadgenerator:sic-jss-270-g90d1fe47@sha256:16c7067e4b6ed9cddb57dc3f3331d285ed7139891613e3bf5a98d2efef5877b6
           name: main
           ports:
             - containerPort: 8089
@@ -2545,7 +2621,7 @@ spec:
               cpu: 500m
               memory: 512Mi
             requests:
-              cpu: 300m
+              cpu: 400m
               memory: 256Mi
           securityContext:
             allowPrivilegeEscalation: false

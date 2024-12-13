@@ -30,8 +30,8 @@ public class ConnectionTest {
             stats.receivedSession = ctx.session;
             stats.newSessionCount++;
 
-            stats.firstMsg = ctx.chanB("client").com();
-            stats.secondMsg = ctx.chanB("client").com();
+            stats.firstMsg = ctx.chanB("client").<String>fcom().get();
+            stats.secondMsg = ctx.chanB("client").<String>fcom().get();
             done.countDown();
         });
 
@@ -52,8 +52,8 @@ public class ConnectionTest {
                 stats.clientSessionID = session.sessionID;
 
                 var chan = client.chanA(session);
-                chan.com("hello");
-                chan.com("world");
+                chan.fcom("hello");
+                chan.fcom("world");
 
                 // Wait for server to handle messages before closing
                 boolean finished = done.await(5, TimeUnit.SECONDS);

@@ -1,10 +1,9 @@
 package choral.reactive;
 
-import choral.channels.SymChannel_A;
-import choral.channels.SymChannel_B;
+import choral.channels.*;
 import choral.lang.Unit;
 
-public class ReactiveSymChannel<M> implements SymChannel_A<M>, SymChannel_B<M> {
+public class ReactiveSymChannel<M> implements AsyncSymChannel_A<M>, AsyncSymChannel_B<M> {
 
     private ReactiveChannel_A<M> chanA;
     private ReactiveChannel_B<M> chanB;
@@ -15,33 +14,33 @@ public class ReactiveSymChannel<M> implements SymChannel_A<M>, SymChannel_B<M> {
     }
 
     @Override
-    public <T extends M> Unit com(T msg) {
-        return chanA.com(msg);
+    public <T extends M> Unit fcom(T msg) {
+        return chanA.fcom(msg);
+    }
+
+//    @Override
+//    public <T extends Enum<T>> Unit select(T msg) {
+//        return chanA.select(msg);
+//    }
+
+    @Override
+    public <T extends M> Future<T> fcom() {
+        return chanB.fcom();
     }
 
     @Override
-    public <T extends Enum<T>> Unit select(T msg) {
-        return chanA.select(msg);
+    public <T extends M> Future<T> fcom(Unit unit) {
+        return fcom();
     }
 
-    @Override
-    public <T extends M> T com() {
-        return chanB.com();
-    }
+//    @Override
+//    public <T extends Enum<T>> T select() {
+//        return chanB.select();
+//    }
 
-    @Override
-    public <T extends M> T com(Unit arg0) {
-        return com();
-    }
-
-    @Override
-    public <T extends Enum<T>> T select() {
-        return chanB.select();
-    }
-
-    @Override
-    public <T extends Enum<T>> T select(Unit arg0) {
-        return select();
-    }
+//    @Override
+//    public <T extends Enum<T>> T select(Unit unit) {
+//        return select();
+//    }
 
 }

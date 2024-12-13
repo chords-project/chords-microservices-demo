@@ -1,8 +1,10 @@
 package choral.reactive;
 
+import choral.channels.Future;
+
 public interface ReactiveReceiver<M> {
     /**
-     * Waits (if necessary) for a message to arrive for the given Session, and returns the message.
+     * Registers for the next message to arrive for the given Session, and returns a Future for the result.
      */
-    public <T extends M> T recv(Session session);
+    public <T extends M> Future<T> recv(Session session);
 }
