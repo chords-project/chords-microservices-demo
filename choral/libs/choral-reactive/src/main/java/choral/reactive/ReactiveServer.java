@@ -4,9 +4,11 @@ import choral.channels.Future;
 import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.connection.Message;
 import choral.reactive.connection.ServerConnectionManager;
+import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.io.IOException;
@@ -17,7 +19,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 public class ReactiveServer
         implements ServerConnectionManager.ServerEvents, ReactiveReceiver<Serializable>, AutoCloseable {
@@ -29,10 +30,8 @@ public class ReactiveServer
     // 2. if sendQueue is non-empty, then recvQueue is empty; and vice versa.
     // 3. if a sessionID is in knownSessionIDs, then the session is in telemetrySessionMap.
 
-    /** Maps a sessionID and a sender name to a queue of messages. The next receive operation will consume the first message in the queue. */
-    private final HashMap<Session, LinkedList<Serializable>> sendQueue = new HashMap<>();
-    /** Maps a sessionID and a sender name to a queue of futures. The next message will be fed to the first future in the list. */
-    private final HashMap<Session, LinkedList<CompletableFuture<Serializable>>> recvQueue = new HashMap<>();
+    private final MessageQueue<Serializable> msgQueue = new MessageQueue<>();
+
     /** Maps a sessionID to a TelemetrySession. */
     private final HashMap<Integer, TelemetrySession> telemetrySessionMap = new HashMap<>();
 
@@ -79,48 +78,40 @@ public class ReactiveServer
     @SuppressWarnings("unchecked")
     @Override
     public <T extends Serializable> Future<T> recv(Session session) {
-        Attributes attributes = Attributes.builder().put("channel.service", serviceName)
-                .put("channel.sender", session.senderName()).build();
+        Attributes attributes = Attributes.builder()
+            .put("channel.service", serviceName)
+            .put("channel.sender", session.senderName())
+            .put("channel.sessionID", session.sessionID)
+            .build();
+
+        Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
+            .spanBuilder("Receive message")
+            .setAllAttributes(attributes)
+            .startSpan();
 
         TelemetrySession telemetrySession;
-        CompletableFuture<Serializable> future = new CompletableFuture<Serializable>()
-                .orTimeout(10, TimeUnit.SECONDS);
-                // TODO Do we want this timeout? What happens if the sender takes >10s to compute the message?
-                //  Maybe the timeout is a parameter we pass *for each session*?
-
         synchronized (this) {
             telemetrySession = telemetrySessionMap.get(session.sessionID());
-
-            if (this.sendQueue.containsKey(session)) {
-                // Session already exists, receive message from sender...
-
-                if (this.sendQueue.get(session).isEmpty()) {
-                    telemetrySession.log(
-                            "ReactiveServer receive, session already exists, waiting for message to arrive",
-                            attributes);
-                    this.recvQueue.get(session).add(future);
-                } else {
-                    telemetrySession.log("ReactiveServer receive, message already arrived", attributes);
-                    future.complete(this.sendQueue.get(session).removeFirst());
-                }
-            } else {
-                // Session does not exist yet, wait for it to arrive...
-                telemetrySession.log(
-                        "ReactiveServer receive, session does not exist yet, waiting for message to arrive",
-                        attributes);
-                enqueueRecv(session, future);
-            }
         }
+
+        var future = msgQueue.retrieveMessage(session, telemetrySession);
 
         return () -> {
             try {
-                return (T) future.get();
+                T message = (T) future.get();
+                span.setAttribute("message", message.toString());
+                return message;
             } catch (InterruptedException | ExecutionException e) {
                 telemetrySession.recordException("ReactiveServer exception when receiving message", e, true, attributes);
+                span.recordException(e);
+                span.setAttribute("error", true);
 
                 // It's the responsibility of the choreography to have the type cast match
                 // Throw runtime exception if mismatch
                 throw new RuntimeException(e);
+            } finally {
+                // End span on first call to .get()
+                span.end();
             }
         };
     }
@@ -166,22 +157,7 @@ public class ReactiveServer
                 telemetrySession = telemetrySessionMap.get(msg.session.sessionID());
             }
 
-            if (this.recvQueue.containsKey(msg.session)) {
-                // the session already exists, pass the message to recv...
-
-                if (this.recvQueue.get(msg.session).isEmpty()) {
-                    telemetrySession.log("ReactiveServer message received: existing session, enqueue send");
-                    enqueueSend(msg.session, msg.message);
-                } else {
-                    telemetrySession.log("ReactiveServer message received: complete receive future");
-                    CompletableFuture<Serializable> future = this.recvQueue.get(msg.session).removeFirst();
-                    future.complete(msg.message);
-                }
-            } else {
-                // this is a new session, enqueue the message
-                telemetrySession.log("ReactiveServer message received: new session, enqueue send");
-                enqueueSend(msg.session, msg.message);
-            }
+            msgQueue.addMessage(msg.session, msg.message, msg.sequenceNumber, telemetrySession);
 
             if (isNewSession) {
                 final Span span = sessionSpan;
@@ -217,30 +193,9 @@ public class ReactiveServer
         }
     }
 
-    // should synchronize on 'this' before calling this method
-    private void enqueueSend(Session session, Serializable msg) {
-        if (!this.sendQueue.containsKey(session)) {
-            this.sendQueue.put(session, new LinkedList<>());
-            this.recvQueue.put(session, new LinkedList<>());
-        }
-
-        this.sendQueue.get(session).add(msg);
-    }
-
-    // should synchronize on 'this' before calling this method
-    private void enqueueRecv(Session session, CompletableFuture<Serializable> future) {
-        if (!this.recvQueue.containsKey(session)) {
-            this.recvQueue.put(session, new LinkedList<>());
-            this.sendQueue.put(session, new LinkedList<>());
-        }
-
-        this.recvQueue.get(session).add(future);
-    }
-
     private void cleanupKey(Session session) {
         synchronized (this) {
-            this.sendQueue.remove(session);
-            this.recvQueue.remove(session);
+            this.msgQueue.cleanupSession(session);
             this.telemetrySessionMap.remove(session.sessionID());
             this.knownSessionIDs.remove(session.sessionID());
         }

@@ -4,8 +4,6 @@ import choral.channels.AsyncDiChannel_B;
 import choral.channels.Future;
 import choral.lang.Unit;
 import choral.reactive.tracing.TelemetrySession;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 
 public class ReactiveChannel_B<M> implements AsyncDiChannel_B<M> {
     private final Session session;
@@ -21,22 +19,7 @@ public class ReactiveChannel_B<M> implements AsyncDiChannel_B<M> {
 
     @Override
     public <T extends M> Future<T> fcom() {
-        Span span = telemetrySession.tracer.spanBuilder("ReactiveChannel receive message")
-                .setAttribute("channel.session", session.toString())
-                .setAttribute("channel.receiver", receiver.toString())
-                .startSpan();
-
-        try (Scope scope = span.makeCurrent()) {
-            Future<T> msg = receiver.<T>recv(session);
-            span.setAttribute("channel.message", msg.toString());
-            return msg;
-        } catch (Exception e) {
-            span.setAttribute("error", true);
-            span.recordException(e);
-            throw e;
-        } finally {
-            span.end();
-        }
+        return receiver.recv(session);
     }
 
     @Override

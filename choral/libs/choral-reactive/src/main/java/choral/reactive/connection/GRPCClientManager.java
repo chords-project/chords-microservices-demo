@@ -1,21 +1,21 @@
 package choral.reactive.connection;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.concurrent.*;
-
 import choral.reactive.tracing.JaegerConfiguration;
 import choral_reactive.ChannelGrpc;
 import choral_reactive.ChannelGrpc.ChannelFutureStub;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.protobuf.Empty;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class GRPCClientManager implements ClientConnectionManager {
 
@@ -70,12 +70,23 @@ public class GRPCClientManager implements ClientConnectionManager {
                             .put("address", address)
                             .build());
 
-            try {
-                futureStub.sendMessage(msg.toGrpcMessage()).get(10, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                connectionSpan.setAttribute("error", true);
-                connectionSpan.recordException(e);
-                throw e;
+            Span sendSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
+                .spanBuilder("GRPC async send message").startSpan();
+
+            try (Scope scope = sendSpan.makeCurrent()) {
+                var result = futureStub.sendMessage(msg.toGrpcMessage());
+                    //.get(10, TimeUnit.SECONDS);
+
+                result.addListener(() -> {
+                    try {
+                        result.get();
+                    } catch (Exception e) {
+                        sendSpan.setAttribute("error", e.getMessage());
+                        sendSpan.recordException(e);
+                    } finally {
+                        sendSpan.end();
+                    }
+                }, Executors.newSingleThreadExecutor());
             }
         }
 

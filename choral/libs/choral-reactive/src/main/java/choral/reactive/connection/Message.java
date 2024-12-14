@@ -21,13 +21,15 @@ public class Message implements Serializable {
 
     public final Session session;
     public final Serializable message;
+    public final int sequenceNumber;
 
     public final HashMap<String, String> headers;
     public SerializedSpanContext senderSpanContext;
 
-    public Message(Session session, Serializable message) {
+    public Message(Session session, Serializable message, int sequenceNumber) {
         this.session = session;
         this.message = message;
+        this.sequenceNumber = sequenceNumber;
         this.headers = new HashMap<>();
     }
 
@@ -68,6 +70,7 @@ public class Message implements Serializable {
     public Message(ChannelOuterClass.Message grpcMessage) throws Exception {
         this.session = new Session(grpcMessage.getChoreography(), grpcMessage.getSender(), grpcMessage.getSessionId());
         this.headers = new HashMap<>(grpcMessage.getHeadersMap());
+        this.sequenceNumber = grpcMessage.getSequenceNumber();
 
         ByteArrayInputStream stream = new ByteArrayInputStream(grpcMessage.getPayload().toByteArray());
         ObjectInputStream ois = new ObjectInputStream(stream);
@@ -88,6 +91,7 @@ public class Message implements Serializable {
         return ChannelOuterClass.Message.newBuilder()
                 .setChoreography(this.session.choreographyName())
                 .setSender(this.session.senderName())
+                .setSequenceNumber(this.sequenceNumber)
                 .setSessionId(this.session.sessionID())
                 .setPayload(ByteString.copyFrom(buf.toByteArray()))
                 .putAllHeaders(this.headers)

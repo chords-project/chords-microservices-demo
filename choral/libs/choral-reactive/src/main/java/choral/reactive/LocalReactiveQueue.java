@@ -1,5 +1,6 @@
 package choral.reactive;
 
+import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -13,9 +14,9 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
         void onNewSession(Session session);
     }
 
-    private final HashMap<Session, LinkedList<Object>> sendQueue = new HashMap<>();
-    private final HashMap<Session, LinkedList<CompletableFuture<Object>>> recvQueue = new HashMap<>();
+    private final MessageQueue<Object> msgQueue = new MessageQueue<>();
     private NewSessionEvent newSessionEvent = null;
+    private final HashMap<Session, Integer> nextSequenceNumber = new HashMap<>();
 
     public LocalReactiveQueue() {
     }
@@ -26,49 +27,15 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
 
     @Override
     public void send(Session session, Object msg) {
-        synchronized (this) {
-            if (this.recvQueue.containsKey(session)) {
-                // the flow already exists, pass the message to recv...
-
-                if (this.recvQueue.get(session).isEmpty()) {
-                    enqueueSend(session, msg);
-                } else {
-                    CompletableFuture<Object> future = this.recvQueue.get(session).removeFirst();
-                    future.complete(msg);
-                }
-            } else {
-                // this is a new flow, enqueue the message and notify the event handler
-                enqueueSend(session, msg);
-
-                // Handle new session in the background
-
-                Thread.ofVirtual().start(() -> {
-                    newSessionEvent.onNewSession(session);
-                    cleanupKey(session);
-                });
-            }
-        }
+        nextSequenceNumber.put(session, nextSequenceNumber.getOrDefault(session, 0) + 1);
+        int sequenceNumber = nextSequenceNumber.get(session);
+        msgQueue.addMessage(session, msg, sequenceNumber, TelemetrySession.makeNoop(session));
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> Future<T> recv(Session session) {
-        CompletableFuture<Object> future = new CompletableFuture<>();
-
-        synchronized (this) {
-            if (this.sendQueue.containsKey(session)) {
-                // Session already exists, receive message from send...
-
-                if (this.sendQueue.get(session).isEmpty()) {
-                    this.recvQueue.get(session).add(future);
-                } else {
-                    future.complete(this.sendQueue.get(session).removeFirst());
-                }
-            } else {
-                // Session does not exist yet, wait for it to arrive...
-                enqueueRecv(session, future);
-            }
-        }
+        var future = this.msgQueue.retrieveMessage(session, TelemetrySession.makeNoop(session));
 
         return () -> {
             try {
@@ -77,33 +44,6 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
                 throw new RuntimeException(e);
             }
         };
-    }
-
-    // should synchronize on 'this' before calling this method
-    private void enqueueSend(Session session, Object msg) {
-        if (!this.sendQueue.containsKey(session)) {
-            this.sendQueue.put(session, new LinkedList<>());
-            this.recvQueue.put(session, new LinkedList<>());
-        }
-
-        this.sendQueue.get(session).add(msg);
-    }
-
-    // should synchronize on 'this' before calling this method
-    private void enqueueRecv(Session session, CompletableFuture<Object> future) {
-        if (!this.recvQueue.containsKey(session)) {
-            this.recvQueue.put(session, new LinkedList<>());
-            this.sendQueue.put(session, new LinkedList<>());
-        }
-
-        this.recvQueue.get(session).add(future);
-    }
-
-    private void cleanupKey(Session session) {
-        synchronized (this) {
-            this.sendQueue.remove(session);
-            this.recvQueue.remove(session);
-        }
     }
 
     @Override

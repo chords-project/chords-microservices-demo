@@ -11,10 +11,11 @@ service Channel {
 message Message {
   string choreography = 1;
   string sender = 2;
-  int32 session_id = 3;
-  bytes payload = 4;
-  map<string, string> headers = 5;
-  SpanContext span_context = 6;
+  int32 sequence_number = 3;
+  int32 session_id = 4;
+  bytes payload = 5;
+  map<string, string> headers = 6;
+  SpanContext span_context = 7;
 }
 
 message SpanContext {
