@@ -34,6 +34,17 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         runAsUser: 1000
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - us-central1-a
+                      - us-central1-b
+                      - us-central1-c
       containers:
       - name: currency-sidecar
         securityContext:
@@ -70,11 +81,11 @@ spec:
             port: 5401
         resources:
           requests:
-            cpu: 200m
-            memory: 250Mi
+            cpu: 300m
+            memory: 200Mi
           limits:
-            cpu: 500m
-            memory: 300Mi
+            cpu: 1000m
+            memory: 800Mi
       - name: currency-server
         securityContext:
           allowPrivilegeEscalation: false
@@ -108,11 +119,11 @@ spec:
             port: 7000
         resources:
           requests:
-            cpu: 100m
-            memory: 64Mi
-          limits:
             cpu: 300m
-            memory: 128Mi
+            memory: 200Mi
+          limits:
+            cpu: 1000m
+            memory: 800Mi
 ---
 apiVersion: v1
 kind: Service

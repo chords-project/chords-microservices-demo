@@ -34,6 +34,17 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "16686"
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - us-central1-a
+                      - us-central1-b
+                      - us-central1-c
       containers:
         - name: jaeger
           env:
@@ -51,11 +62,11 @@ spec:
               port: 16686
           resources:
             requests:
-              cpu: 50m
-              memory: 180Mi
+              cpu: 300m
+              memory: 600Mi
             limits:
-              cpu: 200m
-              memory: 300Mi
+              cpu: 1000m
+              memory: 800Mi
 ---
 apiVersion: v1
 kind: Service

@@ -65,7 +65,7 @@ def empty_cart(l):
 def checkout(l):
     addToCart(l)
     current_year = datetime.datetime.now().year+1
-    l.client.post("/cart/checkout", {
+    l.client.post("/cart/checkout/choreography", {
         'email': fake.email(),
         'street_address': fake.street_address(),
         'zip_code': fake.zipcode(),
@@ -82,41 +82,20 @@ def checkout(l):
 def logout(l):
     l.client.get('/logout')
 
-# class UserBehavior(TaskSet):
-
-#     def on_start(self):
-#         index(self)
-
-#     tasks = {
-#         index: 1,
-#         setCurrency: 2,
-#         browseProduct: 10,
-#         addToCart: 2,
-#         viewCart: 3,
-#         checkout: 1
-#     }
-
-
-class CheckoutBehaviour(TaskSet):
-
-    def on_start(self):
-        index(self)
-
-    @task
-    def checkout_flow(self):
-        setCurrency(self)
+def checkout_flow(l, checkout_endpoint):
+        #setCurrency(l)
 
         # Add products to cart
-        max_products = random.randrange(2, len(products))
+        max_products = random.randrange(1, 4)
         buy_products = random.sample(products, max_products)
         for product in buy_products:
-            self.client.post("/cart", {
+            l.client.post("/cart", {
                 'product_id': product,
                 'quantity': random.randint(1, 10)})
 
         # Checkout
         current_year = datetime.datetime.now().year+1
-        self.client.post("/cart/checkout", {
+        l.client.post(checkout_endpoint, {
             'email': fake.email(),
             'street_address': fake.street_address(),
             'zip_code': fake.zipcode(),
@@ -129,12 +108,46 @@ class CheckoutBehaviour(TaskSet):
             'credit_card_cvv': f"{random.randint(100, 999)}",
         })
 
+class UserBehavior(TaskSet):
 
-class WebsiteUser(FastHttpUser):
-    tasks = [
-        # UserBehavior
-        CheckoutBehaviour
-    ]
+    def on_start(self):
+        index(self)
+        setCurrency(self)
 
-    wait_time = constant_pacing(5)
-    # wait_time = between(1, 5)
+    tasks = {
+        index: 1,
+        setCurrency: 2,
+        browseProduct: 10,
+        addToCart: 2,
+        viewCart: 3,
+        checkout: 1
+    }
+
+
+class OrchestratedCheckout(TaskSet):
+
+    def on_start(self):
+        index(self)
+
+    @task
+    def checkout(self):
+        checkout_flow(self, "/cart/checkout/orchestrator")
+
+class ChoreographicCheckout(TaskSet):
+
+    def on_start(self):
+        index(self)
+
+    @task
+    def checkout(self):
+        checkout_flow(self, "/cart/checkout/choreography")
+
+class OrchestratedCheckoutUser(FastHttpUser):
+    tasks = [OrchestratedCheckout]
+    # wait_time = constant_pacing(5)
+    wait_time = between(1, 5)
+
+class ChoreographicCheckoutUser(FastHttpUser):
+    tasks = [ChoreographicCheckout]
+    # wait_time = constant_pacing(5)
+    wait_time = between(1, 5)
