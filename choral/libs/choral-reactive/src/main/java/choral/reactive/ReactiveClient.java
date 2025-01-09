@@ -32,7 +32,7 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
     public void send(Session session, Serializable msg) {
         Session newSession = session.replacingSender(serviceName);
 
-        Span span = telemetrySession.tracer.spanBuilder("ReactiveClient send message")
+        Span span = telemetrySession.tracer.spanBuilder("Send message ("+connection+")")
                 .setAttribute("channel.session", newSession.toString())
                 .setAttribute("channel.message", msg.toString())
                 .setAttribute("channel.connection", connection.toString())

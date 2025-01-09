@@ -27,5 +27,6 @@ public interface ClientConnectionManager extends AutoCloseable {
         // return new TCPClientManagerSimple(address, telemetry);
         // return new TCPClientManagerPool(address, telemetry);
         return new GRPCClientManager(address, telemetry);
+        // return new GRPCStreamingClientManager(address, telemetry);
     }
 }

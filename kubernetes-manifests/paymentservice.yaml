@@ -18,6 +18,7 @@ metadata:
   name: paymentservice
   labels:
     app: paymentservice
+    kind: microservice
 spec:
   selector:
     matchLabels:
@@ -34,17 +35,17 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         runAsUser: 1000
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: topology.kubernetes.io/zone
-                    operator: In
-                    values:
-                      - us-central1-a
-                      - us-central1-b
-                      - us-central1-c
+#      affinity:
+#        nodeAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#            nodeSelectorTerms:
+#              - matchExpressions:
+#                  - key: topology.kubernetes.io/zone
+#                    operator: In
+#                    values:
+#                      - us-central1-a
+#                      - us-central1-b
+#                      - us-central1-c
       containers:
       - name: payment-sidecar
         securityContext:
@@ -77,15 +78,16 @@ spec:
           grpc:
             port: 5401
         livenessProbe:
+          timeoutSeconds: 12
           grpc:
             port: 5401
         resources:
           requests:
             cpu: 300m
-            memory: 200Mi
+            memory: 800Mi
           limits:
             cpu: 1000m
-            memory: 800Mi
+            memory: 1600Mi
       - name: payment-server
         securityContext:
           allowPrivilegeEscalation: false
@@ -113,6 +115,7 @@ spec:
           grpc:
             port: 50051
         livenessProbe:
+          timeoutSeconds: 12
           grpc:
             port: 50051
         resources:

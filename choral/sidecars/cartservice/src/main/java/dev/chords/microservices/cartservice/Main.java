@@ -10,6 +10,8 @@ import dev.chords.choreographies.WebshopSession;
 import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Main {
 

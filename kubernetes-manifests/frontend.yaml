@@ -18,6 +18,7 @@ metadata:
   name: frontend
   labels:
     app: frontend
+    kind: microservice
 spec:
   selector:
     matchLabels:
@@ -35,17 +36,17 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         runAsUser: 1000
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: topology.kubernetes.io/zone
-                    operator: In
-                    values:
-                      - us-central1-a
-                      - us-central1-b
-                      - us-central1-c
+#      affinity:
+#        nodeAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#            nodeSelectorTerms:
+#              - matchExpressions:
+#                  - key: topology.kubernetes.io/zone
+#                    operator: In
+#                    values:
+#                      - us-central1-a
+#                      - us-central1-b
+#                      - us-central1-c
       containers:
         - name: frontend-sidecar
           securityContext:
@@ -62,10 +63,12 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 100
+            timeoutSeconds: 12
             httpGet:
               path: "/ping"
               port: 8081
           livenessProbe:
+            timeoutSeconds: 12
             httpGet:
               path: "/ping"
               port: 8081
@@ -89,13 +92,14 @@ spec:
           # Tracing
           - name: JAEGER_ENDPOINT
             value: "http://jaeger-collector:4317"
+
           resources:
             requests:
               cpu: 300m
-              memory: 200Mi
+              memory: 800Mi
             limits:
               cpu: 1000m
-              memory: 800Mi
+              memory: 1600Mi
         - name: frontend-server
           securityContext:
             allowPrivilegeEscalation: false
@@ -119,6 +123,7 @@ spec:
                 value: "shop_session-id=x-readiness-probe"
           livenessProbe:
             initialDelaySeconds: 10
+            timeoutSeconds: 12
             httpGet:
               path: "/_healthz"
               port: 8080

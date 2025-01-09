@@ -14,6 +14,7 @@ public interface ServerConnectionManager extends AutoCloseable {
         // return new TCPServerManagerSimple(events, telemetry);
         // return new TCPServerManagerNio(events, telemetry);
         return new GRPCServerManager(events, telemetry);
+        // return new GRPCStreamingServerManager(events, telemetry);
     }
 
     public interface ServerEvents {

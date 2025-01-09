@@ -15,10 +15,49 @@
 # limitations under the License.
 
 import random
-from locust import FastHttpUser, TaskSet, between, constant_pacing, task
+from locust import FastHttpUser, TaskSet, between, constant_pacing, task, events
+from collections import deque
+import os
 from faker import Faker
 import datetime
 fake = Faker()
+
+latest_requests_buf: deque[str] = None
+
+@events.test_start.add_listener
+def on_test_start(environment, **kwargs):
+    global latest_requests_buf
+    print("Test starting, initializing latest_requests_buf")
+    latest_requests_buf = deque(maxlen=1000)
+
+@events.test_stop.add_listener
+def on_test_stop(environment, **kwargs):
+    global latest_requests_buf
+    if latest_requests_buf is None:
+        print("Test stopped, latest_requests_buf was None, ignoring...")
+        return
+
+    print("Test stopped, saving latest_requests_buf to file /tmp/latest_requests.csv")
+    with open('/tmp/latest_requests.csv', 'w') as f:
+        f.write("start_time,request_type,name,response_time,response_length,url\n")
+        f.writelines(latest_requests_buf)
+    latest_requests_buf = None
+
+@events.request.add_listener
+def on_request_finished(request_type, name, response_time, response_length, response,
+                       context, exception, start_time, url, **kwargs):
+    global latest_requests_buf
+    if exception is not None:
+        return
+
+    # filter out requests that are not to a checkout endpoint
+    if "checkout" not in name:
+        return
+
+    latest_requests_buf.append(
+        "{},{},{},{},{},{}\n".format(start_time, request_type, name, response_time, response_length, url)
+    )
+
 
 products = [
     '0PUK6V6EV0',

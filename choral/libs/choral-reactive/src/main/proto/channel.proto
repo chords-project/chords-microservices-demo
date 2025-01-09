@@ -8,6 +8,10 @@ service Channel {
   rpc SendMessage (Message) returns (google.protobuf.Empty);
 }
 
+service StreamingChannel {
+    rpc StreamMessages(stream Message) returns (google.protobuf.Empty);
+}
+
 message Message {
   string choreography = 1;
   string sender = 2;

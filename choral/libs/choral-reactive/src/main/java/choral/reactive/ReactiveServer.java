@@ -85,7 +85,7 @@ public class ReactiveServer
             .build();
 
         Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
-            .spanBuilder("Receive message")
+            .spanBuilder("Receive message ("+session.senderName().toLowerCase()+")")
             .setAllAttributes(attributes)
             .startSpan();
 

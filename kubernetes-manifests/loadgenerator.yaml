@@ -39,17 +39,17 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         runAsUser: 1000
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: topology.kubernetes.io/zone
-                    operator: In
-                    values:
-                      - us-central1-a
-                      - us-central1-b
-                      - us-central1-c
+#      affinity:
+#        nodeAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#            nodeSelectorTerms:
+#              - matchExpressions:
+#                  - key: topology.kubernetes.io/zone
+#                    operator: In
+#                    values:
+#                      - us-central1-a
+#                      - us-central1-b
+#                      - us-central1-c
       initContainers:
         - command:
             - /bin/sh
@@ -108,7 +108,7 @@ spec:
               cpu: 300m
               memory: 200Mi
             limits:
-              cpu: 1000m
+              cpu: 1400m
               memory: 800Mi
 ---
 apiVersion: v1

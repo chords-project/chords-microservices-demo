@@ -1,6 +1,8 @@
 package choral.reactive;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
@@ -14,7 +16,8 @@ public class ChannelConfigurator {
                 .forAddress(address.getHostName(), address.getPort())
                 .usePlaintext()
                 .keepAliveTime(5, TimeUnit.SECONDS)
-                .keepAliveWithoutCalls(true);
+                .keepAliveWithoutCalls(true)
+                .executor(Executors.newCachedThreadPool());
 
         GrpcOpenTelemetry grpcOpenTelmetry = GrpcOpenTelemetry.newBuilder()
                 .sdk(telemetry)

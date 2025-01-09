@@ -18,6 +18,7 @@ metadata:
   name: cartservice
   labels:
     app: cartservice
+    kind: microservice
 spec:
   selector:
     matchLabels:
@@ -34,17 +35,17 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         runAsUser: 1000
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: topology.kubernetes.io/zone
-                    operator: In
-                    values:
-                      - us-central1-a
-                      - us-central1-b
-                      - us-central1-c
+#      affinity:
+#        nodeAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#            nodeSelectorTerms:
+#              - matchExpressions:
+#                  - key: topology.kubernetes.io/zone
+#                    operator: In
+#                    values:
+#                      - us-central1-a
+#                      - us-central1-b
+#                      - us-central1-c
       containers:
       - name: cart-sidecar
         securityContext:
@@ -77,10 +78,10 @@ spec:
         resources:
           requests:
             cpu: 300m
-            memory: 200Mi
+            memory: 800Mi
           limits:
             cpu: 1000m
-            memory: 800Mi
+            memory: 1600Mi
         startupProbe:
           initialDelaySeconds: 10
           periodSeconds: 5
@@ -88,6 +89,7 @@ spec:
           grpc:
             port: 5401
         livenessProbe:
+          timeoutSeconds: 12
           grpc:
             port: 5401
       - name: cart-server
@@ -117,6 +119,7 @@ spec:
             memory: 800Mi
         startupProbe:
           initialDelaySeconds: 10
+          timeoutSeconds: 12
           periodSeconds: 5
           failureThreshold: 100
           grpc:

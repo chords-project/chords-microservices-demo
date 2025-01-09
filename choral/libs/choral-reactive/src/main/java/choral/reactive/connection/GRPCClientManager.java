@@ -64,30 +64,26 @@ public class GRPCClientManager implements ClientConnectionManager {
 
         @Override
         public void sendMessage(Message msg) throws Exception {
-            connectionSpan.addEvent("Send message",
-                    Attributes.builder()
+            var result = futureStub.sendMessage(msg.toGrpcMessage());
+
+            long startTime = System.nanoTime();
+
+            result.addListener(() -> {
+                try {
+                    result.get();
+
+                    long duration = (System.nanoTime() - startTime) / 1000;
+
+                    connectionSpan.addEvent("Message sent to "+address+" ("+duration+" ms)",
+                        Attributes.builder()
                             .put("message", msg.toString())
                             .put("address", address)
                             .build());
-
-            Span sendSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
-                .spanBuilder("GRPC async send message").startSpan();
-
-            try (Scope scope = sendSpan.makeCurrent()) {
-                var result = futureStub.sendMessage(msg.toGrpcMessage());
-                    //.get(10, TimeUnit.SECONDS);
-
-                result.addListener(() -> {
-                    try {
-                        result.get();
-                    } catch (Exception e) {
-                        sendSpan.setAttribute("error", e.getMessage());
-                        sendSpan.recordException(e);
-                    } finally {
-                        sendSpan.end();
-                    }
-                }, Executors.newSingleThreadExecutor());
-            }
+                } catch (Exception e) {
+                    connectionSpan.setAttribute("error", true);
+                    connectionSpan.recordException(e);
+                }
+            }, Executors.newSingleThreadExecutor());
         }
 
         @Override
