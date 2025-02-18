@@ -47,9 +47,7 @@ spec:
 #                  - key: topology.kubernetes.io/zone
 #                    operator: In
 #                    values:
-#                      - us-central1-a
-#                      - us-central1-b
-#                      - us-central1-c
+#                      - eu-north-1b
       initContainers:
         - command:
             - /bin/sh

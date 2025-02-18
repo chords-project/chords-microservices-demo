@@ -1,11 +1,11 @@
 package choral.reactive.connection;
 
+import choral.reactive.tracing.Logger;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -27,6 +27,7 @@ import choral.reactive.tracing.JaegerConfiguration;
 public class TCPServerManagerNio implements ServerConnectionManager {
 
     private final Tracer tracer;
+    private final Logger logger;
     private final ServerEvents serverEvents;
     private ServerSocketChannel serverSocket = null;
     private Selector selector = null;
@@ -35,8 +36,9 @@ public class TCPServerManagerNio implements ServerConnectionManager {
     private Scope serverSpanScope = null;
     private long lastSpanReset = 0;
 
-    public TCPServerManagerNio(ServerEvents serverEvents, OpenTelemetrySdk telemetry) {
+    public TCPServerManagerNio(ServerEvents serverEvents, OpenTelemetry telemetry) {
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+        this.logger = new Logger(telemetry, TCPServerManagerNio.class.getName());
         this.serverEvents = serverEvents;
     }
 
@@ -59,7 +61,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
             serverSocket.configureBlocking(false);
             serverSocket.register(selector, SelectionKey.OP_ACCEPT);
 
-            startupSpan.addEvent("TCPServerManagerNio: listening on " + address);
+            logger.info("TCPServerManagerNio: listening on " + address);
 
         } catch (Exception e) {
             startupSpan.setAttribute("error", true);
@@ -97,7 +99,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
                 selector.select();
 
                 if (!serverSocket.isOpen()) {
-                    serverSpan.addEvent("Server socket closed");
+                    logger.info("Server socket closed");
                     break;
                 }
 
@@ -108,7 +110,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
 
                     if (key.isAcceptable()) {
                         SocketChannel client = serverSocket.accept();
-                        serverSpan.addEvent(
+                        logger.info(
                                 String.format("Incoming Connection from %s", client.socket().getInetAddress()));
                         client.configureBlocking(false);
                         SelectionKey newKey = client.register(selector, SelectionKey.OP_READ);
@@ -123,16 +125,14 @@ public class TCPServerManagerNio implements ServerConnectionManager {
                         try {
                             connectionHandler.read(client);
                         } catch (ClosedChannelException e) {
-                            serverSpan.addEvent(String.format("Connection from %s closed",
+                            logger.info(String.format("Connection from %s closed",
                                     client.socket().getInetAddress()));
                             key.cancel();
                             connections.remove(connectionHandler);
                             connectionHandler.close();
                             client.close();
                         } catch (IOException e) {
-                            connectionHandler.connectionSpan.setAttribute("error", true);
-                            connectionHandler.connectionSpan.recordException(e,
-                                    Attributes.builder().put("exception.context", "Read from client").build());
+                            logger.exception("Read from client failed", e);
                             key.cancel();
                             connections.remove(connectionHandler);
                             connectionHandler.close();
@@ -216,7 +216,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
 
                     if (objectSize < 0) {
                         // Close connection
-                        System.out.println("Client closed connection");
+                        logger.info("Client closed connection");
                         connections.remove(this);
                         this.close();
                         client.close();
@@ -231,7 +231,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
                 }
 
                 int n = client.read(buffer);
-                connectionSpan.addEvent("Read " + n + " bytes, remaining=" + buffer.remaining());
+                logger.debug("Read " + n + " bytes, remaining=" + buffer.remaining());
 
                 if (buffer.remaining() == 0) {
                     buffer.flip();
@@ -243,7 +243,7 @@ public class TCPServerManagerNio implements ServerConnectionManager {
 
                     try {
                         Message message = (Message) objectInputStream.readObject();
-                        System.out.println("TCPServerManagerNio received message: " + message.toString());
+                        logger.debug("TCPServerManagerNio received message: " + message.toString());
                         serverEvents.messageReceived(message);
                     } catch (ClassNotFoundException e) {
                         connectionSpan.setAttribute("error", true);

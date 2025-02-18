@@ -9,6 +9,8 @@ plugins {
     java
     id("org.springframework.boot") version "3.3.5"
     id("io.spring.dependency-management") version "1.1.6"
+
+    id("com.google.cloud.tools.jib")
 }
 
 group = "dev.chords"
@@ -43,6 +45,11 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+}
+
+jib {
+    //from.image = "openjdk:24-jdk"
+    //container.mainClass = "dev.chords.microservices.frontend.FrontendApplication"
 }
 
 tasks.named<Test>("test") {

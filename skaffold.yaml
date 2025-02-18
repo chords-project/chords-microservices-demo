@@ -85,6 +85,7 @@ build:
 manifests:
   rawYaml:
     - kubernetes-manifests/jaeger.yaml
+    - kubernetes-manifests/observability.yaml
   kustomize:
     paths:
       - kubernetes-manifests
@@ -144,9 +145,9 @@ apiVersion: skaffold/v4beta11
 kind: Config
 metadata:
   name: loadgenerator
-requires:
-  - configs:
-      - app
+#requires:
+#  - configs:
+#      - app
 build:
   artifacts:
     - image: loadgenerator

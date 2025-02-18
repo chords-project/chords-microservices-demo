@@ -28,6 +28,16 @@ public class ReactiveChannel_A<M> implements AsyncDiChannel_A<M> {
         return Unit.id;
     }
 
+    @Override
+    public <S extends M> Unit com(S s) {
+        return fcom(s);
+    }
+
+    @Override
+    public <T extends Enum<T>> Unit select(T t) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
 //    @SuppressWarnings("unchecked")
 //    @Override
 //    public <T extends Enum<T>> Unit select(T msg) {

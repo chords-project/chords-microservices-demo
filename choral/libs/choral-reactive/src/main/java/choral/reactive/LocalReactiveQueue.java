@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 
 import choral.channels.Future;
 import choral.reactive.tracing.TelemetrySession;
+import io.opentelemetry.api.OpenTelemetry;
 
 public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveReceiver<Object> {
 
@@ -14,7 +15,7 @@ public class LocalReactiveQueue implements ReactiveSender<Object>, ReactiveRecei
         void onNewSession(Session session);
     }
 
-    private final MessageQueue<Object> msgQueue = new MessageQueue<>();
+    private final MessageQueue<Object> msgQueue = new MessageQueue<>(OpenTelemetry.noop());
     private NewSessionEvent newSessionEvent = null;
     private final HashMap<Session, Integer> nextSequenceNumber = new HashMap<>();
 

@@ -43,9 +43,7 @@ spec:
 #                  - key: topology.kubernetes.io/zone
 #                    operator: In
 #                    values:
-#                      - us-central1-a
-#                      - us-central1-b
-#                      - us-central1-c
+#                      - eu-north-1b
       containers:
       - name: cart-sidecar
         securityContext:
@@ -72,13 +70,18 @@ spec:
           value: "shippingservice:5401"
 
         # Tracing
-        - name: JAEGER_ENDPOINT
-          value: "http://jaeger-collector:4317"
+        - name: ENABLE_TRACING
+          value: "1"
+        - name: COLLECTOR_SERVICE_ADDR
+          value: "http://lgtm:4317"
+
+#        - value: JAVA_TOOL_OPTIONS
+#          name: '-Xms500m -Xmx800m'
 
         resources:
           requests:
-            cpu: 300m
-            memory: 800Mi
+            cpu: 200m
+            memory: 400Mi
           limits:
             cpu: 1000m
             memory: 1600Mi
@@ -109,10 +112,10 @@ spec:
         - name: ENABLE_TRACING
           value: "1"
         - name: COLLECTOR_SERVICE_ADDR
-          value: "jaeger-collector:4317"
+          value: "http://lgtm:4317"
         resources:
           requests:
-            cpu: 300m
+            cpu: 200m
             memory: 200Mi
           limits:
             cpu: 1000m
@@ -171,17 +174,15 @@ spec:
         runAsGroup: 1000
         runAsNonRoot: true
         runAsUser: 1000
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: topology.kubernetes.io/zone
-                    operator: In
-                    values:
-                      - us-central1-a
-                      - us-central1-b
-                      - us-central1-c
+#      affinity:
+#        nodeAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#            nodeSelectorTerms:
+#              - matchExpressions:
+#                  - key: topology.kubernetes.io/zone
+#                    operator: In
+#                    values:
+#                      - eu-north-1b
       containers:
       - name: redis
         securityContext:

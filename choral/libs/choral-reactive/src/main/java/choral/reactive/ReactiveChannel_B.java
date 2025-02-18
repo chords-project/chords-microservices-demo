@@ -27,6 +27,26 @@ public class ReactiveChannel_B<M> implements AsyncDiChannel_B<M> {
         return fcom();
     }
 
+    @Override
+    public <S extends M> S com(Unit unit) {
+        return com();
+    }
+
+    @Override
+    public <S extends M> S com() {
+        return this.<S>fcom().get();
+    }
+
+    @Override
+    public <T extends Enum<T>> T select(Unit unit) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public <T extends Enum<T>> T select() {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
 //    @SuppressWarnings("unchecked")
 //    @Override
 //    public <T extends Enum<T>> T select() {

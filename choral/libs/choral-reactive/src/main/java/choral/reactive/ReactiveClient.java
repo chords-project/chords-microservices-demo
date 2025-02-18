@@ -5,6 +5,7 @@ import choral.reactive.connection.ClientConnectionManager.Connection;
 import choral.reactive.connection.Message;
 import choral.reactive.tracing.TelemetrySession;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 
@@ -19,6 +20,7 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
     private int nextSequence = 1;
 
     private final TelemetrySession telemetrySession;
+    private final LongCounter sendCounter;
 
     public ReactiveClient(ClientConnectionManager connectionManager, String serviceName,
             TelemetrySession telemetrySession)
@@ -26,17 +28,26 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
         this.connection = connectionManager.makeConnection();
         this.serviceName = serviceName;
         this.telemetrySession = telemetrySession;
+        this.sendCounter = telemetrySession.meter
+            .counterBuilder("choral.reactive.client.message-count")
+            .setDescription("The total number of messages sent")
+            .setUnit("messages")
+            .build();
     }
 
     @Override
     public void send(Session session, Serializable msg) {
         Session newSession = session.replacingSender(serviceName);
 
+        Attributes attributes = Attributes.builder()
+            .put("channel.session", newSession.toString())
+            .put("channel.message", msg.toString())
+            .put("channel.connection", connection.toString())
+            .build();
+
         Span span = telemetrySession.tracer.spanBuilder("Send message ("+connection+")")
-                .setAttribute("channel.session", newSession.toString())
-                .setAttribute("channel.message", msg.toString())
-                .setAttribute("channel.connection", connection.toString())
-                .startSpan();
+            .setAllAttributes(attributes)
+            .startSpan();
 
         try (Scope scope = span.makeCurrent()) {
             Message message = new Message(newSession, msg, nextSequence);
@@ -45,6 +56,8 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
             telemetrySession.injectSessionContext(message);
 
             connection.sendMessage(message);
+
+            sendCounter.add(1, Attributes.builder().put("success", true).build());
         } catch (Exception e) {
             span.setAttribute("error", true);
             span.recordException(e);
@@ -54,6 +67,8 @@ public class ReactiveClient implements ReactiveSender<Serializable>, AutoCloseab
                     e,
                     true,
                     Attributes.builder().put("service", serviceName).put("connection", connection.toString()).build());
+
+            sendCounter.add(1, Attributes.builder().put("success", false).build());
         } finally {
             span.end();
         }

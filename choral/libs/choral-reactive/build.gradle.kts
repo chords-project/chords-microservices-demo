@@ -38,12 +38,14 @@ dependencies {
     // ## OpenTelemetry SDK ##
 
     // using the bom ensures that all of your opentelemetry dependency versions are aligned
-    api(platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.9.0-alpha"))
+    //api(platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.12.0-alpha"))
+    api(platform("io.opentelemetry:opentelemetry-bom:1.47.0"))
 
     api("io.opentelemetry:opentelemetry-api")
+    //api("io.opentelemetry:opentelemetry-api-incubator")
     api("io.opentelemetry:opentelemetry-sdk")
     api("io.opentelemetry:opentelemetry-exporter-otlp")
-    api("io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha")
+    //api("io.opentelemetry.semconv:opentelemetry-semconv")
 
     // ## gRPC ##
     runtimeOnly ("io.grpc:grpc-netty-shaded:${grpcVersion}")

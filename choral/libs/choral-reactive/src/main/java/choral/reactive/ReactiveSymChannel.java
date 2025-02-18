@@ -33,6 +33,36 @@ public class ReactiveSymChannel<M> implements AsyncSymChannel_A<M>, AsyncSymChan
         return fcom();
     }
 
+    @Override
+    public <S extends M> Unit com(S s) {
+        return fcom(s);
+    }
+
+    @Override
+    public <S extends M> S com(Unit unit) {
+        return com();
+    }
+
+    @Override
+    public <S extends M> S com() {
+        return this.<S>fcom().get();
+    }
+
+    @Override
+    public <T extends Enum<T>> Unit select(T t) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public <T extends Enum<T>> T select(Unit unit) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public <T extends Enum<T>> T select() {
+        return null;
+    }
+
 //    @Override
 //    public <T extends Enum<T>> T select() {
 //        return chanB.select();

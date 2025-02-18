@@ -2,6 +2,7 @@ package dev.chords.microservices.emailservice;
 
 import choral.reactive.ChannelConfigurator;
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
 import dev.chords.choreographies.OrderResult;
 import hipstershop.Demo;
 import hipstershop.EmailServiceGrpc;
@@ -20,17 +21,19 @@ public class EmailService implements dev.chords.choreographies.EmailService, Aut
     protected ManagedChannel channel;
     protected EmailServiceFutureStub connection;
     protected Tracer tracer;
+    protected Logger logger;
 
     public EmailService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
         channel = ChannelConfigurator.makeChannel(address, telemetry);
 
         this.connection = EmailServiceGrpc.newFutureStub(channel);
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+        this.logger = new Logger(telemetry, EmailService.class.getName());
     }
 
     @Override
     public void sendOrderConfirmation(String email, OrderResult orderResult) {
-        System.out.println("[EMAIL] Send order confirmation");
+        logger.info("Send order email confirmation");
 
         Span span = tracer.spanBuilder("EmailService.sendOrderConfirmation")
             .setAttribute("request.orderResult", orderResult.toString()).startSpan();

@@ -1,5 +1,6 @@
 package dev.chords.microservices.payment;
 
+import choral.reactive.tracing.Logger;
 import dev.chords.choreographies.CreditCardInfo;
 import dev.chords.choreographies.Money;
 import hipstershop.Demo;
@@ -8,10 +9,10 @@ import hipstershop.Demo.ChargeResponse;
 import hipstershop.PaymentServiceGrpc;
 import hipstershop.PaymentServiceGrpc.PaymentServiceFutureStub;
 import io.grpc.ManagedChannel;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -24,17 +25,19 @@ public class PaymentService implements dev.chords.choreographies.PaymentService 
     protected ManagedChannel channel;
     protected PaymentServiceFutureStub connection;
     protected Tracer tracer;
+    protected Logger logger;
 
-    public PaymentService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
+    public PaymentService(InetSocketAddress address, OpenTelemetry telemetry) {
         channel = ChannelConfigurator.makeChannel(address, telemetry);
 
         this.connection = PaymentServiceGrpc.newFutureStub(channel);
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+        this.logger = new Logger(telemetry, PaymentService.class.getName());
     }
 
     @Override
     public String charge(Money price, CreditCardInfo creditCardInfo) {
-        System.out.println("[PAYMENT] Charge credit card");
+        logger.info("Charge credit card");
 
         Span span = tracer.spanBuilder("PaymentService.charge").startSpan();
 

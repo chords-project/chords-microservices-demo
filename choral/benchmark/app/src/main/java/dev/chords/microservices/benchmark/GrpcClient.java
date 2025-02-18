@@ -9,6 +9,7 @@ import greeting.Greeting.HelloReply;
 import greeting.Greeting.HelloRequest;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
@@ -21,7 +22,7 @@ public class GrpcClient implements GreeterService {
     // GreeterFutureStub futureStub;
     Tracer tracer;
 
-    GrpcClient(int port, OpenTelemetrySdk telemetry) {
+    GrpcClient(int port, OpenTelemetry telemetry) {
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
 
         this.channel = ManagedChannelBuilder.forAddress("localhost", port).usePlaintext().build();

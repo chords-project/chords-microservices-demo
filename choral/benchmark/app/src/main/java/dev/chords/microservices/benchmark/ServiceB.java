@@ -1,22 +1,21 @@
 package dev.chords.microservices.benchmark;
 
 import choral.reactive.connection.ClientConnectionManager;
-import choral.reactive.Session;
 import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.api.OpenTelemetry;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 
 public class ServiceB {
 
-    private OpenTelemetrySdk telemetry;
+    private OpenTelemetry telemetry;
     private ReactiveServer serverB;
     private ClientConnectionManager connectionServiceA;
     private GrpcClient grpcClient;
 
-    public ServiceB(OpenTelemetrySdk telemetry, String addressServiceA) throws Exception {
+    public ServiceB(OpenTelemetry telemetry, String addressServiceA) throws Exception {
         this.telemetry = telemetry;
         this.grpcClient = new GrpcClient(5430, telemetry);
         this.connectionServiceA = ClientConnectionManager.makeConnectionManager(addressServiceA, telemetry);

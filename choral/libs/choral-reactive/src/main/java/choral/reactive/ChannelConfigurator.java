@@ -1,23 +1,24 @@
 package choral.reactive;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.opentelemetry.GrpcOpenTelemetry;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.api.OpenTelemetry;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ChannelConfigurator {
-    public static ManagedChannel makeChannel(InetSocketAddress address, OpenTelemetrySdk telemetry) {
+    public static ManagedChannel makeChannel(InetSocketAddress address, OpenTelemetry telemetry) {
         ManagedChannelBuilder<?> builder = ManagedChannelBuilder
                 .forAddress(address.getHostName(), address.getPort())
                 .usePlaintext()
                 .keepAliveTime(5, TimeUnit.SECONDS)
                 .keepAliveWithoutCalls(true)
-                .executor(Executors.newCachedThreadPool());
+                //.directExecutor();
+                //.executor(Executors.newCachedThreadPool());
+                .executor(Executors.newVirtualThreadPerTaskExecutor());
 
         GrpcOpenTelemetry grpcOpenTelmetry = GrpcOpenTelemetry.newBuilder()
                 .sdk(telemetry)

@@ -1,6 +1,8 @@
 package choral.reactive.connection;
 
-import io.opentelemetry.sdk.OpenTelemetrySdk;
+import choral.reactive.tracing.Logger;
+import io.opentelemetry.api.OpenTelemetry;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -14,12 +16,14 @@ import java.net.URISyntaxException;
 public class TCPServerManagerSimple implements ServerConnectionManager {
 
     private ServerSocket serverSocket = null;
-    private OpenTelemetrySdk telemetry;
-    private ServerEvents events;
+    private final OpenTelemetry telemetry;
+    private final Logger logger;
+    private final ServerEvents events;
 
-    public TCPServerManagerSimple(ServerEvents events, OpenTelemetrySdk telemetry) {
+    public TCPServerManagerSimple(ServerEvents events, OpenTelemetry telemetry) {
         this.events = events;
         this.telemetry = telemetry;
+        this.logger = new Logger(telemetry, TCPServerManagerSimple.class.getName());
     }
 
     /**
@@ -32,14 +36,14 @@ public class TCPServerManagerSimple implements ServerConnectionManager {
      */
     @Override
     public void listen(String address) throws URISyntaxException {
-        System.out.println("TCPReactiveServer listener starting on " + address);
+        logger.info("TCPReactiveServer listener starting on " + address);
 
         URI uri = new URI(null, address, null, null, null).parseServerAuthority();
         InetSocketAddress addr = new InetSocketAddress(uri.getHost(), uri.getPort());
 
         try {
             serverSocket = new ServerSocket(addr.getPort(), 50, addr.getAddress());
-            System.out.println("TCPReactiveServer listening successfully on " + serverSocket.getLocalSocketAddress());
+            logger.info("TCPReactiveServer listening successfully on " + serverSocket.getLocalSocketAddress());
 
             while (true) {
                 Socket connection = serverSocket.accept();
@@ -56,29 +60,28 @@ public class TCPServerManagerSimple implements ServerConnectionManager {
 
     private void clientListen(Socket connection) {
         try {
-            System.out.println("TCPReactiveServer client connected: address=" + connection.getInetAddress());
+            logger.info("TCPReactiveServer client connected: address=" + connection.getInetAddress());
             while (true) {
                 try (ObjectInputStream stream = new ObjectInputStream(connection.getInputStream())) {
                     while (true) {
                         try {
                             Message msg = (Message) stream.readObject();
 
-                            System.out.println("TCPReactiveServer received message: address="
+                            logger.debug("TCPReactiveServer received message: address="
                                     + connection.getInetAddress() + " message=" + msg.toString());
 
                             events.messageReceived(msg);
                         } catch (StreamCorruptedException | ClassNotFoundException e) {
-                            System.out.println("TCPReactiveServer failed to deserialize class: address="
-                                    + connection.getInetAddress());
+                            logger.exception("TCPReactiveServer failed to deserialize class: address="
+                                    + connection.getInetAddress(), e);
                         }
                     }
                 }
             }
         } catch (EOFException e) {
-            System.out.println("TCPReactiveServer client disconnected: address=" + connection.getInetAddress());
+            logger.info("TCPReactiveServer client disconnected: address=" + connection.getInetAddress());
         } catch (IOException e) {
-            System.out.println("TCPReactiveServer client exception: address=" + connection.getInetAddress());
-            e.printStackTrace();
+            logger.exception("TCPReactiveServer client exception: address=" + connection.getInetAddress(), e);
         }
     }
 

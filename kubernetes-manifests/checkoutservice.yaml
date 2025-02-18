@@ -42,10 +42,7 @@ spec:
 #                  - key: topology.kubernetes.io/zone
 #                    operator: In
 #                    values:
-#                      - us-central1-a
-#                      - us-central1-b
-#                      - us-central1-c
-#                      - us-central1-f
+#                      - eu-north-1a
       containers:
         - name: server
           securityContext:
@@ -74,7 +71,7 @@ spec:
           - name: ENABLE_TRACING
             value: "1"
           - name: COLLECTOR_SERVICE_ADDR
-            value: "jaeger-collector:4317"
+            value: "http://lgtm:4317"
 
           - name: PRODUCT_CATALOG_SERVICE_ADDR
             value: "productcatalogservice:3550"

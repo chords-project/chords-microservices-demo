@@ -6,6 +6,7 @@ import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Email;
 import dev.chords.choreographies.ServiceResources;
+import dev.chords.choreographies.Tracing;
 import dev.chords.choreographies.WebshopSession;
 import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -21,12 +22,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral email service");
 
-        final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
-        OpenTelemetrySdk telemetry = OpenTelemetrySdk.builder().build();
-        if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
-            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "EmailService");
-        }
+        OpenTelemetrySdk telemetry = Tracing.initTracing("EmailService");
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
         emailService = new EmailService(new InetSocketAddress("localhost", rpcPort), telemetry);

@@ -1,14 +1,14 @@
 package choral.reactive.connection;
 
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
@@ -24,11 +24,13 @@ public class TCPClientManagerSimple implements ClientConnectionManager {
 
     public final String address;
     private final InetSocketAddress socketAddr;
-    private final OpenTelemetrySdk telemetry;
+    private final OpenTelemetry telemetry;
+    private final Logger logger;
 
-    public TCPClientManagerSimple(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
+    public TCPClientManagerSimple(String address, OpenTelemetry telemetry) throws URISyntaxException {
         this.address = address;
         this.telemetry = telemetry;
+        this.logger = new Logger(telemetry, TCPClientManagerSimple.class.getName());
 
         URI uri = new URI(null, address, null, null, null).parseServerAuthority();
         this.socketAddr = new InetSocketAddress(uri.getHost(), uri.getPort());
@@ -67,14 +69,14 @@ public class TCPClientManagerSimple implements ClientConnectionManager {
                     .putInt(objectBuffer.size())
                     .put(objectBuffer.toByteArray());
 
-            System.out.println("Sending object of size: " + objectBuffer.size());
+            logger.info("Sending object of size: " + objectBuffer.size());
 
             this.connection.getOutputStream().write(sendBuffer.array());
         }
 
         @Override
         public void close() throws IOException {
-            System.out.println("Closing client connection");
+            logger.info("Closing client connection");
 
             // Send quit event
             connection.getOutputStream().write(ByteBuffer.allocate(4).putInt(-1).array());

@@ -42,9 +42,7 @@ spec:
 #                  - key: topology.kubernetes.io/zone
 #                    operator: In
 #                    values:
-#                      - us-central1-a
-#                      - us-central1-b
-#                      - us-central1-c
+#                      - eu-north-1b
       containers:
         - name: jaeger
           env:
@@ -62,11 +60,11 @@ spec:
               port: 16686
           resources:
             requests:
-              cpu: 800m
-              memory: 600Mi
+              cpu: 300m
+              memory: 500Mi
             limits:
               cpu: 1200m
-              memory: 800Mi
+              memory: 1600Mi
 ---
 apiVersion: v1
 kind: Service

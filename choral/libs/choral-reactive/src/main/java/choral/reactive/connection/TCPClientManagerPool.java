@@ -15,10 +15,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 /**
  * This object contains logic for connecting to a remote server using TCP. Thread-safe. Does not
@@ -31,13 +32,15 @@ public class TCPClientManagerPool implements ClientConnectionManager {
     private SocketChannel channel = null;
     private ByteArrayOutputStream objectBuffer = new ByteArrayOutputStream(4096);
     private CountDownLatch connectedLatch = new CountDownLatch(1);
-    private final OpenTelemetrySdk telemetry;
+    private final OpenTelemetry telemetry;
+    private final Logger logger;
     private final Span poolSpan;
 
-    public TCPClientManagerPool(String address, OpenTelemetrySdk telemetry)
+    public TCPClientManagerPool(String address, OpenTelemetry telemetry)
             throws URISyntaxException, UnknownHostException, IOException {
         this.address = address;
         this.telemetry = telemetry;
+        this.logger = new Logger(telemetry, TCPClientManagerPool.class.getName());
 
         this.poolSpan = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
                 .spanBuilder("TCPClientManagerPool pool")
@@ -61,7 +64,7 @@ public class TCPClientManagerPool implements ClientConnectionManager {
 
                             poolSpan.addEvent("connected to server");
 
-                            System.out.println(
+                            logger.info(
                                     "TCPReactiveClientConnection successfully connected to server: " + address);
                             break;
                         } catch (IOException e) {
@@ -73,7 +76,7 @@ public class TCPClientManagerPool implements ClientConnectionManager {
                                             .put("retry.waitTime", waitTime.toMillis())
                                             .build());
 
-                            System.out.println(
+                            logger.info(
                                     "TCPReactiveClientConnection failed to connect to client: attempt=" +
                                             (i + 1) +
                                             ", address=" +
@@ -96,7 +99,7 @@ public class TCPClientManagerPool implements ClientConnectionManager {
 
     @Override
     public void close() throws IOException {
-        System.out.println("Closing client manager pool");
+        logger.info("Closing client manager pool");
         poolSpan.addEvent("Closing client manager pool");
 
         try {

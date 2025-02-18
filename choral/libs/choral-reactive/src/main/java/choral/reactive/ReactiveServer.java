@@ -5,19 +5,19 @@ import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.connection.Message;
 import choral.reactive.connection.ServerConnectionManager;
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
 import choral.reactive.tracing.TelemetrySession;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class ReactiveServer
@@ -30,25 +30,40 @@ public class ReactiveServer
     // 2. if sendQueue is non-empty, then recvQueue is empty; and vice versa.
     // 3. if a sessionID is in knownSessionIDs, then the session is in telemetrySessionMap.
 
-    private final MessageQueue<Serializable> msgQueue = new MessageQueue<>();
+    private final MessageQueue<Serializable> msgQueue;
 
     /** Maps a sessionID to a TelemetrySession. */
     private final HashMap<Integer, TelemetrySession> telemetrySessionMap = new HashMap<>();
 
     private final String serviceName;
     private final NewSessionEvent newSessionEvent;
-    private final OpenTelemetrySdk telemetry;
+    private final OpenTelemetry telemetry;
+    private final Logger logger;
     private final ServerConnectionManager connectionManager;
+    private final DoubleHistogram receiveTimeHistogram;
+    private final DoubleHistogram sessionDurationHistogram;
 
     /**
      * Creates a ReactiveServer, using {@link ServerConnectionManager} for the connection.
      * Invoke {@link #listen(String)} to start listening.
      */
-    public ReactiveServer(String serviceName, OpenTelemetrySdk telemetry, NewSessionEvent newSessionEvent) {
+    public ReactiveServer(String serviceName, OpenTelemetry telemetry, NewSessionEvent newSessionEvent) {
         this.serviceName = serviceName;
         this.telemetry = telemetry;
+        this.logger = new Logger(telemetry, ReactiveServer.class.getName());
         this.newSessionEvent = newSessionEvent;
         this.connectionManager = ServerConnectionManager.makeConnectionManager(this, telemetry);
+        this.msgQueue = new MessageQueue<>(telemetry);
+        this.receiveTimeHistogram = telemetry.getMeter(JaegerConfiguration.TRACER_NAME)
+            .histogramBuilder("choral.reactive.server.receive-time")
+            .setDescription("Channel receive time")
+            .setUnit("ms")
+            .build();
+        this.sessionDurationHistogram = telemetry.getMeter(JaegerConfiguration.TRACER_NAME)
+            .histogramBuilder("choral.reactive.server.session-duration")
+            .setDescription("Session duration")
+            .setUnit("ms")
+            .build();
     }
 
     /**
@@ -56,7 +71,7 @@ public class ReactiveServer
      * the connection.
      */
     public ReactiveServer(String serviceName, NewSessionEvent newSessionEvent) {
-        this(serviceName, OpenTelemetrySdk.builder().build(), newSessionEvent);
+        this(serviceName, OpenTelemetry.noop(), newSessionEvent);
     }
 
     /**
@@ -64,6 +79,8 @@ public class ReactiveServer
      * program exits.
      */
     public void listen(String address) throws URISyntaxException, IOException {
+        logger.info("Reactive server listening to " + address);
+
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 ReactiveServer.this.close();
@@ -84,6 +101,8 @@ public class ReactiveServer
             .put("channel.sessionID", session.sessionID)
             .build();
 
+        Long startTime = System.nanoTime();
+
         Span span = telemetry.getTracer(JaegerConfiguration.TRACER_NAME)
             .spanBuilder("Receive message ("+session.senderName().toLowerCase()+")")
             .setAllAttributes(attributes)
@@ -100,6 +119,10 @@ public class ReactiveServer
             try {
                 T message = (T) future.get();
                 span.setAttribute("message", message.toString());
+
+                Long endTime = System.nanoTime();
+                receiveTimeHistogram.record((endTime - startTime) / 1_000_000.0, attributes);
+
                 return message;
             } catch (InterruptedException | ExecutionException e) {
                 telemetrySession.recordException("ReactiveServer exception when receiving message", e, true, attributes);
@@ -117,6 +140,8 @@ public class ReactiveServer
     }
 
     public void registerSession(Session session, TelemetrySession telemetrySession) {
+        logger.debug("Registering session " + session.sessionID);
+
         synchronized (this) {
             knownSessionIDs.add(session.sessionID());
             telemetrySessionMap.put(session.sessionID(), telemetrySession);
@@ -138,7 +163,7 @@ public class ReactiveServer
     }
 
     @Override
-    public void messageReceived(Message msg) { // TODO profile this
+    public void messageReceived(Message msg) {
 
         synchronized (this) {
             boolean isNewSession = knownSessionIDs.add(msg.session.sessionID);
@@ -165,12 +190,12 @@ public class ReactiveServer
                 Thread.ofVirtual()
                         .name("NEW_SESSION_HANDLER_" + msg.session)
                         .start(() -> {
+                            Long startTime = System.nanoTime();
                             this.telemetrySessionMap.put(msg.session.sessionID(), telemetrySession);
 
                             telemetrySession.log(
                                     "ReactiveServer handle new session",
-                                    Attributes.builder().put("service", serviceName)
-                                            .put("session", msg.session.toString()).build());
+                                    Attributes.builder().put("service", serviceName).build());
 
                             try (Scope scope = span.makeCurrent();
                                     SessionContext sessionCtx = new SessionContext(this, msg.session,
@@ -188,12 +213,19 @@ public class ReactiveServer
                             }
 
                             cleanupKey(msg.session);
+                            Long endTime = System.nanoTime();
+                            sessionDurationHistogram.record(
+                                (endTime - startTime) / 1_000_000.0,
+                                Attributes.builder().put("session", msg.session.toString()).build()
+                            );
                         });
             }
         }
     }
 
     private void cleanupKey(Session session) {
+        logger.debug("Cleaning up session " + session.sessionID);
+
         synchronized (this) {
             this.msgQueue.cleanupSession(session);
             this.telemetrySessionMap.remove(session.sessionID());
@@ -203,6 +235,7 @@ public class ReactiveServer
 
     @Override
     public void close() throws IOException {
+        logger.info("Shutting down reactive server");
         connectionManager.close();
     }
 

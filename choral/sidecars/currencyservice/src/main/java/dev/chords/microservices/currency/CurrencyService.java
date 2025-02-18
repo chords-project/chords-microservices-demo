@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 import choral.reactive.ChannelConfigurator;
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
 import dev.chords.choreographies.Money;
 import dev.chords.choreographies.OrderItem;
 import dev.chords.choreographies.OrderItems;
@@ -27,20 +28,21 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
     protected ManagedChannel channel;
     protected CurrencyServiceFutureStub connection;
     protected Tracer tracer;
+    protected Logger logger;
 
     public CurrencyService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
         channel = ChannelConfigurator.makeChannel(address, telemetry);
         connection = CurrencyServiceGrpc.newFutureStub(channel);
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+        this.logger = new Logger(telemetry, CurrencyService.class.getName());
     }
 
     @Override
     public List<String> supportedCurrencies() {
-        System.out.println("[CURRENCY] Get supported currencies");
-
         Span span = tracer.spanBuilder("CurrencyService.supportedCurrencies").startSpan();
 
         try (Scope scope = span.makeCurrent()) {
+            logger.info("Get supported currencies");
 
             GetSupportedCurrenciesResponse response = connection.getSupportedCurrencies(Empty.getDefaultInstance())
                     .get(10, TimeUnit.SECONDS);
@@ -58,14 +60,13 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
 
     @Override
     public Money convert(Money from, String toCurrency) {
-        System.out.println("[CURRENCY] Convert currencies: from=" + from.currencyCode + ", to=" + toCurrency);
-
         Span span = tracer.spanBuilder("CurrencyService.convertCurrency")
                 .setAttribute("request.from", from.currencyCode)
                 .setAttribute("request.to", toCurrency)
                 .startSpan();
 
         try (Scope scope = span.makeCurrent()) {
+            logger.info("Convert currencies: from=" + from.currencyCode + ", to=" + toCurrency);
 
             CurrencyConversionRequest request = CurrencyConversionRequest.newBuilder()
                     .setFrom(
@@ -92,13 +93,12 @@ public class CurrencyService implements dev.chords.choreographies.CurrencyServic
 
     @Override
     public OrderItems convertProducts(OrderItems products, String toCurrency) {
-        System.out.println("[CURRENCY] Convert products: to=" + toCurrency);
-
         Span span = tracer.spanBuilder("CurrencyService.convertProducts")
                 .setAttribute("request.toCurrency", toCurrency)
                 .startSpan();
 
         try (Scope scope = span.makeCurrent()) {
+            logger.info("Convert products: to=" + toCurrency);
 
             List<OrderItem> orderItemList = products.items.stream()
                     .map(product -> new OrderItem(product.item, convert(product.cost, toCurrency)))

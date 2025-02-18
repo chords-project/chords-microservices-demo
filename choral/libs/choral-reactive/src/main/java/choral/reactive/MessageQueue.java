@@ -1,6 +1,9 @@
 package choral.reactive;
 
+import choral.reactive.tracing.JaegerConfiguration;
 import choral.reactive.tracing.TelemetrySession;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.metrics.LongUpDownCounter;
 
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -12,10 +15,20 @@ public class MessageQueue<T> {
      * Maps a sessionID and a sender name to a queue of messages.
      */
     private final HashMap<Session, SessionQueue<T>> queue = new HashMap<>();
+    private final LongUpDownCounter queueSizeGauge;
+
+    public MessageQueue(OpenTelemetry openTelemetry) {
+        queueSizeGauge = openTelemetry.getMeter(JaegerConfiguration.TRACER_NAME)
+            .upDownCounterBuilder("choral.reactive.MessageQueue.size")
+            .setUnit("messages")
+            .setDescription("The size of the message queue")
+            .build();
+    }
 
     public synchronized void addMessage(Session session, T message, int sequenceNumber, TelemetrySession telemetrySession) {
         if (!queue.containsKey(session)) {
             queue.put(session, new SessionQueue<>(telemetrySession));
+            queueSizeGauge.add(1);
         }
 
         queue.get(session).addMessage(message, sequenceNumber);
@@ -23,6 +36,7 @@ public class MessageQueue<T> {
 
     public synchronized Future<T> retrieveMessage(Session session, TelemetrySession telemetrySession) {
         if (!queue.containsKey(session)) {
+            queueSizeGauge.add(-1);
             queue.put(session, new SessionQueue<>(telemetrySession));
         }
 

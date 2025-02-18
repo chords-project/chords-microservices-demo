@@ -376,7 +376,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/adservice:sic-jss-270-g90d1fe47@sha256:5ba0c34b4609648f40fa6d8bc12a5a843f4cf580f649e73e2eedbcfcce118ead
           livenessProbe:
             grpc:
@@ -437,8 +437,10 @@ spec:
               value: productcatalogservice:5401
             - name: CHORAL_SHIPPING
               value: shippingservice:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice-sidecar:sic-jss-270-g90d1fe47@sha256:6366119b64f0f319040be8906fc16c0e703b071130efa66e80ee9e2a227d7b3b
           livenessProbe:
             grpc:
@@ -471,7 +473,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice:sic-jss-270-g90d1fe47@sha256:1cac94116dc3e6c2b6ad1e1953c8ff54bc360cf62035d4220ef27a2c6af0f67d
           livenessProbe:
             grpc:
@@ -529,7 +531,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
             - name: PRODUCT_CATALOG_SERVICE_ADDR
               value: productcatalogservice:3550
             - name: SHIPPING_SERVICE_ADDR
@@ -597,8 +599,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_FRONTEND
               value: frontend:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice-sidecar:sic-jss-270-g90d1fe47@sha256:b3d74320da0d6aad84a2567a9b301f3b8597bf71ee0d4b6e159db7f5505d8e08
           livenessProbe:
             grpc:
@@ -633,7 +637,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice:sic-jss-270-g90d1fe47@sha256:f8b5b4409cdd4569cb901856f15a904e0dc2eadaf0a74578dd20bff6d3ac4fbc
           livenessProbe:
             grpc:
@@ -693,8 +697,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_FRONTEND
               value: frontend:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice-sidecar:sic-jss-270-g90d1fe47@sha256:c4883259502a5f63fc0b0ced99962a7f15c9c659fe6563feeb93122c15fd0a45
           livenessProbe:
             grpc:
@@ -729,7 +735,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice:sic-jss-270-g90d1fe47@sha256:8271654381fc2bab4f39c1cefff74948963336644057d7b8ae0df9c5e2ae0b29
           livenessProbe:
             grpc:
@@ -796,8 +802,10 @@ spec:
               value: emailservice:5401
             - name: CHORAL_FRONTEND
               value: 0.0.0.0:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend-sidecar:sic-jss-270-g90d1fe47@sha256:fda58989b08d9f8b88961d8e1d4b069a17cb349b1580cc79dcf1a3ca455ae3d8
           livenessProbe:
             httpGet:
@@ -832,7 +840,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
             - name: PRODUCT_CATALOG_SERVICE_ADDR
               value: productcatalogservice:3550
             - name: CURRENCY_SERVICE_ADDR
@@ -915,8 +923,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_FRONTEND
               value: frontend:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice-sidecar:sic-jss-270-g90d1fe47@sha256:17041e5f4e63767921ecbfb0feeb562930e83e56192848f0fd54b61ab79388b6
           livenessProbe:
             grpc:
@@ -951,7 +961,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice:sic-jss-270-g90d1fe47@sha256:e8b039f2535261589da47d996468d658508d8d6364d03c5d1e4cb07cda2b48c5
           livenessProbe:
             grpc:
@@ -1008,8 +1018,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_CURRENCY
               value: currencyservice:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalog-sidecar:sic-jss-270-g90d1fe47@sha256:adef8fb57d62f31989d197a0161835c457703201413d52e3576a499b0df4c750
           livenessProbe:
             grpc:
@@ -1044,7 +1056,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalogservice:sic-jss-270-g90d1fe47@sha256:6501f15b39170622ab164a57b3e3d6449fbf4206d6bfab571c1d6026c7f821df
           livenessProbe:
             grpc:
@@ -1108,7 +1120,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/recommendationservice:sic-jss-270-g90d1fe47@sha256:c39830a2117b01fa561a4298d2b6cf658d6bc62512be730171c552266b48e676
           livenessProbe:
             grpc:
@@ -1221,8 +1233,10 @@ spec:
               value: frontend:5401
             - name: CHORAL_CURRENCY
               value: currencyservice:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice-sidecar:sic-jss-270-g90d1fe47@sha256:aaa6ae538f5a5d5840ab7f4cc934883574c93ffd6979ea99166b6869268f0be7
           livenessProbe:
             grpc:
@@ -1257,7 +1271,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice:sic-jss-270-g90d1fe47@sha256:94898c600e562f7140a6877eeb645a739cdcfd314b614c94f633c63dd10d5af0
           livenessProbe:
             grpc:
@@ -1670,7 +1684,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/adservice:sic-jss-270-g90d1fe47@sha256:5ba0c34b4609648f40fa6d8bc12a5a843f4cf580f649e73e2eedbcfcce118ead
           livenessProbe:
             grpc:
@@ -1731,8 +1745,10 @@ spec:
               value: productcatalogservice:5401
             - name: CHORAL_SHIPPING
               value: shippingservice:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice-sidecar:sic-jss-270-g90d1fe47@sha256:6366119b64f0f319040be8906fc16c0e703b071130efa66e80ee9e2a227d7b3b
           livenessProbe:
             grpc:
@@ -1765,7 +1781,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/cartservice:sic-jss-270-g90d1fe47@sha256:1cac94116dc3e6c2b6ad1e1953c8ff54bc360cf62035d4220ef27a2c6af0f67d
           livenessProbe:
             grpc:
@@ -1823,7 +1839,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
             - name: PRODUCT_CATALOG_SERVICE_ADDR
               value: productcatalogservice:3550
             - name: SHIPPING_SERVICE_ADDR
@@ -1891,8 +1907,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_FRONTEND
               value: frontend:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice-sidecar:sic-jss-270-g90d1fe47@sha256:b3d74320da0d6aad84a2567a9b301f3b8597bf71ee0d4b6e159db7f5505d8e08
           livenessProbe:
             grpc:
@@ -1927,7 +1945,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/currencyservice:sic-jss-270-g90d1fe47@sha256:f8b5b4409cdd4569cb901856f15a904e0dc2eadaf0a74578dd20bff6d3ac4fbc
           livenessProbe:
             grpc:
@@ -1987,8 +2005,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_FRONTEND
               value: frontend:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice-sidecar:sic-jss-270-g90d1fe47@sha256:c4883259502a5f63fc0b0ced99962a7f15c9c659fe6563feeb93122c15fd0a45
           livenessProbe:
             grpc:
@@ -2023,7 +2043,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/emailservice:sic-jss-270-g90d1fe47@sha256:8271654381fc2bab4f39c1cefff74948963336644057d7b8ae0df9c5e2ae0b29
           livenessProbe:
             grpc:
@@ -2090,8 +2110,10 @@ spec:
               value: emailservice:5401
             - name: CHORAL_FRONTEND
               value: 0.0.0.0:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/frontend-sidecar:sic-jss-270-g90d1fe47@sha256:fda58989b08d9f8b88961d8e1d4b069a17cb349b1580cc79dcf1a3ca455ae3d8
           livenessProbe:
             httpGet:
@@ -2126,7 +2148,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
             - name: PRODUCT_CATALOG_SERVICE_ADDR
               value: productcatalogservice:3550
             - name: CURRENCY_SERVICE_ADDR
@@ -2209,8 +2231,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_FRONTEND
               value: frontend:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice-sidecar:sic-jss-270-g90d1fe47@sha256:17041e5f4e63767921ecbfb0feeb562930e83e56192848f0fd54b61ab79388b6
           livenessProbe:
             grpc:
@@ -2245,7 +2269,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/paymentservice:sic-jss-270-g90d1fe47@sha256:e8b039f2535261589da47d996468d658508d8d6364d03c5d1e4cb07cda2b48c5
           livenessProbe:
             grpc:
@@ -2302,8 +2326,10 @@ spec:
               value: 0.0.0.0:5401
             - name: CHORAL_CURRENCY
               value: currencyservice:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalog-sidecar:sic-jss-270-g90d1fe47@sha256:adef8fb57d62f31989d197a0161835c457703201413d52e3576a499b0df4c750
           livenessProbe:
             grpc:
@@ -2338,7 +2364,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/productcatalogservice:sic-jss-270-g90d1fe47@sha256:6501f15b39170622ab164a57b3e3d6449fbf4206d6bfab571c1d6026c7f821df
           livenessProbe:
             grpc:
@@ -2402,7 +2428,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/recommendationservice:sic-jss-270-g90d1fe47@sha256:c39830a2117b01fa561a4298d2b6cf658d6bc62512be730171c552266b48e676
           livenessProbe:
             grpc:
@@ -2515,8 +2541,10 @@ spec:
               value: frontend:5401
             - name: CHORAL_CURRENCY
               value: currencyservice:5401
-            - name: JAEGER_ENDPOINT
-              value: http://jaeger-collector:4317
+            - name: ENABLE_TRACING
+              value: "1"
+            - name: COLLECTOR_SERVICE_ADDR
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice-sidecar:sic-jss-270-g90d1fe47@sha256:aaa6ae538f5a5d5840ab7f4cc934883574c93ffd6979ea99166b6869268f0be7
           livenessProbe:
             grpc:
@@ -2551,7 +2579,7 @@ spec:
             - name: ENABLE_TRACING
               value: "1"
             - name: COLLECTOR_SERVICE_ADDR
-              value: jaeger-collector:4317
+              value: "http://lgtm:4317"
           image: europe-west1-docker.pkg.dev/chords-microservice-444208/webshop-repo/shippingservice:sic-jss-270-g90d1fe47@sha256:94898c600e562f7140a6877eeb645a739cdcfd314b614c94f633c63dd10d5af0
           livenessProbe:
             grpc:

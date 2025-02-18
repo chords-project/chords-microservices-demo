@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 import choral.reactive.ChannelConfigurator;
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
 import dev.chords.choreographies.Cart;
 import dev.chords.choreographies.CartItem;
 import hipstershop.CartServiceGrpc;
@@ -24,54 +25,48 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
     protected ManagedChannel channel;
     protected CartServiceFutureStub connection;
     protected Tracer tracer;
+    protected Logger logger;
 
     public CartService(InetSocketAddress address, OpenTelemetrySdk telemetry) {
         channel = ChannelConfigurator.makeChannel(address, telemetry);
 
         this.connection = CartServiceGrpc.newFutureStub(channel);
         this.tracer = telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+        this.logger = new Logger(telemetry, CartService.class.getName());
     }
 
     public void addItem(String userID, String productID, int quantity) {
-        System.out.println("[CART] Adding item to cart");
+        Span span = span = tracer.spanBuilder("CartService.addItem")
+            .setAttribute("request.userID", userID)
+            .setAttribute("request.productID", productID)
+            .setAttribute("request.quantity", quantity)
+            .startSpan();
 
-        Span span = null;
-        Scope scope = null;
-        if (tracer != null) {
-            span = tracer.spanBuilder("CartService.addItem")
-                    .setAttribute("request.userID", userID)
-                    .setAttribute("request.productID", productID)
-                    .setAttribute("request.quantity", quantity)
-                    .startSpan();
+        try (Scope scope = span.makeCurrent();) {
+            logger.info("Adding item to cart");
 
-            scope = span.makeCurrent();
-        }
-
-        Demo.AddItemRequest request = Demo.AddItemRequest.newBuilder()
+            Demo.AddItemRequest request = Demo.AddItemRequest.newBuilder()
                 .setUserId(userID)
                 .setItem(
-                        Demo.CartItem.newBuilder()
-                                .setProductId(productID)
-                                .setQuantity(quantity))
+                    Demo.CartItem.newBuilder()
+                        .setProductId(productID)
+                        .setQuantity(quantity))
                 .build();
 
-        connection.addItem(request);
+            connection.addItem(request);
 
-        if (scope != null)
-            scope.close();
-
-        if (span != null)
+        } finally {
             span.end();
+        }
     }
 
     @Override
     public Cart getCart(String userID) {
-        System.out.println("[CART] Get cart for user: " + userID);
-
         Span span = tracer.spanBuilder("CartService.getCart")
                 .setAttribute("request.userID", userID).startSpan();
 
         try (Scope scope = span.makeCurrent();) {
+            logger.info("Get cart for user: " + userID);
 
             Demo.GetCartRequest request = Demo.GetCartRequest.newBuilder()
                     .setUserId(userID)
@@ -94,10 +89,9 @@ public class CartService implements dev.chords.choreographies.CartService, AutoC
     }
 
     public void emptyCart(String userID) {
-        System.out.println("[CART] Empty cart for user: " + userID);
-
         Span span = tracer.spanBuilder("CartService.emptyCart").setAttribute("request.userID", userID).startSpan();
         try (Scope scope = span.makeCurrent()) {
+            logger.info("Empty cart for user: " + userID);
 
             EmptyCartRequest request = EmptyCartRequest.newBuilder().setUserId(userID).build();
 

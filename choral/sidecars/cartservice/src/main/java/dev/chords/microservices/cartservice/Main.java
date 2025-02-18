@@ -4,8 +4,10 @@ import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.ReactiveServer;
 import choral.reactive.ReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
 import dev.chords.choreographies.ChorPlaceOrder_Cart;
 import dev.chords.choreographies.ServiceResources;
+import dev.chords.choreographies.Tracing;
 import dev.chords.choreographies.WebshopSession;
 import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -19,16 +21,13 @@ public class Main {
 
     private static ClientConnectionManager shippingConn;
     private static ClientConnectionManager productCatalogConn;
+    private static Logger logger;
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Starting choral cart service");
+        OpenTelemetrySdk telemetry = Tracing.initTracing("CartService");
+        logger = new Logger(telemetry, Main.class.getName());
 
-        final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
-        OpenTelemetrySdk telemetry = OpenTelemetrySdk.builder().build();
-        if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
-            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "CartService");
-        }
+        logger.info("Starting choral cart service");
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("ASPNETCORE_HTTP_PORTS", "7070"));
         cartService = new CartService(new InetSocketAddress("localhost", rpcPort), telemetry);
@@ -50,7 +49,7 @@ public class Main {
 
         switch (session.choreography) {
             case PLACE_ORDER:
-                ctx.log("[CART] New PLACE_ORDER request");
+                ctx.log("New PLACE_ORDER request");
 
                 ChorPlaceOrder_Cart placeOrderChor = new ChorPlaceOrder_Cart(
                         cartService,
@@ -60,11 +59,11 @@ public class Main {
 
                 placeOrderChor.placeOrder();
 
-                ctx.log("[CART] PLACE_ORDER choreography completed");
+                ctx.log("PLACE_ORDER choreography completed");
 
                 break;
             default:
-                ctx.log("[CART] Invalid choreography " + ctx.session.choreographyName());
+                ctx.log("Invalid choreography " + ctx.session.choreographyName());
                 break;
         }
     }

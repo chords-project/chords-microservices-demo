@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import random
-from locust import FastHttpUser, TaskSet, between, constant_pacing, task, events
+from locust import FastHttpUser, LoadTestShape, TaskSet, between, constant_pacing, task, events
 from collections import deque
 import os
 from faker import Faker
@@ -28,6 +28,11 @@ latest_requests_buf: deque[str] = None
 def on_test_start(environment, **kwargs):
     global latest_requests_buf
     print("Test starting, initializing latest_requests_buf")
+
+    min_products = max(0, environment.parsed_options.min_product_count)
+    max_products = min(len(products), environment.parsed_options.max_product_count)
+    print(f"min products: {min_products}, max products: {max_products}")
+
     latest_requests_buf = deque(maxlen=1000)
 
 @events.test_stop.add_listener
@@ -58,6 +63,10 @@ def on_request_finished(request_type, name, response_time, response_length, resp
         "{},{},{},{},{},{}\n".format(start_time, request_type, name, response_time, response_length, url)
     )
 
+@events.init_command_line_parser.add_listener
+def _(parser):
+    parser.add_argument("--min-product-count", default=1, help="The minimum number of items in the cart duing checkout")
+    parser.add_argument("--max-product-count", default=9, help="The maximum number of items in the cart duing checkout")
 
 products = [
     '0PUK6V6EV0',
@@ -125,8 +134,13 @@ def checkout_flow(l, checkout_endpoint):
         #setCurrency(l)
 
         # Add products to cart
-        max_products = random.randrange(1, 4)
-        buy_products = random.sample(products, max_products)
+        #max_products = random.randrange(1, 4)
+
+        min_products = max(0, l.user.environment.parsed_options.min_product_count)
+        max_products = min(len(products), l.user.environment.parsed_options.max_product_count)
+        products_count = random.randrange(min_products, max_products+1)
+
+        buy_products = random.sample(products, products_count)
         for product in buy_products:
             l.client.post("/cart", {
                 'product_id': product,
@@ -167,6 +181,7 @@ class OrchestratedCheckout(TaskSet):
 
     def on_start(self):
         index(self)
+        self.client.post("/setCurrency", {'currency_code': 'EUR'})
 
     @task
     def checkout(self):
@@ -176,6 +191,7 @@ class ChoreographicCheckout(TaskSet):
 
     def on_start(self):
         index(self)
+        self.client.post("/setCurrency", {'currency_code': 'EUR'})
 
     @task
     def checkout(self):
@@ -190,3 +206,22 @@ class ChoreographicCheckoutUser(FastHttpUser):
     tasks = [ChoreographicCheckout]
     # wait_time = constant_pacing(5)
     wait_time = between(1, 5)
+
+class WarmupBenchmarkShape(LoadTestShape):
+
+    stages = [
+        {"duration": 2 * 60, "users": 40, "spawn_rate": 1},
+        {"duration": 4 * 60, "users": 20, "spawn_rate": 1},
+    ]
+
+    def tick(self):
+        run_time = self.get_run_time()
+
+        total_duration = 0
+
+        for stage in self.stages:
+            total_duration += stage["duration"]
+            if run_time < total_duration:
+                return (stage["users"], stage["spawn_rate"])
+
+        return None

@@ -6,6 +6,7 @@ import choral.reactive.ReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Shipping;
 import dev.chords.choreographies.ServiceResources;
+import dev.chords.choreographies.Tracing;
 import dev.chords.choreographies.WebshopSession;
 import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -23,12 +24,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral shipping service");
 
-        final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
-        telemetry = OpenTelemetrySdk.builder().build();
-        if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
-            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "ShippingService");
-        }
+        OpenTelemetrySdk telemetry = Tracing.initTracing("ShippingService");
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
         shippingService = new ShippingService(new InetSocketAddress("localhost", rpcPort), telemetry);

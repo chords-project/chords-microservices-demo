@@ -5,19 +5,18 @@ import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.ReactiveClient;
 import choral.reactive.ReactiveServer;
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
 import choral.reactive.tracing.TelemetrySession;
-import dev.chords.choreographies.ChorPlaceOrder_Client;
-import dev.chords.choreographies.OrderResult;
-import dev.chords.choreographies.ReqPlaceOrder;
-import dev.chords.choreographies.ServiceResources;
-import dev.chords.choreographies.WebshopSession;
+import dev.chords.choreographies.*;
 import dev.chords.choreographies.WebshopSession.Choreography;
 import dev.chords.choreographies.WebshopSession.Service;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.DoubleHistogram;
+import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -30,7 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class FrontendController {
 
     ReactiveServer server;
-    OpenTelemetrySdk telemetry = null;
+    OpenTelemetry telemetry;
+    Logger logger;
+    DoubleHistogram checkoutDurationHistogram;
 
     ClientConnectionManager cartConn;
     ClientConnectionManager currencyConn;
@@ -39,11 +40,14 @@ public class FrontendController {
     ClientConnectionManager emailConn;
 
     public FrontendController() {
-        final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
-        if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
-            this.telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "Frontend");
-        }
+        this.telemetry = Tracing.initTracing("Frontend");
+        this.logger = new Logger(telemetry, FrontendController.class.getName());
+
+        this.checkoutDurationHistogram = telemetry.getMeter(JaegerConfiguration.TRACER_NAME)
+            .histogramBuilder("choral.frontend.checkout-duration")
+            .setUnit("ms")
+            .setDescription("Time it takes to perform a checkout")
+            .build();
 
         try {
             cartConn = ClientConnectionManager.makeConnectionManager(ServiceResources.shared.cart,
@@ -62,8 +66,8 @@ public class FrontendController {
         }
 
         server = new ReactiveServer(Service.FRONTEND.name(), this.telemetry, ctx -> {
-            System.out.println(
-                    "[FRONTEND] Received new session from " + ctx.session.senderName()
+            logger.info(
+                    "Received new session from " + ctx.session.senderName()
                             + " service: " + ctx.session);
         });
 
@@ -77,7 +81,7 @@ public class FrontendController {
                     }
                 });
 
-        System.out.println("[FRONTEND] Done configuring frontend controller");
+        logger.info("Done configuring frontend controller");
     }
 
     @GetMapping("/ping")
@@ -87,7 +91,9 @@ public class FrontendController {
 
     @PostMapping("/checkout")
     PlaceOrderResponse checkout(@RequestBody ReqPlaceOrder request) {
-        System.out.println("[FRONTEND] Placing order: " + request);
+        logger.info("Placing order: " + request);
+
+        Long startTime = System.nanoTime();
 
         WebshopSession session = WebshopSession.makeSession(Choreography.PLACE_ORDER,
                 Service.FRONTEND);
@@ -116,7 +122,7 @@ public class FrontendController {
              ReactiveClient emailClient = new ReactiveClient(
                  emailConn, Service.FRONTEND.name(), telemetrySession);) {
 
-            telemetrySession.log("[FRONTEND] Initiating PLACE_ORDER choreography");
+            telemetrySession.log("Initiating PLACE_ORDER choreography");
 
             var currencyChan = new ReactiveSymChannel<>(currencyClient.chanA(session),
                     server.chanB(session, Service.CURRENCY.name()));
@@ -141,13 +147,27 @@ public class FrontendController {
 
             OrderResult result = placeOrderChor.placeOrder(request);
 
-            telemetrySession.log("[FRONTEND] Finished PLACE_ORDER choreography",
+            telemetrySession.log("Finished PLACE_ORDER choreography",
                     Attributes.builder().put("order.result", result.toString()).build());
+
+            Long endTime = System.nanoTime();
+            checkoutDurationHistogram.record((endTime - startTime) / 1_000_000.,
+                Attributes.builder()
+                    .put("success", true)
+                    .build()
+                );
 
             return new PlaceOrderResponse(result);
         } catch (Exception e) {
             telemetrySession.recordException("Frontend PLACE_ORDER choreography failed",
                     e, true);
+
+            Long endTime = System.nanoTime();
+            checkoutDurationHistogram.record((endTime - startTime) / 1_000_000.,
+                Attributes.builder()
+                    .put("success", false)
+                    .build()
+            );
 
             throw new RuntimeException(e);
         } finally {

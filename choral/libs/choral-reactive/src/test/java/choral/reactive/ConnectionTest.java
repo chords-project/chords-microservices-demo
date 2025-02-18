@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import choral.reactive.connection.ClientConnectionManager;
 import choral.reactive.tracing.TelemetrySession;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.api.OpenTelemetry;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ public class ConnectionTest {
 
         assertDoesNotThrow(() -> {
             try (ClientConnectionManager connManager = ClientConnectionManager.makeConnectionManager("0.0.0.0:4567",
-                    OpenTelemetrySdk.builder().build());) {
+                    OpenTelemetry.noop());) {
                 Session session = Session.makeSession("choreography", "client");
                 ReactiveClient client = new ReactiveClient(connManager, "client",
                         TelemetrySession.makeNoop(session));

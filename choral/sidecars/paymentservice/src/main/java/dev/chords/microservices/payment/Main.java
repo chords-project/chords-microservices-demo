@@ -6,6 +6,7 @@ import choral.reactive.ReactiveServer.SessionContext;
 import choral.reactive.tracing.JaegerConfiguration;
 import dev.chords.choreographies.ChorPlaceOrder_Payment;
 import dev.chords.choreographies.ServiceResources;
+import dev.chords.choreographies.Tracing;
 import dev.chords.choreographies.WebshopSession;
 import dev.chords.choreographies.WebshopSession.Service;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -22,12 +23,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         System.out.println("Starting choral payment service");
 
-        final String JAEGER_ENDPOINT = System.getenv().get("JAEGER_ENDPOINT");
-        telemetry = OpenTelemetrySdk.builder().build();
-        if (JAEGER_ENDPOINT != null) {
-            System.out.println("Configuring choreographic telemetry to: " + JAEGER_ENDPOINT);
-            telemetry = JaegerConfiguration.initTelemetry(JAEGER_ENDPOINT, "PaymentService");
-        }
+        OpenTelemetrySdk telemetry = Tracing.initTracing("PaymentService");
 
         int rpcPort = Integer.parseInt(System.getenv().getOrDefault("PORT", "50051"));
         paymentService = new PaymentService(new InetSocketAddress("localhost", rpcPort), telemetry);

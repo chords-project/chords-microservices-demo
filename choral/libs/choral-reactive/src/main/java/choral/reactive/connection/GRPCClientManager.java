@@ -1,14 +1,17 @@
 package choral.reactive.connection;
 
 import choral.reactive.tracing.JaegerConfiguration;
+import choral.reactive.tracing.Logger;
 import choral_reactive.ChannelGrpc;
 import choral_reactive.ChannelGrpc.ChannelFutureStub;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.context.Context;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -21,12 +24,15 @@ public class GRPCClientManager implements ClientConnectionManager {
 
     private final ManagedChannel channel;
     private final ChannelFutureStub futureStub;
-    private final OpenTelemetrySdk telemetry;
+    private final OpenTelemetry telemetry;
+    private final Logger logger;
     private final String address;
+    private final DoubleHistogram sendHistogram;
 
-    public GRPCClientManager(String address, OpenTelemetrySdk telemetry) throws URISyntaxException {
+    public GRPCClientManager(String address, OpenTelemetry telemetry) throws URISyntaxException {
         this.address = address;
         this.telemetry = telemetry;
+        this.logger = new Logger(telemetry, GRPCClientManager.class.getName());
 
         URI uri = new URI(null, address, null, null, null).parseServerAuthority();
         InetSocketAddress socketAddr = new InetSocketAddress(uri.getHost(), uri.getPort());
@@ -39,10 +45,17 @@ public class GRPCClientManager implements ClientConnectionManager {
         this.futureStub = ChannelGrpc
             .newFutureStub(channel);
             //.withDeadlineAfter(10, TimeUnit.SECONDS);
+
+        this.sendHistogram = telemetry.getMeter(JaegerConfiguration.TRACER_NAME)
+            .histogramBuilder("choral.reactive.grpc-client.send-duration")
+            .setDescription("Duration for sending a message")
+            .setUnit("ms")
+            .build();
     }
 
     @Override
     public Connection makeConnection() {
+        logger.debug("Connect to gRPC server " + address);
         return new ClientConnection();
     }
 
@@ -66,24 +79,32 @@ public class GRPCClientManager implements ClientConnectionManager {
         public void sendMessage(Message msg) throws Exception {
             var result = futureStub.sendMessage(msg.toGrpcMessage());
 
+            Attributes attributes = Attributes.builder()
+                .put("message", msg.toString())
+                .put("address", address)
+                .build();
+
             long startTime = System.nanoTime();
 
             result.addListener(() -> {
                 try {
                     result.get();
 
-                    long duration = (System.nanoTime() - startTime) / 1000;
+                    double duration = (System.nanoTime() - startTime) / 1_000_000.0;
 
-                    connectionSpan.addEvent("Message sent to "+address+" ("+duration+" ms)",
+                    connectionSpan.addEvent("Message sent to "+address+" ("+(long)duration+" ms)", attributes);
+
+                    sendHistogram.record(
+                        duration,
                         Attributes.builder()
-                            .put("message", msg.toString())
                             .put("address", address)
-                            .build());
+                            .build()
+                    );
                 } catch (Exception e) {
                     connectionSpan.setAttribute("error", true);
                     connectionSpan.recordException(e);
                 }
-            }, Executors.newSingleThreadExecutor());
+            }, Executors.newVirtualThreadPerTaskExecutor());
         }
 
         @Override

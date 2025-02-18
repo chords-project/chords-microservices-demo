@@ -2,18 +2,23 @@ package choral.reactive.tracing;
 
 import choral.reactive.Session;
 import choral.reactive.connection.Message;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.logs.Logger;
+import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 
 public class TelemetrySession {
 
-    private OpenTelemetrySdk telemetry;
+    private final OpenTelemetry telemetry;
     public final Tracer tracer;
+    public final Meter meter;
+    public final Logger logger;
 
     private Session session;
 
@@ -23,13 +28,16 @@ public class TelemetrySession {
     private SpanContext senderLinkContext;
 
     public static TelemetrySession makeNoop(Session session) {
-        return new TelemetrySession(OpenTelemetrySdk.builder().build(), session, Span.getInvalid());
+        return new TelemetrySession(OpenTelemetry.noop(), session, Span.getInvalid());
     }
 
-    public TelemetrySession(OpenTelemetrySdk telemetry, Message msg) {
+    public TelemetrySession(OpenTelemetry telemetry, Message msg) {
         this.telemetry = telemetry;
         this.session = msg.session;
+
         this.tracer = this.telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+        this.meter = this.telemetry.getMeter(JaegerConfiguration.TRACER_NAME);
+        this.logger = this.telemetry.getLogsBridge().get(JaegerConfiguration.TRACER_NAME);
 
         this.senderLinkContext = msg.senderSpanContext.toSpanContext();
         this.choreographyContext = telemetry.getPropagators()
@@ -38,18 +46,22 @@ public class TelemetrySession {
     }
 
     // Configure initial telemetry session
-    public TelemetrySession(OpenTelemetrySdk telemetry, Session session, Span span) {
+    public TelemetrySession(OpenTelemetry telemetry, Session session, Span span) {
         this.telemetry = telemetry;
         this.session = session;
-        this.tracer = this.telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+
         this.senderLinkContext = null;
         this.choreographyContext = Context.root().with(span);
         this.choreographySpan = span;
+
+        this.tracer = this.telemetry.getTracer(JaegerConfiguration.TRACER_NAME);
+        this.meter = this.telemetry.getMeter(JaegerConfiguration.TRACER_NAME);
+        this.logger = this.telemetry.getLogsBridge().get(JaegerConfiguration.TRACER_NAME);
     }
 
     // Configure dummy telemetry session
     public TelemetrySession(Session session) {
-        this(OpenTelemetrySdk.builder().build(), session, Span.getInvalid());
+        this(OpenTelemetry.noop(), session, Span.getInvalid());
     }
 
     public Span makeChoreographySpan() {
@@ -74,7 +86,13 @@ public class TelemetrySession {
         Attributes extraAttributes = Attributes.builder().put("session", session.toString()).putAll(attributes).build();
 
         //System.out.println(message + ": " + attributesToString(extraAttributes));
-        choreographySpan.addEvent(message, extraAttributes);
+        //choreographySpan.addEvent(message, extraAttributes);
+
+        logger.logRecordBuilder()
+            .setAllAttributes(extraAttributes)
+            .setBody(message)
+            .setSeverity(Severity.INFO)
+            .emit();
     }
 
     public void recordException(String message, Exception e, boolean error, Attributes attributes) {
