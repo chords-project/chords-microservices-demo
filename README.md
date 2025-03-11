@@ -1,5 +1,9 @@
 # Google Webshop Demo modified to use Choral
 
+> [!WARNING]  
+> This repository has been archived since its contents has been moved to the [Choral Accompanist](https://github.com/chords-project/choral-accompanist) repository instead.
+> This repository will be deleted in the future.
+
 ## Running it locally
 
 Make sure you have a local Kubernetes environment running, eg. `minikube` or the Kubernetes extension enabled in Docker for Mac.
